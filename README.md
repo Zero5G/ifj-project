@@ -1,4 +1,5 @@
 # IFJ Projekt
+## Kompilace
 Pro kompilaci budeme zatim používat Clang, protože je nejlehčí nainstalovat
 nejnovější verzi, na merlinovy mužeme používat `gcc-15`, pokud ho chcete používat
 taky, tak si ho musíte kompilovat sami:
@@ -11,16 +12,29 @@ Clang: https://apt.llvm.org/
 sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 ```
 
-Dokumentace: doxygen graphviz
+## Make příkazy
+- `all` (bez příkazu) - spustí kompilaci, více [zde](#kompilace)
+- `test` - spustí kompilaci & testy, více [zde](#testování)
+- `doc` - generace dokumentace z kometářů, více [zde](#dokumentace)
+- `clean` - odstraní vše ze složek `build`, `bin` a `doc`
+- `run` - spustí hlavní soubor bez parametrů
+- `check` - spustí `check-format` a `check-tidy`, více [zde](#formátování)
+- `check-format` - kontrola formátování, více [zde](#formátování)
+- `check-tidy` - kontrola základních chyb, více [zde](#formátování)
+- `format` - formátovaní **VŠECH** souborů `.c` a `.h`, spouštějte jen když víte že formátujete jen svůj kód, více [zde](#formátování)
+
+## Dokumentace
+Dokumentace: [docs](https://www.doxygen.nl/manual/docblocks.html)
 ```bash
 sudo apt install doxygen graphviz
 ```
 
+## Testování
 Unit testing: [Criterion](https://github.com/Snaipe/Criterion), docs: https://criterion.readthedocs.io/en/master/starter.html
 ```bash
 sudo apt install libcriterion-dev
 ```
-
+## Autocomplete
 Opravit rozbitý autocomplete:
 ```bash
 sudo apt install bear
@@ -28,6 +42,13 @@ rm compile_commands.json
 bear -- make
 ```
 
-Clang Tidy: https://clang.llvm.org/extra/clang-tidy/
-
+## Formátování
 Clang Format: https://clang.llvm.org/docs/ClangFormat.html
+```bash
+sudo apt-get install clang-format
+```
+
+Clang Tidy: https://clang.llvm.org/extra/clang-tidy/
+```bash
+sudo apt-get install clang-tidy
+```
