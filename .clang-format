@@ -1,0 +1,45 @@
+---
+BasedOnStyle: GNU
+DerivePointerAlignment: false
+PointerAlignment: Left
+#####################################
+# Line Options
+MaxEmptyLinesToKeep: 1
+LineEnding: LF
+#####################################
+# Break options
+BreakBeforeBraces: Attach
+BreakStringLiterals: true
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+#####################################
+# Indent options
+IndentWidth: 4
+#IndentGotoLabels: HalfIndent
+IndentPPDirectives: BeforeHash
+IndentWrappedFunctionNames: true
+IndentCaseLabels: true
+#####################################
+# Insert options
+InsertBraces: true
+InsertNewlineAtEOF: true
+#####################################
+# Space options
+SpaceAfterCStyleCast: false
+SpaceBeforeCaseColon: false
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterFunctionDefinitionName: false
+  AfterFunctionDeclarationName: false
+# SpacesInContainerLiterals: true
+#####################################
+# Other
+ColumnLimit: 99
+IncludeBlocks: Regroup
+UseTab: Never
+IntegerLiteralSeparator:
+  Binary: 4
+  Decimal: 3
+  Hex: -1
+...
