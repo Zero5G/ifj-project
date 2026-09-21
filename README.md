@@ -4,7 +4,7 @@ nejnovější verzi, na merlinovy mužeme používat `gcc-15`, pokud ho chcete p
 taky, tak si ho musíte kompilovat sami:
 [tenhle návod](https://medium.com/@xersendo/moving-to-c-26-how-to-build-and-set-up-gcc-15-1-on-ubuntu-f52cc9173fa0)
 mi fungoval na Linux Mint, ale na Ubuntu 24.04 - WSL selhal. Ubuntu 26.04 - WSL by mněla mít `gcc-15`
-už nainstalované, takže můžete použít i to.
+jako default při stažení `gcc`, takže můžete použít i to.
 
 Clang: https://apt.llvm.org/ 
 ```bash
