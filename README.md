@@ -16,7 +16,7 @@ Dokumentace: doxygen graphviz
 sudo apt install doxygen graphviz
 ```
 
-Unit testing: https://github.com/Snaipe/Criterion
+Unit testing: [Criterion](https://github.com/Snaipe/Criterion), docs: https://criterion.readthedocs.io/en/master/starter.html
 ```bash
 sudo apt install libcriterion-dev
 ```
