@@ -1,4 +1,4 @@
-CC := gcc
+CC ?= clang-22
 CFLAGS := -Wall -Wextra -std=c23 -Iinclude
 LDFLAGS :=
 
@@ -7,7 +7,7 @@ TARGET := bin/interpreter
 SRC := $(shell find src -name '*.c')
 OBJ := $(patsubst src/%.c,build/%.o,$(SRC))
 
-.PHONY: all clean
+.PHONY: all clean doc
 
 all: $(TARGET)
 
@@ -21,5 +21,8 @@ build/%.o: src/%.c
 
 -include $(OBJ:.o=.d)
 
+doc:
+	doxygen Doxyfile
+
 clean:
-	rm -rf build/* bin/interpreter
+	rm -rf build/* bin/interpreter doc/* doxygen_warnings.log
