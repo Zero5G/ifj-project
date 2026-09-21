@@ -15,7 +15,7 @@ MAIN_OBJ := build/main.o
 
 TEST_SRC := $(shell find tests -name '*.c')
 
-.PHONY: all clean doc test
+.PHONY: all clean doc test format check-format check-tidy check
 
 all: $(TARGET)
 
@@ -43,6 +43,17 @@ build/main.o: src/main.c
 
 run: $(TARGET)
 	./$(TARGET)
+
+format:
+	clang-format -i --Werror $(SRC) $(TEST_SRC)
+
+check-format:
+	clang-format --dry-run --Werror $(SRC) $(TEST_SRC)
+
+check-tidy:
+	@run-clang-tidy -p .
+
+check: check-format check-tidy
 
 doc:
 	doxygen Doxyfile

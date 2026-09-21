@@ -1,5 +1,5 @@
-#include <string.h>
 #include <criterion/criterion.h>
+#include <string.h>
 
 Test(sample, test) {
     cr_expect(strlen("Test") == 4, "Expected \"Test\" to have a length of 4.");
@@ -7,6 +7,4 @@ Test(sample, test) {
     cr_assert(strlen("") == 0);
 }
 
-Test(sample, test2) {
-    cr_assert(0 == 0);
-}
+Test(sample, test2) { cr_assert(0 == 0); }
