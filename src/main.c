@@ -1,3 +1,8 @@
+/**
+ * @file main.c
+ * @brief Main entry point of application
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 

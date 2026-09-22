@@ -59,4 +59,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -rf build/* bin/* doc/*
+	rm -rf build/* bin/* doc/gen/*

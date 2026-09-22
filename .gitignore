@@ -1,5 +1,6 @@
 /build
 /bin
-/doc
+/doc/gen
+/doc/doxygen_warnings.log
 /.cache
 compile_commands.json
