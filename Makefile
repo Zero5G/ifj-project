@@ -57,6 +57,9 @@ check: check-format check-tidy
 
 doc:
 	doxygen Doxyfile
+	sed -i 's/\\usepackage\[T2A\]{fontenc}/\\usepackage[T1]{fontenc}/' doc/gen/latex/refman.tex
+	make -C doc/gen/latex
+	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
 clean:
-	rm -rf build/* bin/* doc/gen/*
+	rm -rf build/* bin/* doc/gen/* dokumentace.pdf
