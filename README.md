@@ -12,6 +12,7 @@ Clang: https://apt.llvm.org/
 wget https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
 sudo ./llvm.sh 23
+rm llvm.sh
 ```
 
 ## Make příkazy

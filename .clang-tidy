@@ -1,3 +1,16 @@
-Checks: 'clang-diagnostic-*,clang-analyzer-*,bugprone-*'
+Checks: >
+    clang-diagnostic-*,
+    clang-analyzer-*,
+    misc-*,
+    bugprone-*,
+    cert-*,
+    performance-*,
+    readability-*,
+    -clang-analyzer-security.insecureAPI.*',
+    -misc-no-recursion,
+
 WarningsAsErrors: true
-HeaderFilterRegex: ''
+
+HeaderFilterRegex: '^(src/|include/|test/).*'
+
+ExtraArgs: [-std=c23,-DDEBUG]
