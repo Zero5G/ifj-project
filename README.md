@@ -16,15 +16,20 @@ rm llvm.sh
 ```
 
 ## Make příkazy
-- `all` (bez příkazu) - spustí kompilaci, více [zde](#kompilace)
+- `all` (bez příkazu) - spustí `clean` a kompilaci, více [zde](#kompilace)
+- `build` (bez příkazu) - spustí kompilaci, více [zde](#kompilace)
+- `debug` (bez příkazu) - spustí kompilaci pro debug, více [zde](#kompilace)
+- `clean` - odstraní vše ze složek `build`, `bin` a `doc`
 - `test` - spustí kompilaci & testy, více [zde](#testování)
 - `doc` - generace dokumentace z kometářů, více [zde](#dokumentace)
-- `clean` - odstraní vše ze složek `build`, `bin` a `doc`
 - `run` - spustí hlavní soubor bez parametrů
 - `check` - spustí `check-format` a `check-tidy`, více [zde](#formátování)
 - `check-format` - kontrola formátování, více [zde](#formátování)
 - `check-tidy` - kontrola základních chyb, více [zde](#formátování)
 - `format` - formátovaní **VŠECH** souborů `.c` a `.h`, spouštějte jen když víte že formátujete jen svůj kód, více [zde](#formátování)
+
+> [!NOTE]
+> Pokud přecházíte z `build` do `debug` a naopak musíte spustic `clean`, eg: `make clean debug`
 
 ## Dokumentace
 Dokumentace: [docs](https://www.doxygen.nl/manual/docblocks.html)
@@ -42,16 +47,26 @@ Opravit rozbitý autocomplete:
 ```bash
 sudo apt install bear
 rm compile_commands.json
-bear -- make
+bear -- make clean build
 ```
 
 ## Formátování
 Clang Format: https://clang.llvm.org/docs/ClangFormat.html
 ```bash
-sudo apt-get install clang-format
+sudo apt-get install clang-format-23
 ```
 
 Clang Tidy: https://clang.llvm.org/extra/clang-tidy/
 ```bash
-sudo apt-get install clang-tidy
+sudo apt-get install clang-tidy-23
+```
+
+## Instalace všeho
+```bash
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+sudo ./llvm.sh 23
+rm llvm.sh
+
+sudo apt install clang-tidy-23 clang-format-23 clang-tools-23 libcriterion-dev bear
 ```
