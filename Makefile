@@ -1,5 +1,5 @@
-CC := clang-22
-CFLAGS := -Wall -Wextra -std=c23 -Iinclude
+CC := clang-23
+CFLAGS := -Wall -Werror -Wextra -std=c23 -Iinclude
 LDFLAGS :=
 
 TEST_CFLAGS := $(CFLAGS) -g $(shell pkg-config --cflags criterion)
@@ -7,6 +7,8 @@ TEST_LDFLAGS := $(shell pkg-config --libs criterion)
 
 TARGET := bin/interpreter
 TEST_TARGET := bin/test_runner
+
+INCLUDES := $(shell find include -name '*.h')
 
 SRC := $(shell find src -name '*.c' ! -name 'main.c')
 OBJ := $(SRC:src/%.c=build/%.o)
@@ -45,15 +47,15 @@ run: $(TARGET)
 	./$(TARGET)
 
 format:
-	clang-format -i --Werror $(SRC) $(TEST_SRC)
+	clang-format -i --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
 
 check-format:
-	clang-format --dry-run --Werror $(SRC) $(TEST_SRC)
+	clang-format --dry-run --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
 
 check-tidy:
 	@run-clang-tidy -p .
 
-check: check-format check-tidy
+check: check-tidy check-format
 
 doc:
 	doxygen Doxyfile

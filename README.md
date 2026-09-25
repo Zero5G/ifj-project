@@ -9,7 +9,9 @@ jako default při stažení `gcc`, takže můžete použít i to.
 
 Clang: https://apt.llvm.org/ 
 ```bash
-sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+sudo ./llvm.sh 23
 ```
 
 ## Make příkazy
