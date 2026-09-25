@@ -57,13 +57,13 @@ run: $(TARGET)
 	./$(TARGET)
 
 format:
-	clang-format -i --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
+	clang-format-23 -i --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
 
 check-format:
-	clang-format --dry-run --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
+	clang-format-23 --dry-run --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
 
 check-tidy:
-	@run-clang-tidy -p .
+	@run-clang-tidy-23 -p .
 
 check: check-tidy check-format
 
