@@ -57,7 +57,7 @@ run: $(TARGET)
 	./$(TARGET)
 
 format:
-	clang-format-23 -i --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
+	clang-format-23 -i $(SRC) $(TEST_SRC) $(INCLUDES) src/main.c
 
 check-format:
 	clang-format-23 --dry-run --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
