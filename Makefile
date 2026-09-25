@@ -21,15 +21,15 @@ TEST_SRC := $(shell find tests -name '*.c')
 
 .PHONY: all build debug clean test doc format check-format check-tidy check
 
+all: clean build
+
+build: $(TARGET)
+
 debug: CFLAGS += $(DEBUG_FLAGS)
 debug: $(TARGET)
 
 debug-test: TEST_CFLAGS += $(DEBUG_FLAGS)
 debug-test: $(TEST_TARGET)
-
-all: clean build
-
-build: $(TARGET)
 
 $(TARGET): $(MAIN_OBJ) $(OBJ)
 	@mkdir -p $(@D)
