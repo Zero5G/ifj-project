@@ -19,15 +19,17 @@ MAIN_OBJ := build/main.o
 
 TEST_SRC := $(shell find tests -name '*.c')
 
-.PHONY: all clean doc test format check-format check-tidy check
+.PHONY: all build debug clean test doc format check-format check-tidy check
 
 debug: CFLAGS += $(DEBUG_FLAGS)
-debug: clean $(TARGET)
+debug: $(TARGET)
 
 debug-test: TEST_CFLAGS += $(DEBUG_FLAGS)
-debug-test: clean $(TEST_TARGET)
+debug-test: $(TEST_TARGET)
 
-all: $(TARGET)
+all: clean build
+
+build: $(TARGET)
 
 $(TARGET): $(MAIN_OBJ) $(OBJ)
 	@mkdir -p $(@D)
