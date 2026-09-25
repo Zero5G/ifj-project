@@ -2,6 +2,8 @@ CC := clang-23
 CFLAGS := -Wall -Werror -Wextra -std=c23 -Iinclude
 LDFLAGS :=
 
+DEBUG_FLAGS := -g -O0
+
 TEST_CFLAGS := $(CFLAGS) -g $(shell pkg-config --cflags criterion)
 TEST_LDFLAGS := $(shell pkg-config --libs criterion)
 
@@ -18,6 +20,12 @@ MAIN_OBJ := build/main.o
 TEST_SRC := $(shell find tests -name '*.c')
 
 .PHONY: all clean doc test format check-format check-tidy check
+
+debug: CFLAGS += $(DEBUG_FLAGS)
+debug: clean $(TARGET)
+
+debug-test: TEST_CFLAGS += $(DEBUG_FLAGS)
+debug-test: clean $(TEST_TARGET)
 
 all: $(TARGET)
 
