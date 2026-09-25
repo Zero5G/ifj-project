@@ -17,8 +17,8 @@ rm llvm.sh
 
 ## Make příkazy
 - `all` (bez příkazu) - spustí `clean` a kompilaci, více [zde](#kompilace)
-- `build` (bez příkazu) - spustí kompilaci, více [zde](#kompilace)
-- `debug` (bez příkazu) - spustí kompilaci pro debug, více [zde](#kompilace)
+- `build` - spustí kompilaci, více [zde](#kompilace)
+- `debug` - spustí kompilaci pro debug, více [zde](#kompilace)
 - `clean` - odstraní vše ze složek `build`, `bin` a `doc`
 - `test` - spustí kompilaci & testy, více [zde](#testování)
 - `doc` - generace dokumentace z kometářů, více [zde](#dokumentace)
