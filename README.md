@@ -1,10 +1,10 @@
 # IFJ Projekt
 ## Kompilace
-Pro kompilaci budeme zatim používat Clang, protože je nejlehčí nainstalovat
-nejnovější verzi, na merlinovy mužeme používat `gcc-15`, pokud ho chcete používat
-taky, tak si ho musíte kompilovat sami:
+Pro kompilaci budeme zatím používat Clang, protože je nejlehčí nainstalovat
+nejnovější verzi, na Merlinovi můžeme používat `gcc-15`,
+pokud ho chcete používat taky, tak si ho musíte kompilovat sami:
 [tenhle návod](https://medium.com/@xersendo/moving-to-c-26-how-to-build-and-set-up-gcc-15-1-on-ubuntu-f52cc9173fa0)
-mi fungoval na Linux Mint, ale na Ubuntu 24.04 - WSL selhal. Ubuntu 26.04 - WSL by mněla mít `gcc-15`
+mi fungoval na Linux Mint, ale na Ubuntu 24.04 - WSL selhal. Ubuntu 26.04 - WSL by měla mít `gcc-15`
 jako default při stažení `gcc`, takže můžete použít i to.
 
 Clang: https://apt.llvm.org/ 
@@ -44,11 +44,15 @@ sudo apt install libcriterion-dev
 ```
 ## Autocomplete
 Opravit rozbitý autocomplete:
-```bash
-sudo apt install bear
-rm compile_commands.json
-bear -- make clean build
-```
+1. Instalace programu Build EAR
+  ```bash
+  sudo apt install bear
+  ```
+2. Generace/Regenerace `compile_commands.json`
+  ```bash
+  rm compile_commands.json
+  bear -- make clean build
+  ```
 
 ## Formátování
 Clang Format: https://clang.llvm.org/docs/ClangFormat.html
@@ -61,6 +65,25 @@ Clang Tidy: https://clang.llvm.org/extra/clang-tidy/
 sudo apt-get install clang-tidy-23
 ```
 
+## Nastavit GitHub s Gitem
+1. Instalace Gitu and GitHub CLI
+  ```bash
+  sudo apt-get install git gh
+  ```
+2. Spojení s GitHubem
+  ```bash
+  gh auth login
+  ```
+  Pak budete pracovat s interactivním terminálem:
+  1. ? What account do you want to log into? `GitHub.com`
+  2. ? What is your preferred protocol for Git operations on this host? `HTTPS`
+  3. ? How would you like to authenticate GitHub CLI? `Login with a web browser`
+  > [!NOTE]
+  > Pokud se nepovede otevřít prohlížeč klikňete na odkaz, nebo ho zkopírujte do prohlížeče 
+  4. Authenticate Git with your GitHub credentials? (Y/n) `Y`
+  > [!NOTE]
+  > Pokud na posledním kroku dáte `n`, tak můžete spustit `git auth setup-git`
+
 ## Instalace všeho
 ```bash
 wget https://apt.llvm.org/llvm.sh
@@ -68,5 +91,5 @@ chmod +x llvm.sh
 sudo ./llvm.sh 23
 rm llvm.sh
 
-sudo apt install clang-tidy-23 clang-format-23 clang-tools-23 libcriterion-dev bear
+sudo apt install build-essential git gh clang-tidy-23 clang-format-23 clang-tools-23 libcriterion-dev bear
 ```
