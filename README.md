@@ -29,7 +29,7 @@ rm llvm.sh
 - `format` - formátovaní **VŠECH** souborů `.c` a `.h`, spouštějte jen když víte že formátujete jen svůj kód, více [zde](#formátování)
 
 > [!NOTE]
-> Pokud přecházíte z `build` do `debug` a naopak musíte spustic `clean`, eg: `make clean debug`
+> Pokud přecházíte z `build` do `debug` a naopak musíte spustic `clean`, e.g. `make clean debug`
 
 ## Dokumentace
 Dokumentace: [docs](https://www.doxygen.nl/manual/docblocks.html)
@@ -91,5 +91,5 @@ chmod +x llvm.sh
 sudo ./llvm.sh 23
 rm llvm.sh
 
-sudo apt install build-essential git gh clang-tidy-23 clang-format-23 clang-tools-23 libcriterion-dev bear
+sudo apt install build-essential git gh clang-tidy-23 clang-format-23 clang-tools-23 libcriterion-dev bear doxygen graphviz
 ```
