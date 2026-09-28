@@ -58,4 +58,4 @@ doc:
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
 clean:
-	rm -rf bin/* doc/gen/* dokumentace.pdf
+	rm -rf test_runner interpreter doc/gen/* dokumentace.pdf
