@@ -1,5 +1,5 @@
 CC := clang-23
-CFLAGS := -Wall -Werror -Wextra -std=c23 -Iinclude
+CFLAGS := -Wall -Werror -Wextra -std=c23 -Isrc
 LDFLAGS :=
 
 DEBUG_FLAGS := -g -O0
@@ -7,19 +7,14 @@ DEBUG_FLAGS := -g -O0
 TEST_CFLAGS := $(CFLAGS) -g $(shell pkg-config --cflags criterion)
 TEST_LDFLAGS := $(shell pkg-config --libs criterion)
 
-TARGET := bin/interpreter
-TEST_TARGET := bin/test_runner
+TARGET := interpreter
+TEST_TARGET := test_runner
 
-INCLUDES := $(shell find include -name '*.h')
+INCLUDES := $(wildcard src/*.h)
+SRC := $(wildcard src/*.c)
+TEST_SRC := $(wildcard tests/*.c)
 
-SRC := $(shell find src -name '*.c' ! -name 'main.c')
-OBJ := $(SRC:src/%.c=build/%.o)
-
-MAIN_OBJ := build/main.o
-
-TEST_SRC := $(shell find tests -name '*.c')
-
-.PHONY: all build debug clean test doc format check-format check-tidy check
+.PHONY: all build debug debug-test test run doc format check-format check-tidy check clean
 
 all: clean build
 
@@ -31,33 +26,22 @@ debug: $(TARGET)
 debug-test: TEST_CFLAGS += $(DEBUG_FLAGS)
 debug-test: $(TEST_TARGET)
 
-$(TARGET): $(MAIN_OBJ) $(OBJ)
+$(TARGET): $(SRC)
 	@mkdir -p $(@D)
-	$(CC) $^ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(TEST_TARGET): $(TEST_SRC) $(OBJ)
+$(TEST_TARGET): $(TEST_SRC)
 	@mkdir -p $(@D)
-	$(CC) $(TEST_CFLAGS) $^ -o $@ $(TEST_LDFLAGS)
+	$(CC) $(TEST_CFLAGS) $^ $(filter-out src/main.c,$(SRC)) -o $@ $(TEST_LDFLAGS)
 
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
-
-build/%.o: src/%.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
-
-build/main.o: src/main.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
-
--include $(OBJ:.o=.d)
--include $(MAIN_OBJ:.o=.d)
 
 run: $(TARGET)
 	./$(TARGET)
 
 format:
-	clang-format-23 -i $(SRC) $(TEST_SRC) $(INCLUDES) src/main.c
+	clang-format-23 -i $(SRC) $(TEST_SRC) $(INCLUDES)
 
 check-format:
 	clang-format-23 --dry-run --Werror $(SRC) $(TEST_SRC) $(INCLUDES)
@@ -74,4 +58,4 @@ doc:
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
 clean:
-	rm -rf build/* bin/* doc/gen/* dokumentace.pdf
+	rm -rf bin/* doc/gen/* dokumentace.pdf

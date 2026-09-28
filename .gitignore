@@ -1,7 +1,7 @@
-/build
-/bin
 /doc/gen
 /doc/doxygen_warnings.log
 /.cache
+test_runner
+interpreter
 compile_commands.json
 dokumentace.pdf
