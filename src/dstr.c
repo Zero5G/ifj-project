@@ -6,7 +6,4 @@
  *
  * @details
  */
-#include <dstr.h>>
-dstr dstr_create(char *str) {
-
-}
+#include <dstr.h>
