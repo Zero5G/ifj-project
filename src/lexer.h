@@ -33,7 +33,7 @@ typedef enum token_type {
 
     // Separátory
     TT_COLON, TT_COMMA,
-    TT_SEMICOLON, TT_DOT, TT_AT,
+    TT_DOT, // TT_SEMICOLON, // TT_AT,
     TT_LPAREN, TT_RPAREN,
 
     //
@@ -49,7 +49,7 @@ struct token_t {
         keyword as_keyword;
         int as_int;
         double as_double;
-    } value;
+    } attr;
 };
 
 typedef struct token_t token;
