@@ -22,7 +22,10 @@ bool stack_delete(stack *stk) {
     if (!stack_is_empty(stk)) {
         return false;
     }
+
     free(stk);
+    stk = nullptr;
+
     return true;
 }
 
