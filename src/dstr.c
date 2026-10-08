@@ -9,6 +9,10 @@
 #include "dstr.h"
 #include <string.h>
 
+dstr expand(dstr str, unsigned len_cap) {
+
+}
+
 dstr dstr_create(char *str) {
     dstr dstring = malloc(sizeof(struct dstr_t));
     if (dstring == nullptr) {
@@ -27,4 +31,12 @@ dstr dstr_create(char *str) {
 
     return dstring;
     
+}
+
+void dstr_clear(dstr str) {
+ return;
+}
+
+unsigned dstr_len(dstr str) {
+   return str->len;
 }
