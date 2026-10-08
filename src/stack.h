@@ -38,11 +38,11 @@ stack *stack_create();
  * Tato funkce uvolní pamět použitou pro zásobník,
  * jen **pokud je zásovník prázdný**
  *
- * @param stk Ukazatel na zásobník
+ * @param stk Ukazatel na ukazatel na zásobník
  *
  * @return Vrací true pokuď zásobník byl uvolněn
  */
-bool stack_delete(stack *stk);
+bool stack_delete(stack **stk);
 
 /**
  * @brief Kontroluje jestli je zásobník prázdný
