@@ -24,7 +24,7 @@ typedef struct stack_t stack;
 
 stack *stack_create();
 
-stack *stack_delete(stack *stk);
+bool stack_delete(stack *stk);
 
 bool stack_is_empty(stack *stk);
 
