@@ -1,0 +1,15 @@
+1. <prog> -> <prolog> <function_list>
+2. <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
+3. <function_list> -> <function> <function_list>
+4. <function_list> -> <function>
+5. <function_list> -> ε
+6. <function> -> KW_DEF TT_IDENTIFIER <parameters> <return_type> TT_EQ <body>
+7. <parameters> -> TT_LPAREN <parameter_list> TT_RPAREN
+8. // here goes all the parameter and parameter list variants //
+9. <body> -> ???
+10. <type> -> KW_INT
+11. <type> -> KW_DOUBLE
+12. <type> -> KW_STRING
+13. <type> -> KW_BOOLEAN
+14. <type> -> KW_UNIT
+15. <type> -> KW_LIST
