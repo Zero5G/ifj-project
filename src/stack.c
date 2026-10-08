@@ -53,6 +53,7 @@ bool stack_push(stack *stk, token data) {
 
     token *ndata = malloc(sizeof(token));
     if (!ndata) {
+        free(item);
         return false;
     }
     *ndata = data;
@@ -78,7 +79,7 @@ token *stack_pop(stack *stk) {
 }
 
 token* stack_top(stack *stk) {
-    if (!stack_is_empty(stk)) {
+    if (stack_is_empty(stk)) {
         return nullptr;
     }
     return stk->top->data;
