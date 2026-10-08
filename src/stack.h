@@ -2,20 +2,15 @@
  * @file stack.h
  *
  * @author Jakub Manoušek
- * @brief Modul pro datovou strukturu ADT TStack
+ * @brief Modul pro datovou strukturu ADT TStack určenou pro tokeny
  *
  * @details
  */
 
-union stack_data_t {
-    int as_int;
-    double as_double;
-};
-
-typedef union stack_data_t stack_data, *stack_data_p;
+#include "lexer.h"
 
 struct stack_item_t {
-    stack_data_p data;
+    token *data;
     struct stack_item_t *next;
 };
 
@@ -27,16 +22,16 @@ typedef struct stack_t stack;
 
 stack *stack_create();
 
-stack *stack_delete(stack *stack);
+stack *stack_delete(stack *stk);
 
-void stack_empty(stack *stack);
+void stack_empty(stack *stk);
 
-bool stack_is_empty(stack *stack);
+bool stack_is_empty(stack *stk);
 
-void stack_init(stack *stack);
+void stack_init(stack *stk);
 
-void stack_push(stack *stack, stack_data data);
+void stack_push(stack *stk, token data);
 
-stack_data stack_pop(stack *stack);
+token* stack_pop(stack *stk);
 
-stack_data stack_top(stack *stack);
+token* stack_top(stack *stk);
