@@ -34,25 +34,27 @@ void stack_init(stack *stk) {
     stk->top = nullptr;
 }
 
-void stack_push(stack *stk, token data) {
+bool stack_push(stack *stk, token data) {
     if (!stk) {
-        return;
+        return false;
     }
 
     stack_item item = malloc(sizeof(struct stack_item_t));
     if (!item) {
-        return;
+        return false;
     }
 
     token *ndata = malloc(sizeof(token));
     if (!ndata) {
-        return;
+        return false;
     }
     *ndata = data;
 
     item->next = stk->top;
     item->data = ndata;
     stk->top = item;
+
+    return true;
 }
 
 token *stack_pop(stack *stk) {
