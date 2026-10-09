@@ -12,7 +12,7 @@
 
 stack *stack_create() {
     stack *stk = malloc(sizeof(struct stack_t));
-    if (!stk) {
+    if (stk == nullptr) {
         return nullptr;
     }
     return stk;
@@ -42,17 +42,17 @@ void stack_init(stack *stk) {
 }
 
 bool stack_push(stack *stk, token data) {
-    if (!stk) {
+    if (stk == nullptr) {
         return false;
     }
 
     stack_item item = malloc(sizeof(struct stack_item_t));
-    if (!item) {
+    if (item == nullptr) {
         return false;
     }
 
     token *ndata = malloc(sizeof(token));
-    if (!ndata) {
+    if (ndata == nullptr) {
         free(item);
         return false;
     }
@@ -67,7 +67,7 @@ bool stack_push(stack *stk, token data) {
 
 token *stack_pop(stack *stk) {
     token *data = stack_top(stk);
-    if (!data) {
+    if (data == nullptr) {
         return nullptr;
     }
 
