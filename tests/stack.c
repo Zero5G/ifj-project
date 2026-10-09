@@ -10,7 +10,7 @@
 
 Test(stack, is_empty) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
+    stk->top = nullptr;
 
     cr_assert_not_null(stk);
     cr_expect(stack_is_empty(stk) == true);
@@ -20,7 +20,7 @@ Test(stack, is_empty) {
 
 Test(stack, not_empty) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
+    stk->top = nullptr;
 
     token tkn = {};
     stack_push(stk, tkn);
@@ -50,7 +50,7 @@ Test(stack, no_init) {
 
 Test(stack, push_once) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
+    stk->top = nullptr;
     cr_assert_not_null(stk);
 
     token tkn = {};
@@ -65,7 +65,7 @@ Test(stack, push_once) {
 
 Test(stack, push_multiple) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
+    stk->top = nullptr;
     cr_assert_not_null(stk);
 
     int expected = MULTIPLE_COUNT;
@@ -96,7 +96,7 @@ Test(stack, push_multiple) {
 Test(stack, pop_once) {
     stack *stk = malloc(sizeof(struct stack_t));
     cr_assert_not_null(stk);
-    stack_init(stk);
+    stk->top = nullptr;
 
     token tkn = {
         .attr.as_int = NUM,
@@ -114,8 +114,8 @@ Test(stack, pop_once) {
 
 Test(stack, pop_multiple) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
     cr_assert_not_null(stk);
+    stk->top = nullptr;
 
     int expected = MULTIPLE_COUNT;
     token tkn = {
@@ -147,7 +147,7 @@ Test(stack, pop_multiple) {
 Test(stack, top) {
     stack *stk = malloc(sizeof(struct stack_t));
     cr_assert_not_null(stk);
-    stack_init(stk);
+    stk->top = nullptr;
 
     token tkn = {
         .attr.as_int = NUM,
@@ -167,8 +167,8 @@ Test(stack, top) {
 
 Test(stack, delete_empty) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
     cr_assert_not_null(stk);
+    stk->top = nullptr;
 
     cr_expect(stack_delete(&stk) == true);
     cr_expect_null(stk);
@@ -178,8 +178,8 @@ Test(stack, delete_empty) {
 
 Test(stack, delete) {
     stack *stk = malloc(sizeof(struct stack_t));
-    stack_init(stk);
     cr_assert_not_null(stk);
+    stk->top = nullptr;
 
     token tkn = {};
     stack_push(stk, tkn);
