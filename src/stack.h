@@ -7,6 +7,9 @@
  * @details
  */
 
+#ifndef STACK_H
+#define STACK_H
+
 #include "lexer.h"
 
 /** @brief Definice položky zásobníku */
@@ -95,3 +98,5 @@ token *stack_pop(stack *stk);
  * @return Vrací data pokuď existují, jinak nullptr
  */
 token* stack_top(stack *stk);
+
+#endif
