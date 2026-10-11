@@ -46,9 +46,9 @@ dstr dstr_concat(dstr str_a, dstr str_b);
 * @brief vloží znak na konec řetězce
 * @param str
 * @param chr
-* @return ukazatel na řetězec
+* @return True když se povede a False pokuď se nepovede
 */
-dstr dstr_push_char(dstr str,char chr);
+bool dstr_push_char(dstr *str,char chr);
 
 /**
 * @brief duplikuje řetezec

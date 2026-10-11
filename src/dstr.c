@@ -8,6 +8,7 @@
  */
 #include "dstr.h"
 #include <string.h>
+#include <stdlib.h>
 
 dstr expand(dstr str, unsigned len_cap) {
 
@@ -30,11 +31,27 @@ dstr dstr_create(char *str) {
     dstring->cap = len + 1;
 
     return dstring;
-    
+}
+bool dstr_push_char(dstr *str, char chr) {
+    char *ptr = realloc((*str)->raw , ((*str)->cap + 1) * sizeof(char));
+    if (ptr == nullptr) {
+        return false;
+    }
+    (*str)->raw[(*str)->len] = chr;
+    (*str)->len += 1;
+    (*str)->cap += 1;
+    (*str)->raw[(*str)->len] = '\0';
+    return true;
 }
 
 void dstr_clear(dstr str) {
- return;
+    str->raw[0] = '\0';
+    str->len = 0;
+}
+
+void dstr_delete(dstr str) {
+    free(str->raw);
+    free(str); 
 }
 
 unsigned dstr_len(dstr str) {
