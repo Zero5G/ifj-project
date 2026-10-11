@@ -32,6 +32,27 @@ dstr dstr_create(char *str) {
 
     return dstring;
 }
+
+dstr dstr_concat_raw(dstr str_a, char *str_b) {
+
+}
+
+dstr dstr_concat(dstr str_a, dstr str_b) {
+
+}
+
+dstr dstr_dup(dstr src) {
+
+}
+
+int dstr_cmp(dstr str_a, dstr str_b) {
+    return strcmp(str_a, str_b);
+}
+
+int dstr_cmp_raw(dstr str_a, char *str_b) {
+
+}
+
 bool dstr_push_char(dstr *str, char chr) {
     char *ptr = realloc((*str)->raw , ((*str)->cap + 1) * sizeof(char));
     if (ptr == nullptr) {
@@ -42,6 +63,12 @@ bool dstr_push_char(dstr *str, char chr) {
     (*str)->cap += 1;
     (*str)->raw[(*str)->len] = '\0';
     return true;
+}
+
+void dstr_delete_char(dstr *str, unsigned pos) {
+    char dchar = (*str)->raw[pos];
+    memmove(dchar,dchar,(*str)->len-1);
+    (*str)->len -= 1;
 }
 
 void dstr_clear(dstr str) {
