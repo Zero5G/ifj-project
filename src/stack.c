@@ -33,13 +33,9 @@ bool stack_delete(stack **stk) {
     return true;
 }
 
-bool stack_is_empty(stack *stk) {
-    return stk->top == nullptr;
-}
+bool stack_is_empty(stack *stk) { return stk->top == nullptr; }
 
-void stack_init(stack *stk) {
-    stk->top = nullptr;
-}
+void stack_init(stack *stk) { stk->top = nullptr; }
 
 bool stack_push(stack *stk, token data) {
     if (stk == nullptr) {
@@ -78,7 +74,7 @@ token *stack_pop(stack *stk) {
     return data;
 }
 
-token* stack_top(stack *stk) {
+token *stack_top(stack *stk) {
     if (stack_is_empty(stk)) {
         return nullptr;
     }

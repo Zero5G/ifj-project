@@ -14,7 +14,7 @@
 
 /** @brief Definice položky zásobníku */
 struct stack_item_t {
-    token *data; /**< Data položky (token) */
+    token *data;               /**< Data položky (token) */
     struct stack_item_t *next; /**< Další položka v zásobníku */
 };
 
@@ -97,6 +97,6 @@ token *stack_pop(stack *stk);
  *
  * @return Vrací data pokuď existují, jinak nullptr
  */
-token* stack_top(stack *stk);
+token *stack_top(stack *stk);
 
 #endif

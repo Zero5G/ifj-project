@@ -31,9 +31,7 @@ Test(stack, not_empty) {
     free(stk);
 }
 
-Test(stack, is_empty_null, .signal = SIGSEGV) {
-    stack_is_empty(nullptr);
-}
+Test(stack, is_empty_null, .signal = SIGSEGV) { stack_is_empty(nullptr); }
 
 Test(stack, init) {
     stack *stk = malloc(sizeof(struct stack_t));
@@ -133,7 +131,7 @@ Test(stack, pop_multiple) {
         token *data = stack_pop(stk);
         cr_assert_not_null(data);
 
-        if (data->attr.as_int == NUM){
+        if (data->attr.as_int == NUM) {
             count++;
         }
         free(data);
@@ -190,6 +188,4 @@ Test(stack, delete) {
     free(stk);
 }
 
-Test(stack, create) {
-    cr_expect_not_null(stack_create());
-}
+Test(stack, create) { cr_expect_not_null(stack_create()); }
