@@ -27,27 +27,34 @@ typedef struct dstr_t *dstr;
 dstr dstr_create(char *str);
 
 /**
+ * @brief Realocuje pamět
+ * @param str
+ * @param len_cap
+ * @return False nebo true podle toho jestli se povedla nebo ne
+ */
+bool expand(dstr str, unsigned len_cap);
+/**
  * @brief připojí řetezec na konec dynamického řetezce
  * @param str_a
  * @param str_b 
  * @return ukazatel na cílový řetězec
  */
-dstr dstr_concat_raw(dstr str_a, char *str_b);
+bool dstr_concat_raw(dstr str_a, char *str_b);
 
 /**
  * @brief připojí jednoho dynamického řetezce na konec druhého
  * @param str_a
  * @param str_b 
- * @return ukazatel na cílový řetězec
+ * @return Vrací false nebo true podle toho jestli se povede
  */
-dstr dstr_concat(dstr str_a, dstr str_b);
+bool dstr_concat(dstr str_a, dstr str_b);
 
 /**
  * @brief duplikuje řetezec
- * @param src
+ * @param str
  * @return ukazatel na kopii
  */
-dstr dstr_dup(dstr src);
+dstr dstr_dup(dstr str);
 
 /**
  * @brief porovná dva stringy
@@ -71,14 +78,14 @@ int dstr_cmp_raw(dstr str_a, char *str_b);
 * @param chr
 * @return True když se povede a False pokuď se nepovede
 */
-bool dstr_push_char(dstr *str,char chr);
+bool dstr_push_char(dstr str,char chr);
 
 /**
  * @brief odstraní znak na pozici a posune zbytek znaků
  * @param str
  * @param pos
  */
-void dstr_delete_char(dstr *str, unsigned pos);
+void dstr_delete_char(dstr str, unsigned pos);
 
 /**
  * @brief odstraní string ale zůstane alokovaná pamět

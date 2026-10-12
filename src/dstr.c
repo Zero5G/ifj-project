@@ -9,9 +9,16 @@
 #include "dstr.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
-dstr expand(dstr str, unsigned len_cap) {
-
+bool expand(dstr str, unsigned len_cap) {
+    char *src = realloc(str->raw,len_cap * sizeof(char));
+    if (src == nullptr) {
+        return false;
+    }
+    str->raw = 
+    str->cap = len_cap + 1;
+    return true;
 }
 
 dstr dstr_create(char *str) {
@@ -33,42 +40,46 @@ dstr dstr_create(char *str) {
     return dstring;
 }
 
-dstr dstr_concat_raw(dstr str_a, char *str_b) {
+bool dstr_concat_raw(dstr str_a, char *str_b) {
+    int len = strlen(str_b) + str_a->len + 1;
+    if (expand(str_a, len) == false) {
+        return false;
+    }
+    str_a->len = len;
+    strcat(str_a->raw,str_b);
+    return true;
 
 }
 
-dstr dstr_concat(dstr str_a, dstr str_b) {
-
+bool dstr_concat(dstr str_a, dstr str_b) {
+    return dstr_concat_raw(str_a, str_b->raw);
 }
 
-dstr dstr_dup(dstr src) {
-
+dstr dstr_dup(dstr str) {
 }
 
 int dstr_cmp(dstr str_a, dstr str_b) {
-    return strcmp(str_a, str_b);
+    return strcmp(str_a->raw, str_b->raw);
 }
 
 int dstr_cmp_raw(dstr str_a, char *str_b) {
-
+    return strcmp(str_a->raw,str_b);
 }
 
-bool dstr_push_char(dstr *str, char chr) {
-    char *ptr = realloc((*str)->raw , ((*str)->cap + 1) * sizeof(char));
-    if (ptr == nullptr) {
+bool dstr_push_char(dstr str, char chr) {
+    if (expand(str->raw , (str->cap + 1)) == false) {
         return false;
     }
-    (*str)->raw[(*str)->len] = chr;
-    (*str)->len += 1;
-    (*str)->cap += 1;
-    (*str)->raw[(*str)->len] = '\0';
+    str->raw[str->len] = chr;
+    str->len += 1;
+    str->raw[str->len] = '\0';
     return true;
 }
 
-void dstr_delete_char(dstr *str, unsigned pos) {
-    char dchar = (*str)->raw[pos];
-    memmove(dchar,dchar,(*str)->len-1);
-    (*str)->len -= 1;
+void dstr_delete_char(dstr str, unsigned pos) {
+    char *dchar = str->raw+pos;
+    memmove(dchar,dchar + 1,str->len - pos);
+    str->len -= 1;
 }
 
 void dstr_clear(dstr str) {
