@@ -36,8 +36,9 @@ typedef enum token_type {
     TT_DOT, // TT_SEMICOLON, // TT_AT,
     TT_LPAREN, TT_RPAREN,
 
-    //
-    TT_INDENT, TT_DEDENT,
+    // Whitespace znaky
+    TT_INDENT, //< Po novém řádku a je vetší než předchozí odsazení
+    TT_OUTDENT, //< Po novém řádku a je menší než předchozí odsazení
     TT_EOF, TT_EOL,
 } token_type;
 
