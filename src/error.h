@@ -1,16 +1,25 @@
+/**
+ * @file error.h
+ *
+ * @author Jakub Manoušek
+ * @brief Modul pro chybová hlašení a ukončení programu
+ *
+ * @details
+ */
 #include <stdint.h>
 
 /** @brief Error kódy aplikace */
-typedef enum error_code: uint8_t {
-    ERR_LEX = 1, /**< Chyba lexikální analýzy */
-    ERR_SYNT = 2, /**< Chyba syntaktické analýzy */
+typedef enum error_code : uint8_t {
+    ERR_LEX = 1,       /**< Chyba lexikální analýzy */
+    ERR_SYNT = 2,      /**< Chyba syntaktické analýzy */
     ERR_SEM_UNDEF = 3, /**< Chyba sematiky: nedefinovaný znak */
     ERR_SEM_REDEF = 4, /**< Chyba sematiky: redefinovaný znak */
-    ERR_SEM_BADARGS = 5, /**< Chyba sematiky: špatné argumenty/nepovolené paramentry */
-    ERR_SEM_TYPE = 6, /**< Chyba sematiky: chyba typu */
-    ERR_SEM_ROAE = 7, /**< Chyba sematiky: zápis do read-only proměnné */
+    ERR_SEM_BADARGS =
+        5, /**< Chyba sematiky: špatné argumenty/nepovolené paramentry */
+    ERR_SEM_TYPE = 6,   /**< Chyba sematiky: chyba typu */
+    ERR_SEM_ROAE = 7,   /**< Chyba sematiky: zápis do read-only proměnné */
     ERR_SEM_OTHER = 10, /**< Chyba sematiky: jiné */
-    ERR_OTHER = 99, /**< Ostatní: programové chyby, atd. */
+    ERR_OTHER = 99,     /**< Ostatní: programové chyby, atd. */
 } error_code;
 
 /**
@@ -21,7 +30,6 @@ typedef enum error_code: uint8_t {
  * @return Vrací řetězec pro chyboví kód
  */
 const char *error_string(error_code code);
-
 
 /**
  * @brief Tisk chybového řetězce
