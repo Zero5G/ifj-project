@@ -1,15 +1,27 @@
-1. <prog> -> <prolog> <function_list>
-2. <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
-3. <function_list> -> <function> <function_list>
-4. <function_list> -> <function>
-5. <function_list> -> ε
-6. <function> -> KW_DEF TT_IDENTIFIER <parameters> <return_type> TT_EQ <body>
-7. <parameters> -> TT_LPAREN <parameter_list> TT_RPAREN
-8. // here goes all the parameter and parameter list variants //
-9. <body> -> ???
-10. <type> -> KW_INT
-11. <type> -> KW_DOUBLE
-12. <type> -> KW_STRING
-13. <type> -> KW_BOOLEAN
-14. <type> -> KW_UNIT
-15. <type> -> KW_LIST
+<prog> -> <prolog> <function_list>
+<prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
+<function_list> -> <function> <function_list>
+<function_list> -> ε
+<function> -> KW_DEF TT_IDENTIFIER <parameters> TT_COLON <return_type> <block>
+<parameters> -> TT_LPAREN <parameter> TT_RPAREN
+<parameter> -> TT_IDENTIFIER TT_COLON <type>
+<parameter> -> ε
+<return_type> -> <type>
+<type> -> KW_INT
+<type> -> KW_DOUBLE
+<type> -> KW_STRING
+<type> -> KW_BOOLEAN
+<type> -> KW_UNIT
+<type> -> KW_LIST
+<block> -> TT_ASSIGN <statement>
+<block> -> TT_ASSIGN TT_EOL TT_INDENT <body> TT_OUTDENT
+<body> -> <statement_list>
+<statement_list> -> <statement> <statement_list>
+<statement_list> -> ε
+<statement> -> <variable_definition>
+<statement> -> <assignment>
+<statement> -> <function_call>
+<statement> -> <function_return>
+<statement> -> <if_statement>
+<statement> -> <while_statement>
+<statement> -> <expression>
