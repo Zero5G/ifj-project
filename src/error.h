@@ -20,7 +20,7 @@ typedef enum error_code: uint8_t {
  *
  * @return Vrací řetězec pro chyboví kód
  */
-char *error_string(error_code code);
+const char *error_string(error_code code);
 
 
 /**
