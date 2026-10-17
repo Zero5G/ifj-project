@@ -7,16 +7,16 @@
  * @details
  */
 #include "dstr.h"
-#include <string.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 bool expand(dstr str, unsigned len_cap) {
-    char *src = realloc(str->raw,len_cap * sizeof(char));
+    char *src = realloc(str->raw, (len_cap + 1) * sizeof(char));
     if (src == nullptr) {
         return false;
     }
-    str->raw = 
+    str->raw = src;
     str->cap = len_cap + 1;
     return true;
 }
@@ -32,7 +32,7 @@ dstr dstr_create(char *str) {
         free(dstring);
         return nullptr;
     }
-    strcpy(string,str);
+    strcpy(string, str);
     dstring->raw = string;
     dstring->len = len;
     dstring->cap = len + 1;
@@ -46,28 +46,22 @@ bool dstr_concat_raw(dstr str_a, char *str_b) {
         return false;
     }
     str_a->len = len;
-    strcat(str_a->raw,str_b);
+    strcat(str_a->raw, str_b);
     return true;
-
 }
 
 bool dstr_concat(dstr str_a, dstr str_b) {
     return dstr_concat_raw(str_a, str_b->raw);
 }
 
-dstr dstr_dup(dstr str) {
-}
+//dstr dstr_dup(dstr str) {}
 
-int dstr_cmp(dstr str_a, dstr str_b) {
-    return strcmp(str_a->raw, str_b->raw);
-}
+int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->raw, str_b->raw); }
 
-int dstr_cmp_raw(dstr str_a, char *str_b) {
-    return strcmp(str_a->raw,str_b);
-}
+int dstr_cmp_raw(dstr str_a, char *str_b) { return strcmp(str_a->raw, str_b); }
 
 bool dstr_push_char(dstr str, char chr) {
-    if (expand(str->raw , (str->cap + 1)) == false) {
+    if (expand(str, (str->cap + 1)) == false) {
         return false;
     }
     str->raw[str->len] = chr;
@@ -77,8 +71,8 @@ bool dstr_push_char(dstr str, char chr) {
 }
 
 void dstr_delete_char(dstr str, unsigned pos) {
-    char *dchar = str->raw+pos;
-    memmove(dchar,dchar + 1,str->len - pos);
+    char *dchar = str->raw + pos;
+    memmove(dchar, dchar + 1, str->len - pos);
     str->len -= 1;
 }
 
@@ -89,9 +83,7 @@ void dstr_clear(dstr str) {
 
 void dstr_delete(dstr str) {
     free(str->raw);
-    free(str); 
+    free(str);
 }
 
-unsigned dstr_len(dstr str) {
-   return str->len;
-}
+unsigned dstr_len(dstr str) { return str->len; }

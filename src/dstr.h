@@ -21,7 +21,7 @@ typedef struct dstr_t *dstr;
 
 /**
  * @brief vytvoří a alokuje pamět pro strukturu
- * @param str 
+ * @param str
  * @return ukazatel na vytvořený dynamický řetězec
  */
 dstr dstr_create(char *str);
@@ -36,7 +36,7 @@ bool expand(dstr str, unsigned len_cap);
 /**
  * @brief připojí řetezec na konec dynamického řetezce
  * @param str_a
- * @param str_b 
+ * @param str_b
  * @return ukazatel na cílový řetězec
  */
 bool dstr_concat_raw(dstr str_a, char *str_b);
@@ -44,7 +44,7 @@ bool dstr_concat_raw(dstr str_a, char *str_b);
 /**
  * @brief připojí jednoho dynamického řetezce na konec druhého
  * @param str_a
- * @param str_b 
+ * @param str_b
  * @return Vrací false nebo true podle toho jestli se povede
  */
 bool dstr_concat(dstr str_a, dstr str_b);
@@ -59,7 +59,7 @@ dstr dstr_dup(dstr str);
 /**
  * @brief porovná dva stringy
  * @param str_a
- * @param str_b 
+ * @param str_b
  * @return vrací <0,0,>0
  */
 int dstr_cmp(dstr str_a, dstr str_b);
@@ -67,18 +67,18 @@ int dstr_cmp(dstr str_a, dstr str_b);
 /**
  * @brief porovná dynamický řetězec s obyčejným char *
  * @param str_a
- * @param str_b 
+ * @param str_b
  * @return vrací <0,0,>0
  */
 int dstr_cmp_raw(dstr str_a, char *str_b);
 
 /**
-* @brief vloží znak na konec řetězce
-* @param str
-* @param chr
-* @return True když se povede a False pokuď se nepovede
-*/
-bool dstr_push_char(dstr str,char chr);
+ * @brief vloží znak na konec řetězce
+ * @param str
+ * @param chr
+ * @return True když se povede a False pokuď se nepovede
+ */
+bool dstr_push_char(dstr str, char chr);
 
 /**
  * @brief odstraní znak na pozici a posune zbytek znaků
@@ -101,7 +101,7 @@ void dstr_delete(dstr str);
 
 /**
  * @brief vypočítá délku řetezce
- * @param str 
+ * @param str
  * @return délku stringu
  */
 unsigned dstr_len(dstr str);
