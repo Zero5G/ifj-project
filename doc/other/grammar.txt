@@ -2,10 +2,12 @@
 <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
 <function_list> -> <function> <function_list>
 <function_list> -> ε
-<function> -> KW_DEF TT_IDENTIFIER <parameters> TT_COLON <return_type> <block>
-<parameters> -> TT_LPAREN <parameter> TT_RPAREN
+<function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN TT_COLON <return_type> <block>
+<parameters> -> <parameter> <parameter_next>
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
 <parameter> -> ε
+<parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
+<parameter_next> -> ε
 <return_type> -> <type>
 <type> -> KW_INT
 <type> -> KW_DOUBLE
@@ -25,3 +27,10 @@
 <statement> -> <if_statement>
 <statement> -> <while_statement>
 <statement> -> <expression>
+<variable_definition> -> KW_VAL TT_IDENTIFIER <variable_type> TT_ASSIGN <expression>
+<variable_definition> -> KW_VAR TT_IDENTIFIER <variable_type> TT_ASSIGN <expression>
+<variable_type> -> TT_COLON <type>
+<variable_type> -> ε
+<assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
+<if_statement> -> KW_IF <condition> KW_THEN TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
+<while_statement> -> KW_WHILE <condition> KW_DO TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
