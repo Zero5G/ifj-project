@@ -12,13 +12,24 @@
 #include <string.h>
 
 bool expand(dstr str, unsigned len_cap) {
-    char *src = realloc(str->raw, (len_cap + 1) * sizeof(char));
-    if (src == nullptr) {
-        return false;
+    if (str->len + len_cap > str->len) {
+        char *src =
+            realloc(str->raw, (str->len + (len_cap + 1)) * sizeof(char));
+        if (src == nullptr) {
+            return false;
+        }
+        str->raw = src;
+        str->cap = len_cap + 1;
+        return true;
+    } else {
+        char *src = realloc(str->raw, str->len * 2 * sizeof(char));
+        if (src == nullptr) {
+            return false;
+        }
+        str->raw = src;
+        str->cap = len_cap + 1;
+        return true;
     }
-    str->raw = src;
-    str->cap = len_cap + 1;
-    return true;
 }
 
 dstr dstr_create(char *str) {
@@ -41,7 +52,7 @@ dstr dstr_create(char *str) {
 }
 
 bool dstr_concat_raw(dstr str_a, char *str_b) {
-    int len = strlen(str_b) + str_a->len + 1;
+    int len = strlen(str_b) + str_a->len;
     if (expand(str_a, len) == false) {
         return false;
     }
@@ -51,10 +62,16 @@ bool dstr_concat_raw(dstr str_a, char *str_b) {
 }
 
 bool dstr_concat(dstr str_a, dstr str_b) {
-    return dstr_concat_raw(str_a, str_b->raw);
+    int len = str_b->len + str_a->len;
+    if (expand(str_a, len) == false) {
+        return false;
+    }
+    str_a->len = len;
+    strcat(str_a->raw, str_b->raw);
+    return true;
 }
 
-//dstr dstr_dup(dstr str) {}
+dstr dstr_dup(dstr str) { return dstr_create(str->raw); }
 
 int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->raw, str_b->raw); }
 
