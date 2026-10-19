@@ -4,8 +4,6 @@ typedef enum
     Symbol_val,
     Symbol_def,
 } Symbol_kind;
-
-
 typedef enum
 {
     Data_type_int,
@@ -14,8 +12,6 @@ typedef enum
     Data_type_unit,
     Data_type_boolean,
 } Symbol_data_type;
-
-
 typedef enum
 {
     State_empty,
@@ -43,3 +39,9 @@ typedef struct
     int active_size;
 } Hash_table;
 
+//deklarace funkci
+Hash_item* hashtable_search(Hash_table *table, char *key);
+int hash_function(int capacity,char *key); //prevedeni znaku na hash
+void hashtable_init(Hash_table *table,int initial_capacity);
+void hashtable_dispose(Hash_table *table);
+Hash_item* hashtable_insert(Hash_table *table, char *key); 

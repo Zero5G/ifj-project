@@ -1,0 +1,95 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include "htab.h"
+
+void hashtable_init(Hash_table *table,int initial_capacity)
+{
+    table->capacity = initial_capacity;
+    table->active_size = 0;
+
+    table->array = malloc(sizeof(Hash_item)*initial_capacity);
+    if(table->array == NULL)
+    {
+        printf("Chyba inicializace pole");
+        exit(99);
+    }
+    for(int i = 0; i< table->capacity; i++)
+    {
+        table->array[i].state = State_empty;
+        table->array[i].key = NULL;
+    }
+}
+//funkce projde vstupni retezec znak po znaku a vypocita znej hash
+//vraci index v tabulce
+int hash_function(int capacity,char *key)
+{
+    unsigned long magic = 5381;
+    for(int i=0;key[i]!= '\0';i++)
+    {
+        magic = magic*33 + key[i];
+    }
+    return magic % capacity;
+}
+
+Hash_item* hashtable_search(Hash_table *table, char *key)
+{
+    int index= hash_function(table->capacity,key);
+    while(table->array[index].state!=State_empty)
+    {
+        if(strcmp(table->array[index].key,key)==0)
+        {
+            return &table->array[index];
+        }
+        else
+        {
+            index = (index+1) % table->capacity;
+        }
+    }
+    return NULL;
+}
+
+
+Hash_item* hashtable_insert(Hash_table *table, char *key)
+{
+    int index= hash_function(table->capacity,key);
+    while(table->array[index].state==State_full)
+    {
+        if(strcmp(table->array[index].key,key)==0)
+        {
+            return &table->array[index];
+        }
+        else
+        {
+            index = (index+1) % table->capacity;
+        }
+    }
+    table->array[index].key = key;
+    table->array[index].state = State_full;
+    table->active_size++;
+    return &table->array[index];
+}
+
+
+
+void hashtable_dispose(Hash_table *table)
+{
+    if(table == NULL || table->array == NULL)
+    {
+        return;
+    }
+    for(int i=0;i<table->capacity;i++)
+    {
+        if(table->array[i].state==State_full)
+        {
+            free(table->array[i].key);
+            table->array[i].state=State_empty;
+        }
+    }
+    free(table->array);
+    table->array = NULL;
+    table->capacity=0;
+    table->active_size = 0;
+}
