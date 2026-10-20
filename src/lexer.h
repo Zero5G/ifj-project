@@ -6,6 +6,9 @@
  *
  * @details
  */
+#ifndef LEXER_H
+#define LEXER_H
+
 #include "dstr.h"
 
 typedef enum keyword {
@@ -88,3 +91,5 @@ typedef struct token {
     token_type type;
     token_attr attr;
 } token;
+
+#endif
