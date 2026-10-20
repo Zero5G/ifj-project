@@ -12,24 +12,17 @@
 #include <string.h>
 
 bool expand(dstr str, unsigned len_cap) {
-    if (str->len + len_cap > str->len) {
-        char *src =
-            realloc(str->raw, (str->len + (len_cap + 1)) * sizeof(char));
-        if (src == nullptr) {
-            return false;
-        }
-        str->raw = src;
-        str->cap = len_cap + 1;
-        return true;
-    } else {
-        char *src = realloc(str->raw, str->len * 2 * sizeof(char));
-        if (src == nullptr) {
-            return false;
-        }
-        str->raw = src;
-        str->cap = len_cap + 1;
-        return true;
+    unsigned cap = str->cap * 2;
+    if (str->cap + len_cap > cap) {
+        cap = str->cap + len_cap;
     }
+    char *src = realloc(str->raw, cap * sizeof(char));
+    if (src == nullptr) {
+        return false;
+    }
+    str->raw = src;
+    str->cap = cap;
+    return true;
 }
 
 dstr dstr_create(char *str) {
