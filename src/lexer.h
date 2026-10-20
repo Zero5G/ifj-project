@@ -78,7 +78,7 @@ typedef enum token_type {
 
 typedef union {
     bool as_bool;
-    // dstr as_str;
+    dstr as_str;
     keyword as_keyword;
     int as_int;
     double as_double;
