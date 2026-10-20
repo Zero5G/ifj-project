@@ -1,3 +1,11 @@
+/**
+ * @file lexer.h
+ *
+ * @author Jakub Manoušek
+ * @brief Modul pro lexikální analyzér
+ *
+ * @details
+ */
 #include "dstr.h"
 
 typedef enum keyword {
@@ -36,21 +44,20 @@ typedef enum token_type {
     TT_DOT, // TT_SEMICOLON, // TT_AT,
     TT_LPAREN, TT_RPAREN,
 
-    // Whitespace znaky
-    TT_INDENT, //< Po novém řádku a je vetší než předchozí odsazení
-    TT_OUTDENT, //< Po novém řádku a je menší než předchozí odsazení
+    //
+    TT_INDENT, TT_DEDENT,
     TT_EOF, TT_EOL,
 } token_type;
 
-struct token_t {
-    token_type type;
-    union {
-        bool as_bool;
-        // dstr as_str;
-        keyword as_keyword;
-        int as_int;
-        double as_double;
-    } attr;
-};
+typedef union {
+    bool as_bool;
+    // dstr as_str;
+    keyword as_keyword;
+    int as_int;
+    double as_double;
+} token_attr;
 
-typedef struct token_t token;
+typedef struct token {
+    token_type type;
+    token_attr attr;
+} token;
