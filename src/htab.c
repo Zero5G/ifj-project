@@ -5,28 +5,28 @@
 #include <stdlib.h>
 #include "htab.h"
 
-void hashtable_init(Hash_table *table,int initial_capacity)
+bool hashtable_init(hash_table *table,int initial_capacity)
 {
     table->capacity = initial_capacity;
     table->active_size = 0;
 
-    table->array = malloc(sizeof(Hash_item)*initial_capacity);
+    table->array = malloc(sizeof(hash_item)*initial_capacity);
     if(table->array == NULL)
     {
-        printf("Chyba inicializace pole");
-        exit(99);
+        return false;
     }
     for(int i = 0; i< table->capacity; i++)
     {
-        table->array[i].state = State_empty;
+        table->array[i].state = STATE_EMPTY;
         table->array[i].key = NULL;
     }
+    return true;
 }
 //funkce projde vstupni retezec znak po znaku a vypocita znej hash
 //vraci index v tabulce
 int hash_function(int capacity,char *key)
 {
-    unsigned long magic = 5381;
+    unsigned long magic = HASH_MAGIC_NUMBER;
     for(int i=0;key[i]!= '\0';i++)
     {
         magic = magic*33 + key[i];
@@ -34,12 +34,16 @@ int hash_function(int capacity,char *key)
     return magic % capacity;
 }
 
-Hash_item* hashtable_search(Hash_table *table, char *key)
+hash_item* hashtable_search(hash_table *table, char *key)
 {
     int index= hash_function(table->capacity,key);
-    while(table->array[index].state!=State_empty)
+    while(table->array[index].state!=STATE_EMPTY)
     {
-        if(strcmp(table->array[index].key,key)==0)
+        if(table->array[index].state==STATE_DELETE)
+        {
+            index = (index+1) % table->capacity;
+        }
+        else if(strcmp(table->array[index].key,key)==0)
         {
             return &table->array[index];
         }
@@ -50,12 +54,10 @@ Hash_item* hashtable_search(Hash_table *table, char *key)
     }
     return NULL;
 }
-
-
-Hash_item* hashtable_insert(Hash_table *table, char *key)
+hash_item* hashtable_insert(hash_table *table, char *key)
 {
     int index= hash_function(table->capacity,key);
-    while(table->array[index].state==State_full)
+    while(table->array[index].state==STATE_FULL)
     {
         if(strcmp(table->array[index].key,key)==0)
         {
@@ -67,14 +69,14 @@ Hash_item* hashtable_insert(Hash_table *table, char *key)
         }
     }
     table->array[index].key = key;
-    table->array[index].state = State_full;
+    table->array[index].state = STATE_FULL;
     table->active_size++;
     return &table->array[index];
 }
 
 
 
-void hashtable_dispose(Hash_table *table)
+void hashtable_dispose(hash_table *table)
 {
     if(table == NULL || table->array == NULL)
     {
@@ -82,10 +84,10 @@ void hashtable_dispose(Hash_table *table)
     }
     for(int i=0;i<table->capacity;i++)
     {
-        if(table->array[i].state==State_full)
+        if(table->array[i].state==STATE_FULL)
         {
             free(table->array[i].key);
-            table->array[i].state=State_empty;
+            table->array[i].state=STATE_EMPTY;
         }
     }
     free(table->array);
