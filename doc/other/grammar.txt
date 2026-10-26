@@ -8,7 +8,8 @@
 <parameter> -> ε
 <parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
 <parameter_next> -> ε
-<return_type> -> <type>
+<return_type> -> TT_COLON <type>
+<return_type> -> ε
 <type> -> KW_INT
 <type> -> KW_DOUBLE
 <type> -> KW_STRING
@@ -32,5 +33,7 @@
 <variable_type> -> TT_COLON <type>
 <variable_type> -> ε
 <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
+<function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
+<function_return> -> KW_RETURN
 <if_statement> -> KW_IF <condition> KW_THEN TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
 <while_statement> -> KW_WHILE <condition> KW_DO TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
