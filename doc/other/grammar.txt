@@ -2,7 +2,7 @@
 <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
 <function_list> -> <function> <function_list>
 <function_list> -> ε
-<function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN TT_COLON <return_type> <block>
+<function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN <return_type> <block>
 <parameters> -> <parameter> <parameter_next>
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
 <parameter> -> ε
