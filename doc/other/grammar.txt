@@ -4,8 +4,8 @@
 <function_list> -> ε
 <function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN <return_type> <block>
 <parameters> -> <parameter> <parameter_next>
+<parameters> -> ε
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
-<parameter> -> ε
 <parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
 <parameter_next> -> ε
 <return_type> -> TT_COLON <type>
