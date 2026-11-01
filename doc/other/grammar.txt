@@ -2,7 +2,7 @@
 <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
 <function_list> -> <function> <function_list>
 <function_list> -> ε
-<function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN <return_type> <block>
+<function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN <return_type> TT_ASSIGN <block>
 <parameters> -> <parameter> <parameter_next>
 <parameters> -> ε
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
@@ -16,8 +16,8 @@
 <type> -> KW_BOOLEAN
 <type> -> KW_UNIT
 <type> -> KW_LIST
-<block> -> TT_ASSIGN <statement>
-<block> -> TT_ASSIGN TT_EOL TT_INDENT <body> TT_OUTDENT
+<block> -> <statement>
+<block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
 <body> -> <statement_list>
 <statement_list> -> <statement> <statement_list>
 <statement_list> -> ε
@@ -34,6 +34,11 @@
 <variable_type> -> ε
 <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
 <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
+<argument_list> -> <argument> <argument_next>
+<argument_list> -> ε
+<argument> -> TT_IDENTIFIER
+<argument_next> TT_COMMA TT_IDENTIFIER <argument_next>
+<argument_next> -> ε
 <function_return> -> KW_RETURN
-<if_statement> -> KW_IF <condition> KW_THEN TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
-<while_statement> -> KW_WHILE <condition> KW_DO TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
+<if_statement> -> KW_IF <expression> KW_THEN TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
+<while_statement> -> KW_WHILE <expression> KW_DO TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
