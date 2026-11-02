@@ -47,7 +47,7 @@ void error_print(error_code code);
  *
  * @param code Chyboví kód
  * @param fmt Formát pro vlastní část chybového hlášení
- * @param args Vlastní parametry pro tisk (typ: va_list)
+ * @param args Vlastní parametry pro tisk (inicializovaný va_list)
  */
 void error_vprintf(error_code code, const char *fmt, va_list args);
 
@@ -76,6 +76,11 @@ void error_printf(error_code code, char *fmt, ...);
  */
 [[noreturn]] void error_fatalf(error_code code, const char *fmt, ...);
 
+/**
+ * @brief Nastaví global_cleanup pro bežící část programu (soubor)
+ *
+ * @param cleanup_func Odkaz na void funkci
+ */
 void error_fatal_set_cleanup(void (*cleanup_func)(void));
 
 /**

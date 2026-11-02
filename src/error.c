@@ -63,14 +63,33 @@ void error_fatal(error_code code) {
 
 void error_fatalf(error_code code, const char *fmt, ...) {
     va_list args;
-
     va_start(args, fmt);
     error_vprintf(code, fmt, args);
     va_end(args);
-
     exit((int)code);
 }
 
 void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
     global_cleanup = cleanup_func;
+}
+
+[[noreturn]] static inline void die(error_code code) {
+    void (*cleanup_hook)(void) = global_cleanup;
+    global_cleanup = nullptr;
+    if (cleanup_hook) {
+        cleanup_hook();
+    }
+    exit((int)code);
+}
+
+void error_fatal_cleanup(error_code code) {
+    die(code);
+}
+
+void error_fatalf_cleanup(error_code code, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    error_vprintf(code, fmt, args);
+    va_end(args);
+    die(code);
 }
