@@ -46,7 +46,7 @@ void error_print(error_code code) {
 
 void error_vprintf(error_code code, const char *fmt, va_list args) {
     fprintf(ERROR_OUT, "%s: ", error_string(code)); // NOLINT
-    vfprintf(ERROR_OUT, fmt, args); // NOLINT
+    vfprintf(ERROR_OUT, fmt, args);                 // NOLINT
 }
 
 void error_printf(error_code code, char *fmt, ...) {
@@ -82,9 +82,7 @@ void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
     exit((int)code);
 }
 
-void error_fatal_cleanup(error_code code) {
-    die(code);
-}
+void error_fatal_cleanup(error_code code) { die(code); }
 
 void error_fatalf_cleanup(error_code code, const char *fmt, ...) {
     va_list args;
