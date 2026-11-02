@@ -29,6 +29,8 @@ const char *error_string(error_code code) {
         return "Chyba sematiky: zápis do read-only proměnné";
     case ERR_SEM_OTHER:
         return "Chyba sematiky: jiné";
+    case ERR_SEM_RUNTIME:
+        return "Nastala chyba sematiky za běhu";
     case ERR_OTHER:
         return "Ostatní: programové chyby, atd.";
     }

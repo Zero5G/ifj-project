@@ -19,6 +19,7 @@ typedef enum error_code : uint8_t {
     ERR_SEM_TYPE = 6,   /**< Chyba sematiky: chyba typu */
     ERR_SEM_ROAE = 7,   /**< Chyba sematiky: zápis do read-only proměnné */
     ERR_SEM_OTHER = 10, /**< Chyba sematiky: jiné */
+    ERR_SEM_RUNTIME = 44, /**< Běhová sémantická chyba */
     ERR_OTHER = 99,     /**< Ostatní: programové chyby, atd. */
 } error_code;
 
