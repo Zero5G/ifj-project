@@ -6,6 +6,7 @@
  *
  * @details
  */
+#include <stdarg.h>
 #include <stdint.h>
 
 /** @brief Error kódy aplikace */
@@ -19,9 +20,11 @@ typedef enum error_code : uint8_t {
     ERR_SEM_TYPE = 6,   /**< Chyba sematiky: chyba typu */
     ERR_SEM_ROAE = 7,   /**< Chyba sematiky: zápis do read-only proměnné */
     ERR_SEM_OTHER = 10, /**< Chyba sematiky: jiné */
-    ERR_SEM_RUNTIME = 44, /**< Běhová sémantická chyba */
     ERR_OTHER = 99,     /**< Ostatní: programové chyby, atd. */
 } error_code;
+
+#define ERROR_OUT stderr
+#define SUM_RUNTIME_ERROR 40
 
 /**
  * @brief Chyboví kód -> řetězec
@@ -37,23 +40,32 @@ const char *error_string(error_code code);
  *
  * @param code Chyboví kód
  */
-void print_error(error_code code);
+void error_print(error_code code);
 
 /**
- * @brief Tisk chybového řetězce a vlastní informací
+ * @brief Tisk chybového řetězce vlastním chybovým hlašením ve formátu varargs
+ *
+ * @param code Chyboví kód
+ * @param fmt Formát pro vlastní část chybového hlášení
+ * @param args Vlastní parametry pro tisk (typ: va_list)
+ */
+void error_vprintf(error_code code, const char *fmt, va_list args);
+
+/**
+ * @brief Tisk chybového řetězce a vlastním chybovým hlašením
  *
  * @param code Chyboví kód
  * @param fmt Formát pro vlastní část chybového hlášení
  * @param ... Vlastní parametry pro tisk
  */
-void print_error_custom(error_code code, char *fmt, ...);
+void error_printf(error_code code, char *fmt, ...);
 
 /**
  * @brief Ukončí program s chybou
  *
  * @param code Chyboví kód
  */
-void error_exit(error_code code);
+[[noreturn]] void error_fatal(error_code code);
 
 /**
  * @brief Ukončí program s chybou a vlastní informací
@@ -62,4 +74,22 @@ void error_exit(error_code code);
  * @param fmt Formát pro vlastní část chybového hlášení
  * @param ... Vlastní parametry pro tisk
  */
-void error_exit_custom(error_code code, char *fmt, ...);
+[[noreturn]] void error_fatalf(error_code code, const char *fmt, ...);
+
+void error_fatal_set_cleanup(void (*cleanup_func)(void));
+
+/**
+ * @brief Ukončí program s chybou a spustí global_cleanup
+ *
+ * @param code Chyboví kód
+ */
+[[noreturn]] void error_fatal_cleanup(error_code code);
+
+/**
+ * @brief Ukončí program s chybou, vlastní informací a spustěním global_cleanup
+ *
+ * @param code Chyboví kód
+ * @param fmt Formát pro vlastní část chybového hlášení
+ * @param ... Vlastní parametry pro tisk
+ */
+[[noreturn]] void error_fatalf_cleanup(error_code code, const char *fmt, ...);

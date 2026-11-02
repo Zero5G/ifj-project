@@ -11,6 +11,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/**
+ * @brief Statický ukazatel na cleanup funkci (nastaven pro každý soubor zvlášť)
+ */
+static void (*global_cleanup)(void) = NULL;
+
 const char *error_string(error_code code) {
     switch (code) {
     case ERR_LEX:
@@ -29,41 +34,43 @@ const char *error_string(error_code code) {
         return "Chyba sematiky: zápis do read-only proměnné";
     case ERR_SEM_OTHER:
         return "Chyba sematiky: jiné";
-    case ERR_SEM_RUNTIME:
-        return "Nastala chyba sematiky za běhu";
     case ERR_OTHER:
         return "Ostatní: programové chyby, atd.";
     }
     return "Neznámí chyboví kód.";
 }
 
-void print_error(error_code code) {
-    fprintf(stderr, "%s", error_string(code)); // NOLINT
+void error_print(error_code code) {
+    fprintf(stderr, "%s\n", error_string(code)); // NOLINT
 }
 
-void print_error_custom(error_code code, char *fmt, ...) {
+void error_vprintf(error_code code, const char *fmt, va_list args) {
+    fprintf(ERROR_OUT, "%s: ", error_string(code)); // NOLINT
+    vfprintf(ERROR_OUT, fmt, args); // NOLINT
+}
+
+void error_printf(error_code code, char *fmt, ...) {
     va_list args;
-
-    fprintf(stderr, "%s: ", error_string(code)); // NOLINT
-
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args); // NOLINT
+    error_vprintf(code, fmt, args);
     va_end(args);
 }
 
-void error_exit(error_code code) {
-    print_error(code);
-    exit(code);
+void error_fatal(error_code code) {
+    error_print(code);
+    exit((int)code);
 }
 
-void error_exit_custom(error_code code, char *fmt, ...) {
+void error_fatalf(error_code code, const char *fmt, ...) {
     va_list args;
 
-    fprintf(stderr, "%s: ", error_string(code)); // NOLINT
-
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args); // NOLINT
+    error_vprintf(code, fmt, args);
     va_end(args);
 
-    exit(code);
+    exit((int)code);
+}
+
+void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
+    global_cleanup = cleanup_func;
 }
