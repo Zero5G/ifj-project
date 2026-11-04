@@ -138,3 +138,9 @@ struct ast_func {
     ast_block_t body;
     ast_func_t *next;
 };
+
+typedef struct ast_prog {
+    ast_stmnt_t *first;
+    ast_stmnt_t *last;
+    size_t count;
+} ast_prog_t;
