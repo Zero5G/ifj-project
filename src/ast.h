@@ -6,6 +6,12 @@
  *
  * @details
  */
+#include "dstr.h"
+#include "types.h"
+#include <stddef.h>
+
+typedef struct ast_func ast_func_t;
+
 typedef enum expr_type {
     E_UNARY,
     E_BINARY,
@@ -15,7 +21,6 @@ typedef enum expr_type {
     E_DOUBLE_LIT,
     E_STRING_LIT,
     E_BOOLEAN_LIT,
-    E_LIST_LIT,
 } expr_type;
 
 typedef enum op_unary {
@@ -42,3 +47,26 @@ typedef enum op_binary {
 typedef struct ast_stmnt {
 
 } ast_stmnt_t;
+
+typedef struct ast_block {
+    ast_stmnt_t *first;
+    ast_stmnt_t *last;
+    size_t count;
+} ast_block_t;
+
+typedef struct ast_func_param {
+    dstr name;
+    data_type type;
+} ast_func_param_t;
+
+struct ast_func {
+    dstr name;
+    bool is_main;
+    ast_func_param_t *params;
+    size_t param_count;
+    bool has_ret_type;
+    data_type ret_type;
+    unsigned line;
+    ast_block_t body;
+    ast_func_t *next;
+};
