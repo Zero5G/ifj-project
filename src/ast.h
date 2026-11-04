@@ -13,16 +13,7 @@
 
 typedef struct ast_stmnt ast_stmnt_t;
 typedef struct ast_func ast_func_t;
-
-typedef enum stmnt_type {
-    STMNT_VAR_DEF,
-    STMNT_FUNC,
-    STMNT_EXPR,
-    STMNT_RET,
-    STMNT_ASSIGN,
-    STMNT_IF,
-    STMNT_WHILE,
-} stmnt_type;
+typedef struct ast_expr ast_expr;
 
 typedef enum expr_type {
     E_UNARY,
@@ -55,6 +46,45 @@ typedef enum op_binary {
     OPU_EQ,
     OPU_NE,
 } op_binary;
+
+typedef enum stmnt_type {
+    STMNT_VAR_DEF,
+    STMNT_FUNC,
+    STMNT_EXPR,
+    STMNT_RET,
+    STMNT_ASSIGN,
+    STMNT_IF,
+    STMNT_WHILE,
+} stmnt_type;
+
+struct ast_expr {
+    expr_type type;
+    data_type data_type;
+    unsigned line;
+    union {
+        dstr str;
+        int int_val;
+        double double_val;
+        struct {
+            op_binary op;
+            ast_expr *right;
+            ast_expr *left;
+        } binary;
+        struct {
+            op_unary op;
+            ast_expr *operand;
+        } unary;
+        struct {
+            dstr name;
+            unsigned var_id; /**< ID generované v sematické analýze */
+        } var;
+        struct {
+            dstr name;
+            ast_expr **args;
+            size_t argc;
+        } func;
+    } as;
+};
 
 struct ast_stmnt {
     unsigned line;
