@@ -8,9 +8,21 @@
  */
 #include "dstr.h"
 #include "types.h"
+
 #include <stddef.h>
 
+typedef struct ast_stmnt ast_stmnt_t;
 typedef struct ast_func ast_func_t;
+
+typedef enum stmnt_type {
+    STMNT_VAR_DEF,
+    STMNT_FUNC,
+    STMNT_EXPR,
+    STMNT_RET,
+    STMNT_ASSIGN,
+    STMNT_IF,
+    STMNT_WHILE,
+} stmnt_type;
 
 typedef enum expr_type {
     E_UNARY,
@@ -44,9 +56,12 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef struct ast_stmnt {
-
-} ast_stmnt_t;
+struct ast_stmnt {
+    unsigned line;
+    ast_stmnt_t *next;
+    stmnt_type type;
+    union {} as;
+};
 
 typedef struct ast_block {
     ast_stmnt_t *first;
