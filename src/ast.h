@@ -13,7 +13,7 @@
 
 typedef struct ast_stmnt ast_stmnt_t;
 typedef struct ast_func ast_func_t;
-typedef struct ast_expr ast_expr;
+typedef struct ast_expr ast_expr_t;
 
 typedef enum expr_type {
     E_UNARY,
@@ -49,7 +49,6 @@ typedef enum op_binary {
 
 typedef enum stmnt_type {
     STMNT_VAR_DEF,
-    STMNT_FUNC,
     STMNT_EXPR,
     STMNT_RET,
     STMNT_ASSIGN,
@@ -67,12 +66,12 @@ struct ast_expr {
         double double_val;
         struct {
             op_binary op;
-            ast_expr *right;
-            ast_expr *left;
+            ast_expr_t *right;
+            ast_expr_t *left;
         } binary;
         struct {
             op_unary op;
-            ast_expr *operand;
+            ast_expr_t *operand;
         } unary;
         struct {
             dstr name;
@@ -80,17 +79,10 @@ struct ast_expr {
         } var;
         struct {
             dstr name;
-            ast_expr **args;
+            ast_expr_t **args;
             size_t argc;
         } func;
     } as;
-};
-
-struct ast_stmnt {
-    unsigned line;
-    ast_stmnt_t *next;
-    stmnt_type type;
-    union {} as;
 };
 
 typedef struct ast_block {
@@ -98,6 +90,37 @@ typedef struct ast_block {
     ast_stmnt_t *last;
     size_t count;
 } ast_block_t;
+
+struct ast_stmnt {
+    unsigned line;
+    ast_stmnt_t *next;
+    stmnt_type type;
+    union {
+        struct {
+            dstr name;
+            unsigned var_id;
+            bool is_mut;
+            data_type type;
+            ast_expr_t *init; /**< První hodnota */
+        } var_def;
+        struct {
+            dstr name;
+            unsigned var_id;
+            ast_expr_t *val;
+        } assign;
+        ast_expr_t *expr;
+        ast_expr_t *ret_val;
+        struct {
+            ast_expr_t *cond;
+            ast_block_t *then_blk;
+            ast_block_t *else_blk;
+        } if_stmnt;
+        struct {
+            ast_expr_t *cond;
+            ast_block_t *block;
+        } while_stmnt;
+    } as;
+};
 
 typedef struct ast_func_param {
     dstr name;
