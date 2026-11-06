@@ -141,8 +141,8 @@ struct ast_func {
 };
 
 typedef struct ast_prog {
-    ast_stmnt_t *first;
-    ast_stmnt_t *last;
+    ast_func_t *first;
+    ast_func_t *last;
     size_t count;
 } ast_prog_t;
 
