@@ -58,7 +58,7 @@ typedef enum stmt_kind {
 } stmt_kind;
 
 struct ast_expr {
-    expr_kind type;
+    expr_kind kind;
     data_type data_type;
     unsigned line;
     union {
@@ -95,7 +95,7 @@ typedef struct ast_block {
 struct ast_stmt {
     unsigned line;
     ast_stmt_t *next;
-    stmt_kind type;
+    stmt_kind kind;
     union {
         struct {
             dstr name;
@@ -170,7 +170,7 @@ ast_expr_t *ast_func_create(unsigned line);
  *
  * @return AST příkazu
  */
-ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind type);
+ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind);
 
 /**
  * @bried Vytvoří strukturu AST výrazu (allokuje paměť)
@@ -180,7 +180,7 @@ ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind type);
  *
  * @return AST výrazu
  */
-ast_expr_t *ast_expr_create(unsigned line, expr_kind type);
+ast_expr_t *ast_expr_create(unsigned line, expr_kind kind);
 
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
