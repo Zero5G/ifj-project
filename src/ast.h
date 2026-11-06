@@ -10,6 +10,7 @@
 #include "types.h"
 
 #include <stddef.h>
+#include <stdio.h>
 
 typedef struct ast_stmnt ast_stmnt_t;
 typedef struct ast_func ast_func_t;
@@ -151,3 +152,7 @@ ast_stmnt_t *ast_stmnt_create(unsigned line, stmnt_type type);
 ast_expr_t *ast_expr_create(unsigned line, expr_type type);
 ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand);
 ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right);
+
+void ast_prog_free(ast_prog_t *program);
+
+void ast_prog_dump(const ast_prog_t *program, FILE *out);
