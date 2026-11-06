@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-typedef struct ast_stmnt ast_stmnt_t;
+typedef struct ast_stmt ast_stmt_t;
 typedef struct ast_func ast_func_t;
 typedef struct ast_expr ast_expr_t;
 
@@ -48,14 +48,14 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef enum stmnt_type {
-    STMNT_VAR_DEF,
-    STMNT_EXPR,
-    STMNT_RET,
-    STMNT_ASSIGN,
-    STMNT_IF,
-    STMNT_WHILE,
-} stmnt_type;
+typedef enum stmt_type {
+    STMT_VAR_DEF,
+    STMT_EXPR,
+    STMT_RET,
+    STMT_ASSIGN,
+    STMT_IF,
+    STMT_WHILE,
+} stmt_type;
 
 struct ast_expr {
     expr_type type;
@@ -87,15 +87,15 @@ struct ast_expr {
 };
 
 typedef struct ast_block {
-    ast_stmnt_t *first;
-    ast_stmnt_t *last;
+    ast_stmt_t *first;
+    ast_stmt_t *last;
     size_t count;
 } ast_block_t;
 
-struct ast_stmnt {
+struct ast_stmt {
     unsigned line;
-    ast_stmnt_t *next;
-    stmnt_type type;
+    ast_stmt_t *next;
+    stmt_type type;
     union {
         struct {
             dstr name;
@@ -115,11 +115,11 @@ struct ast_stmnt {
             ast_expr_t *cond;
             ast_block_t *then_blk;
             ast_block_t *else_blk;
-        } if_stmnt;
+        } if_stmt;
         struct {
             ast_expr_t *cond;
             ast_block_t *block;
-        } while_stmnt;
+        } while_stmt;
     } as;
 };
 
@@ -170,7 +170,7 @@ ast_expr_t *ast_func_create(unsigned line);
  *
  * @return AST příkazu
  */
-ast_stmnt_t *ast_stmnt_create(unsigned line, stmnt_type type);
+ast_stmt_t *ast_stmt_create(unsigned line, stmt_type type);
 
 /**
  * @bried Vytvoří strukturu AST výrazu (allokuje paměť)
@@ -209,9 +209,9 @@ ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *lef
  * @brief Přídát příkaz do blocku
  *
  * @param[in,out] block Block do kterého přidátvat
- * @param[in] stmnt Příkaz co přidát
+ * @param[in] stmt Příkaz co přidát
  */
-void ast_block_append(ast_block_t *block, ast_stmnt_t *stmnt);
+void ast_block_append(ast_block_t *block, ast_stmt_t *stmt);
 
 /**
  * @brief Přídát funkci do programu
