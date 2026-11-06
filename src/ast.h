@@ -16,7 +16,7 @@ typedef struct ast_stmt ast_stmt_t;
 typedef struct ast_func ast_func_t;
 typedef struct ast_expr ast_expr_t;
 
-typedef enum expr_type {
+typedef enum expr_kind {
     E_UNARY,
     E_BINARY,
     E_FUNC,
@@ -25,7 +25,7 @@ typedef enum expr_type {
     E_DOUBLE_LIT,
     E_STRING_LIT,
     E_BOOLEAN_LIT,
-} expr_type;
+} expr_kind;
 
 typedef enum op_unary {
     OPU_NEG,
@@ -48,17 +48,17 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef enum stmt_type {
+typedef enum stmt_kind {
     STMT_VAR_DEF,
     STMT_EXPR,
     STMT_RET,
     STMT_ASSIGN,
     STMT_IF,
     STMT_WHILE,
-} stmt_type;
+} stmt_kind;
 
 struct ast_expr {
-    expr_type type;
+    expr_kind type;
     data_type data_type;
     unsigned line;
     union {
@@ -95,7 +95,7 @@ typedef struct ast_block {
 struct ast_stmt {
     unsigned line;
     ast_stmt_t *next;
-    stmt_type type;
+    stmt_kind type;
     union {
         struct {
             dstr name;
@@ -170,7 +170,7 @@ ast_expr_t *ast_func_create(unsigned line);
  *
  * @return AST příkazu
  */
-ast_stmt_t *ast_stmt_create(unsigned line, stmt_type type);
+ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind type);
 
 /**
  * @bried Vytvoří strukturu AST výrazu (allokuje paměť)
@@ -180,7 +180,7 @@ ast_stmt_t *ast_stmt_create(unsigned line, stmt_type type);
  *
  * @return AST výrazu
  */
-ast_expr_t *ast_expr_create(unsigned line, expr_type type);
+ast_expr_t *ast_expr_create(unsigned line, expr_kind type);
 
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
