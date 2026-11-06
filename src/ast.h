@@ -146,13 +146,76 @@ typedef struct ast_prog {
     size_t count;
 } ast_prog_t;
 
+/**
+ * @brief Vytvoří hlavní strukturu AST program (allokuje paměť)
+ *
+ * @return AST programu
+ */
 ast_prog_t *ast_prog_create();
+
+/**
+ * @bried Vytvoří strukturu AST funkce (allokuje paměť)
+ *
+ * @param line Číslo řádku
+ *
+ * @return AST funkce
+ */
 ast_expr_t *ast_func_create(unsigned line);
+
+/**
+ * @bried Vytvoří strukturu AST příkazu (allokuje paměť)
+ *
+ * @param line Číslo řádku
+ * @param type Druh příkazu
+ *
+ * @return AST příkazu
+ */
 ast_stmnt_t *ast_stmnt_create(unsigned line, stmnt_type type);
+
+/**
+ * @bried Vytvoří strukturu AST výrazu (allokuje paměť)
+ *
+ * @param line Číslo řádku
+ * @param type Druh výrazu
+ *
+ * @return AST výrazu
+ */
 ast_expr_t *ast_expr_create(unsigned line, expr_type type);
+
+/**
+ * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ *
+ * @param line Číslo řádku
+ * @param type Druh unární operace
+ * @param operand Operand výrazu
+ *
+ * @return AST unárního výrazu
+ */
 ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand);
+
+/**
+ * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ *
+ * @param line Číslo řádku
+ * @param type Druh binární operace
+ * @param left Levý operand výrazu
+ * @param right Pravý operand výrazu
+ *
+ * @return AST binárního výrazu
+ */
 ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right);
 
+/**
+ * @brief Rekurzivně uvolní všechy data součástí AST programu spolu s programem
+ *
+ * @param program AST programu
+ */
 void ast_prog_free(ast_prog_t *program);
 
+/**
+ * @brief Vytiskne všechny data AST programu
+ *
+ * @param program AST programu
+ * @param out Výstupní `stream`
+ */
 void ast_prog_dump(const ast_prog_t *program, FILE *out);
