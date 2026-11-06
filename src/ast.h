@@ -144,3 +144,10 @@ typedef struct ast_prog {
     ast_stmnt_t *last;
     size_t count;
 } ast_prog_t;
+
+ast_prog_t *ast_prog_create();
+ast_expr_t *ast_func_create(unsigned line);
+ast_stmnt_t *ast_stmnt_create(unsigned line, stmnt_type type);
+ast_expr_t *ast_expr_create(unsigned line, expr_type type);
+ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand);
+ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right);
