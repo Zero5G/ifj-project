@@ -107,4 +107,20 @@ void hashtable_dispose(hash_table *table);
  */
 hash_item *hashtable_insert(hash_table *table, char *key);
 
+/**
+ * @brief Rozsiri hash pole tabulky
+ *
+ * @param table ukazatel na hash tabulku
+ * @return vrati nove rozsirene pole hash tabulky
+ */
+bool hashtable_resize(hash_table *table);
+
+/**
+ * @brief Smaze prvek z tabulky
+ *
+ * @param table ukazatel na hash tabulku
+ * @param key klic prvku
+ * @return smaze prvek z tabulky
+ */
+bool hashtable_remove(hash_table *table, char *key);
 #endif
