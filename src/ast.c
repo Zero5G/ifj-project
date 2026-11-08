@@ -54,3 +54,60 @@ ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind) {
 
     return stmt;
 }
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+ast_expr_t *ast_expr_create(unsigned line, expr_kind kind) {
+    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    if (expr == nullptr) {
+        return nullptr;
+    }
+
+    expr->kind = kind;
+    expr->data_type = TYPE_UNKNOWN;
+    expr->line = line;
+
+    return expr;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand) {
+    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    if (expr == nullptr) {
+        return nullptr;
+    }
+
+    expr->kind = E_UNARY;
+    if (operand != nullptr) {
+        expr->data_type = operand->data_type;
+    } else {
+        expr->data_type = TYPE_UNKNOWN;
+    }
+    expr->line = line;
+    expr->as.unary.op = opu;
+    expr->as.unary.operand = operand;
+
+    return expr;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right) {
+    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    if (expr == nullptr) {
+        return nullptr;
+    }
+
+    expr->kind = E_UNARY;
+    if (left != nullptr) {
+        expr->data_type = left->data_type;
+    } else if (right != nullptr) {
+        expr->data_type = right->data_type;
+    } else {
+        expr->data_type = TYPE_UNKNOWN;
+    }
+    expr->line = line;
+    expr->as.binary.op = opb;
+    expr->as.binary.left = left;
+    expr->as.binary.right = right;
+
+    return expr;
+}

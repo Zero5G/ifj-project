@@ -59,9 +59,9 @@ typedef enum stmt_kind: uint8_t {
 } stmt_kind;
 
 struct ast_expr {
-    expr_kind kind;
     data_type data_type;
     unsigned line;
+    expr_kind kind;
     union {
         dstr str;
         int int_val;
@@ -186,6 +186,8 @@ ast_expr_t *ast_expr_create(unsigned line, expr_kind kind);
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
  *
+ * Datový typ je brán automaticky z operandu, jinak je TYPE_UNKNOWN
+ *
  * @param line Číslo řádku
  * @param type Druh unární operace
  * @param operand Operand výrazu
@@ -196,6 +198,9 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *opera
 
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ *
+ * Datový typ je brán automaticky z levé strany, pokud je levá strana nullptr,
+ * tak se bere z pravé, jinak je TYPE_UNKNOWN
  *
  * @param line Číslo řádku
  * @param type Druh binární operace
