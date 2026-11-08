@@ -66,7 +66,7 @@ hash_item *hashtable_search(hash_table *table, char *key) {
     }
     return nullptr;
 }
-//rozsireni pole a presun prvku do noveho pole
+//rozsireni pole a presun prvku do noveho pole hash tabulky
 bool hashtable_resize(hash_table *table)
 {
     if (table->active_size < table->capacity * 0.75) 
