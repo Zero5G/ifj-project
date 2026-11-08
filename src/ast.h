@@ -10,6 +10,7 @@
 #include "types.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 typedef struct ast_stmt ast_stmt_t;
@@ -48,7 +49,7 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef enum stmt_kind {
+typedef enum stmt_kind: uint8_t {
     STMT_VAR_DEF,
     STMT_EXPR,
     STMT_RET,
@@ -160,7 +161,7 @@ ast_prog_t *ast_prog_create();
  *
  * @return AST funkce
  */
-ast_expr_t *ast_func_create(unsigned line);
+ast_func_t *ast_func_create(unsigned line);
 
 /**
  * @bried Vytvoří strukturu AST příkazu (allokuje paměť)
