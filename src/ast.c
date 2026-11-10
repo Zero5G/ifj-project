@@ -164,28 +164,32 @@ static void expr_free(ast_expr_t *expr) {
                 expr_free(expr->as.func.args[i]);
             }
             free((ast_expr_t*)expr->as.func.args);
+            break;
         case E_STRING_LIT:
             dstr_delete(expr->as.str);
+            break;
         case E_UNIT_LIT:
         case E_INT_LIT:
         case E_DOUBLE_LIT:
         case E_BOOLEAN_LIT:
         break;
     }
+    free(expr);
 }
 
 static void block_free(ast_block_t *block) {
-    if (block->first != nullptr) {
-        stmt_free(block->first);
+    if (block == nullptr) {
+        return;
     }
-    ast_stmt_t *next = block->first;
-    ast_stmt_t *prev = block->first;
-    while (block->count < 0) {
-        prev = next;
-        next = next->next;
-        stmt_free(prev);
-        block->count--;
+    ast_stmt_t *stmt = block->first;
+    while (stmt != nullptr) {
+        ast_stmt_t *next = stmt->next;
+        stmt_free(stmt);
+        stmt = next;
     }
+    block->first = nullptr;
+    block->last = nullptr;
+    block->count = 0;
 }
 
 static void stmt_free(ast_stmt_t *stmt) {
@@ -210,24 +214,33 @@ static void stmt_free(ast_stmt_t *stmt) {
         case STMT_IF:
             expr_free(stmt->as.if_stmt.cond);
             block_free(stmt->as.if_stmt.then_blk);
+            free(stmt->as.if_stmt.then_blk);
             block_free(stmt->as.if_stmt.else_blk);
+            free(stmt->as.if_stmt.else_blk);
+            break;
         case STMT_WHILE:
             expr_free(stmt->as.while_stmt.cond);
             block_free(stmt->as.while_stmt.block);
+            free(stmt->as.while_stmt.block);
         break;
     }
     free(stmt);
 }
 
 void ast_prog_free(ast_prog_t *program) {
-    ast_func_t *next = program->first;
-    ast_func_t *prev = program->first;
-    while (program->count > 0) {
-        prev = next;
-        block_free(&prev->body);
-        next = next->next;
-        free(prev->params);
-        free(prev);
-        program->count--;
+    ast_func_t *func = program->first;
+    while (func != nullptr) {
+        ast_func_t *next = func->next;
+        dstr_delete(func->name);
+        for (size_t i = 0; i < func->param_count; i++) {
+            dstr_delete(func->params[i].name);
+        }
+        free(func->params);
+        block_free(&func->body);
+        free(func);
+        func = next;
     }
+    program->first = nullptr;
+    program->last = nullptr;
+    program->count = 0;
 }
