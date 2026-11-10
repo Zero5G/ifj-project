@@ -7,6 +7,8 @@
  * @details
  */
 #include "ast.h"
+#include "dstr.h"
+#include <stddef.h>
 #include <stdlib.h>
 
 ast_prog_t *ast_prog_create() {
@@ -110,4 +112,122 @@ ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *lef
     expr->as.binary.right = right;
 
     return expr;
+}
+
+bool ast_block_append(ast_block_t *block, ast_stmt_t *stmt) {
+    if (block == nullptr || stmt == nullptr) {
+        return false;
+    }
+
+    if (block->last != nullptr) {
+        block->last->next = stmt;
+    } else {
+        block->first = stmt;
+    }
+    block->last = stmt;
+    block->count++;
+
+    return true;
+}
+
+bool ast_prog_append(ast_prog_t *program, ast_func_t *func) {
+    if (program == nullptr || func == nullptr) {
+        return false;
+    }
+
+    if (program->last != nullptr) {
+        program->last->next = func;
+    } else {
+        program->first = func;
+    }
+    program->last = func;
+    program->count++;
+
+    return true;
+}
+
+static void stmt_free(ast_stmt_t *stmt);
+static void expr_free(ast_expr_t *expr);
+static void block_free(ast_block_t *block);
+
+static void expr_free(ast_expr_t *expr) {
+    switch (expr->kind) {
+        case E_UNARY:
+            expr_free(expr->as.unary.operand);
+            break;
+        case E_BINARY:
+            expr_free(expr->as.binary.left);
+            expr_free(expr->as.binary.right);
+            break;
+        case E_FUNC:
+            for (size_t i = 0; i < expr->as.func.argc; i++) {
+                expr_free(expr->as.func.args[i]);
+            }
+            free((ast_expr_t*)expr->as.func.args);
+        case E_STRING_LIT:
+            dstr_delete(expr->as.str);
+        case E_UNIT_LIT:
+        case E_INT_LIT:
+        case E_DOUBLE_LIT:
+        case E_BOOLEAN_LIT:
+        break;
+    }
+}
+
+static void block_free(ast_block_t *block) {
+    if (block->first != nullptr) {
+        stmt_free(block->first);
+    }
+    ast_stmt_t *next = block->first;
+    ast_stmt_t *prev = block->first;
+    while (block->count < 0) {
+        prev = next;
+        next = next->next;
+        stmt_free(prev);
+        block->count--;
+    }
+}
+
+static void stmt_free(ast_stmt_t *stmt) {
+    if (stmt == nullptr) {
+        return;
+    }
+    switch (stmt->kind) {
+        case STMT_VAR_DEF:
+            dstr_delete(stmt->as.var_def.name);
+            expr_free(stmt->as.var_def.init);
+            break;
+        case STMT_EXPR:
+            expr_free(stmt->as.expr);
+            break;
+        case STMT_RET:
+            expr_free(stmt->as.ret_val);
+            break;
+        case STMT_ASSIGN:
+            dstr_delete(stmt->as.assign.name);
+            expr_free(stmt->as.assign.val);
+            break;
+        case STMT_IF:
+            expr_free(stmt->as.if_stmt.cond);
+            block_free(stmt->as.if_stmt.then_blk);
+            block_free(stmt->as.if_stmt.else_blk);
+        case STMT_WHILE:
+            expr_free(stmt->as.while_stmt.cond);
+            block_free(stmt->as.while_stmt.block);
+        break;
+    }
+    free(stmt);
+}
+
+void ast_prog_free(ast_prog_t *program) {
+    ast_func_t *next = program->first;
+    ast_func_t *prev = program->first;
+    while (program->count > 0) {
+        prev = next;
+        block_free(&prev->body);
+        next = next->next;
+        free(prev->params);
+        free(prev);
+        program->count--;
+    }
 }

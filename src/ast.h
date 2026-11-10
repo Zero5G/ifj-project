@@ -216,16 +216,20 @@ ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *lef
  *
  * @param[in,out] block Block do kterého přidátvat
  * @param[in] stmt Příkaz co přidát
+ *
+ * @return Stav úspěchu
  */
-void ast_block_append(ast_block_t *block, ast_stmt_t *stmt);
+bool ast_block_append(ast_block_t *block, ast_stmt_t *stmt);
 
 /**
  * @brief Přídát funkci do programu
  *
  * @param[in,out] program Program do kterého přidátvat
  * @param[in] func Funkce co přidát
+ *
+ * @return Stav úspěchu
  */
-void ast_prog_append(ast_prog_t *program, ast_func_t *func);
+bool ast_prog_append(ast_prog_t *program, ast_func_t *func);
 
 /**
  * @brief Rekurzivně uvolní všechy data součástí AST programu spolu s programem
