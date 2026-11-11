@@ -286,10 +286,15 @@ static const char *name_lookup(const char *const *tbl, size_t n, size_t idx) {
 
 // NOLINTBEGIN(cert-err33-c)
 
+static void indent(int depth, FILE *out) {
+    for (int i = 0; i < depth; i++) {
+        fputc('\t', out);
+    }
+}
+
 static void expr_dump(const ast_expr_t *expr, FILE *out);
 static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out);
 static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out);
-
 
 static void expr_dump(const ast_expr_t *expr, FILE *out) {
     if (expr == nullptr) {
@@ -336,5 +341,17 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
             break;
     }
 }
+
+static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out) {
+    if (block == nullptr) {
+        return;
+    }
+    indent(depth, out);
+    fprintf(out, "%s(%zu):\n", label, block->count);
+    for (const ast_stmt_t *s = block->first; s != nullptr; s = s->next) {
+        stmt_dump(s, depth + 1, out);
+    }
+}
+
 
 // NOLINTEND(cert-err33-c)
