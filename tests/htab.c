@@ -7,45 +7,24 @@
 
 // Schválně malá počáteční kapacita, abychom vynutili zvětšení pole
 #define INITIAL_CAPACITY 4
-#define MAX_KEYS 16
 
-// Tabulka klíče neuvolňuje -> testy si všechny alokované klíče evidují
-// a uvolní je samy (až po hashtable_dispose)
-static char *allocated_keys[MAX_KEYS];
-static int allocated_count;
-
-// Pomocná funkce pro bezpečné dynamické alokování klíčů
+// Pomocná funkce pro bezpečné dynamické alokování klíčů.
+// Po úspěšném vložení klíč vlastní tabulka (uvolní ho remove i dispose).
 static char *create_key(const char *str) {
-    cr_assert_lt(allocated_count, MAX_KEYS);
     char *key = malloc(strlen(str) + 1);
     cr_assert_not_null(key);
     strcpy(key, str);
-    allocated_keys[allocated_count++] = key;
     return key;
-}
-
-static void free_keys(void) {
-    for (int i = 0; i < allocated_count; i++) {
-        free(allocated_keys[i]);
-        allocated_keys[i] = NULL;
-    }
-    allocated_count = 0;
 }
 
 static hash_table table;
 
 static void setup(void) {
-    allocated_count = 0;
     cr_assert(hashtable_init(&table, INITIAL_CAPACITY),
               "Inicializace selhala!");
 }
 
-static void teardown(void) {
-    hashtable_dispose(&table);
-    free_keys();
-}
-
-static void setup_keys(void) { allocated_count = 0; }
+static void teardown(void) { hashtable_dispose(&table); }
 
 // Naplní tabulku čtyřmi klíči (vynutí zvětšení na 8)
 static void fill_table(void) {
@@ -55,18 +34,18 @@ static void fill_table(void) {
     cr_assert_not_null(hashtable_insert(&table, create_key("delta")));
 }
 
-TestSuite(htab_lifecycle, .init = setup_keys, .fini = free_keys);
+TestSuite(htab_lifecycle);
 TestSuite(htab, .init = setup, .fini = teardown);
 
 /* --- 1. INICIALIZACE --- */
 Test(htab_lifecycle, init) {
-    hash_table table;
-    cr_assert(hashtable_init(&table, INITIAL_CAPACITY),
+    hash_table htab;
+    cr_assert(hashtable_init(&htab, INITIAL_CAPACITY),
               "Inicializace selhala!");
-    cr_assert_eq(table.capacity, INITIAL_CAPACITY);
-    cr_assert_eq(table.active_size, 0);
-    cr_assert_not_null(table.array);
-    hashtable_dispose(&table);
+    cr_assert_eq(htab.capacity, (unsigned)INITIAL_CAPACITY);
+    cr_assert_eq(htab.active_size, 0U);
+    cr_assert_not_null(htab.array);
+    hashtable_dispose(&htab);
 }
 
 /* --- 2. VKLADANI A ZVETSOVANI --- */
@@ -75,8 +54,8 @@ Test(htab, insert_no_resize_below_threshold) {
     cr_assert_not_null(hashtable_insert(&table, create_key("beta")));
     // Třetí prvek podmínku nesplní (2 není >= 3), takže se nezvětšuje
     cr_assert_not_null(hashtable_insert(&table, create_key("gamma")));
-    cr_assert_eq(table.capacity, INITIAL_CAPACITY,
-                 "Kapacita se zvetsila predcasne: %d", table.capacity);
+    cr_assert_eq(table.capacity, (unsigned)INITIAL_CAPACITY,
+                 "Kapacita se zvetsila predcasne: %u", table.capacity);
 }
 
 Test(htab, insert_triggers_resize) {
@@ -85,19 +64,23 @@ Test(htab, insert_triggers_resize) {
     cr_assert_not_null(hashtable_insert(&table, create_key("gamma")));
     // Čtvrtý prvek podmínku splní (3 >= 3), takže spustí rehashing
     cr_assert_not_null(hashtable_insert(&table, create_key("delta")));
-    cr_assert_eq(table.capacity, 8,
-                 "Tabulka se nezvetsila! Kapacita je stale: %d",
+    cr_assert_eq(table.capacity, 8U,
+                 "Tabulka se nezvetsila! Kapacita je stale: %u",
                  table.capacity);
+    cr_assert_eq(table.active_size, 4U);
 }
 
 Test(htab, insert_duplicate_returns_existing) {
     hash_item *first = hashtable_insert(&table, create_key("alfa"));
     cr_assert_not_null(first);
 
-    // Duplikát se do tabulky nedostane; klíč uvolní evidence v teardownu
-    hash_item *dup = hashtable_insert(&table, create_key("alfa"));
+    // Duplikát se do tabulky nedostane, tabulka ho nevlastní -> free zde
+    char *dup_key = create_key("alfa");
+    hash_item *dup = hashtable_insert(&table, dup_key);
     cr_assert_not_null(dup, "Duplikat nebyl odhalen");
     cr_assert_eq(dup, first, "Duplikat nevratil existujici prihradku");
+    cr_assert_eq(table.active_size, 1U);
+    free(dup_key);
 }
 
 /* --- 3. VYHLEDAVANI --- */
@@ -116,10 +99,18 @@ Test(htab, search_missing_returns_null) {
 /* --- 4. MAZANI --- */
 Test(htab, remove_existing) {
     fill_table();
+    // remove klíč uvolní sám
     cr_assert(hashtable_remove(&table, "beta"),
               "Klic 'beta' se nepodarilo smazat");
     cr_assert_null(hashtable_search(&table, "beta"),
                    "Klic 'beta' jde po smazani stale vyhledat!");
+    cr_assert_eq(table.active_size, 3U);
+}
+
+Test(htab, remove_missing_returns_false) {
+    fill_table();
+    cr_assert_not(hashtable_remove(&table, "omega"));
+    cr_assert_eq(table.active_size, 4U);
 }
 
 Test(htab, search_continues_past_deleted) {
@@ -134,12 +125,14 @@ Test(htab, search_continues_past_deleted) {
 
 /* --- 5. UKLID PAMETI --- */
 Test(htab_lifecycle, dispose_clears_table) {
-    hash_table table;
-    cr_assert(hashtable_init(&table, INITIAL_CAPACITY));
-    cr_assert_not_null(hashtable_insert(&table, create_key("alfa")));
-    hashtable_dispose(&table);
-    cr_assert_null(table.array, "Tabulka neni spravne vynulovana!");
-    cr_assert_eq(table.capacity, 0, "Tabulka neni spravne vynulovana!");
+    hash_table htab;
+    cr_assert(hashtable_init(&htab, INITIAL_CAPACITY));
+    cr_assert_not_null(hashtable_insert(&htab, create_key("alfa")));
+    // dispose uvolní i klíče
+    hashtable_dispose(&htab);
+    cr_assert_null(htab.array, "Tabulka neni spravne vynulovana!");
+    cr_assert_eq(htab.capacity, 0U, "Tabulka neni spravne vynulovana!");
+    cr_assert_eq(htab.active_size, 0U);
 }
 
 // NOLINTEND(readability-function-cognitive-complexity)
