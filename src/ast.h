@@ -6,6 +6,10 @@
  *
  * @details
  */
+
+#ifndef AST_H
+#define AST_H
+
 #include "dstr.h"
 #include "types.h"
 
@@ -248,3 +252,5 @@ void ast_prog_free(ast_prog_t *program);
  * @param out Výstupní `stream`
  */
 void ast_prog_dump(const ast_prog_t *program, FILE *out);
+
+#endif
