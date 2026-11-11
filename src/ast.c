@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 ast_prog_t *ast_prog_create() {
-    ast_prog_t *prog = malloc(sizeof(ast_prog_t));
+    ast_prog_t *prog = calloc(1, sizeof(ast_prog_t));
     if (prog == nullptr) {
         return nullptr;
     }
@@ -26,7 +26,7 @@ ast_prog_t *ast_prog_create() {
 }
 
 ast_func_t *ast_func_create(unsigned line) {
-    ast_func_t *func = malloc(sizeof(ast_func_t));
+    ast_func_t *func = calloc(1, sizeof(ast_func_t));
     if (func == nullptr) {
         return nullptr;
     }
@@ -46,7 +46,7 @@ ast_func_t *ast_func_create(unsigned line) {
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind) {
-    ast_stmt_t *stmt = malloc(sizeof(ast_stmt_t));
+    ast_stmt_t *stmt = calloc(1, sizeof(ast_stmt_t));
     if (stmt == nullptr) {
         return nullptr;
     }
@@ -60,7 +60,7 @@ ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind) {
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ast_expr_t *ast_expr_create(unsigned line, expr_kind kind) {
-    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    ast_expr_t *expr = calloc(1, sizeof(ast_expr_t));
     if (expr == nullptr) {
         return nullptr;
     }
@@ -74,7 +74,7 @@ ast_expr_t *ast_expr_create(unsigned line, expr_kind kind) {
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand) {
-    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    ast_expr_t *expr = calloc(1, sizeof(ast_expr_t));
     if (expr == nullptr) {
         return nullptr;
     }
@@ -94,7 +94,7 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *opera
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right) {
-    ast_expr_t *expr = malloc(sizeof(ast_expr_t));
+    ast_expr_t *expr = calloc(1, sizeof(ast_expr_t));
     if (expr == nullptr) {
         return nullptr;
     }
