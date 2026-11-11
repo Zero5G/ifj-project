@@ -20,7 +20,7 @@ bool hashtable_init(hash_table *table, int initial_capacity) {
     if (table->array == nullptr) {
         return false;
     }
-    for (int i = 0; i < table->capacity; i++) {
+    for (unsigned i = 0; i < table->capacity; i++) {
         table->array[i].state = STATE_EMPTY;
         table->array[i].key = nullptr;
     }
@@ -39,8 +39,8 @@ int hash_function(unsigned capacity, const char *key) {
 }
 
 bool hashtable_remove(hash_table *table, char *key) {
-    int index = hash_function(table->capacity, key);
-    for (int i = 0; i < table->capacity; i++) {
+    unsigned index = hash_function(table->capacity, key);
+    for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[index].state == STATE_EMPTY) {
             return false;
         }
@@ -58,8 +58,8 @@ bool hashtable_remove(hash_table *table, char *key) {
 }
 
 hash_item *hashtable_search(hash_table *table, char *key) {
-    int index = hash_function(table->capacity, key);
-    for (int i = 0; i < table->capacity; i++) {
+    unsigned index = hash_function(table->capacity, key);
+    for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[index].state == STATE_EMPTY) {
             return nullptr;
         }
@@ -83,17 +83,17 @@ bool hashtable_resize(hash_table *table) {
     if (table->array == nullptr) {
         return false;
     }
-    int old_capacity = table->capacity;
+    unsigned old_capacity = table->capacity;
     table->capacity = table->capacity * 2;
     // inicializace noveho pole
-    for (int i = 0; i < table->capacity; i++) {
+    for (unsigned i = 0; i < table->capacity; i++) {
         table->array[i].state = STATE_EMPTY;
         table->array[i].key = nullptr;
     }
     // presun starych prvku do noveho pole
-    for (int i = 0; i < old_capacity; i++) {
+    for (unsigned i = 0; i < old_capacity; i++) {
         if (old_array[i].state == STATE_FULL) {
-            int new_index = hash_function(table->capacity, old_array[i].key);
+            unsigned new_index = hash_function(table->capacity, old_array[i].key);
             while (table->array[new_index].state == STATE_FULL) {
                 new_index = (new_index + 1) % table->capacity;
             }
@@ -116,7 +116,7 @@ hash_item *hashtable_insert(hash_table *table, char *key) {
         return nullptr;
     }
 
-    int index = hash_function(table->capacity, key);
+    unsigned index = hash_function(table->capacity, key);
     while (table->array[index].state == STATE_FULL) {
         index = (index + 1) % table->capacity;
     }
@@ -130,7 +130,7 @@ void hashtable_dispose(hash_table *table) {
     if (table == nullptr || table->array == nullptr) {
         return;
     }
-    for (int i = 0; i < table->capacity; i++) {
+    for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[i].state == STATE_FULL) {
             free(table->array[i].key);
             table->array[i].state = STATE_EMPTY;

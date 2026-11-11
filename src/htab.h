@@ -67,8 +67,8 @@ typedef struct {
  */
 typedef struct {
     hash_item *array;
-    int capacity;
-    int active_size;
+    unsigned capacity;
+    unsigned active_size;
 } hash_table;
 
 /**
