@@ -32,9 +32,10 @@ typedef struct symbol {
     data_type *param_types; /**< pole typů */
     size_t param_count;
     bool is_buildin;
-    bool ret_explicit; /**< jestli decl má definovaný typ, nebo ne (`TYPE_UNKNOWN`) */
+    bool ret_explicit;      /**< jestli decl má definovaný typ, nebo ne
+                               (`TYPE_UNKNOWN`) */
     bool infer_in_progress; /**< typ co vrací funkce se hledá */
-    ast_func_t *decl; /**< funkce, kterou vytvořil uživatel */
+    ast_func_t *decl;       /**< funkce, kterou vytvořil uživatel */
 } symbol;
 
 typedef struct symtable symtable;

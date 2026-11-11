@@ -40,8 +40,7 @@ TestSuite(htab, .init = setup, .fini = teardown);
 /* --- 1. INICIALIZACE --- */
 Test(htab_lifecycle, init) {
     hash_table htab;
-    cr_assert(hashtable_init(&htab, INITIAL_CAPACITY),
-              "Inicializace selhala!");
+    cr_assert(hashtable_init(&htab, INITIAL_CAPACITY), "Inicializace selhala!");
     cr_assert_eq(htab.capacity, (unsigned)INITIAL_CAPACITY);
     cr_assert_eq(htab.active_size, 0U);
     cr_assert_not_null(htab.array);

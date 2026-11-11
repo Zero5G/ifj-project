@@ -93,7 +93,8 @@ bool hashtable_resize(hash_table *table) {
     // presun starych prvku do noveho pole
     for (unsigned i = 0; i < old_capacity; i++) {
         if (old_array[i].state == STATE_FULL) {
-            unsigned new_index = hash_function(table->capacity, old_array[i].key);
+            unsigned new_index =
+                hash_function(table->capacity, old_array[i].key);
             while (table->array[new_index].state == STATE_FULL) {
                 new_index = (new_index + 1) % table->capacity;
             }
