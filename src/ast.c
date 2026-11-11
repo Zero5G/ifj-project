@@ -99,7 +99,7 @@ ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *lef
         return nullptr;
     }
 
-    expr->kind = E_UNARY;
+    expr->kind = E_BINARY;
     if (left != nullptr) {
         expr->data_type = left->data_type;
     } else if (right != nullptr) {
