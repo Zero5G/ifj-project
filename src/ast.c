@@ -352,7 +352,7 @@ static void block_dump(const char *label, const ast_block_t *block, unsigned dep
     }
 }
 
-static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out) {
+static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out) {
     indent(depth, out);
     fputs("STMT: ", out);
     switch (stmt->kind) {
@@ -392,6 +392,26 @@ static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out) {
             return;
     }
     fputc('\n', out);
+}
+
+
+void ast_prog_dump(const ast_prog_t *program, FILE *out) {
+    for (const ast_func_t *func = program->first; func != nullptr; func = func->next) {
+        fprintf(out, "FUNC%s: %s(", func->is_main ? " [main]" : "", func->name->raw);
+        for (size_t i = 0; i < func->param_count; i++) {
+            if (i > 0) {
+                fputs(", ", out);
+            }
+            fprintf(out, "%s: %s", func->params[i].name->raw,
+                NAME_OF(type_names, func->params[i].type));
+        }
+        fputc(')', out);
+        if (func->has_ret_type) {
+            fprintf(out, " -> %s", NAME_OF(type_names, func->ret_type));
+        }
+        fputc('\n', out);
+        block_dump("BODY", &func->body, 1, out);
+    }
 }
 
 // NOLINTEND(cert-err33-c)
