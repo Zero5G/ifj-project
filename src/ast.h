@@ -6,10 +6,15 @@
  *
  * @details
  */
+
+#ifndef AST_H
+#define AST_H
+
 #include "dstr.h"
 #include "types.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 typedef struct ast_stmt ast_stmt_t;
@@ -48,7 +53,7 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef enum stmt_kind {
+typedef enum stmt_kind : uint8_t {
     STMT_VAR_DEF,
     STMT_EXPR,
     STMT_RET,
@@ -58,13 +63,14 @@ typedef enum stmt_kind {
 } stmt_kind;
 
 struct ast_expr {
-    expr_kind kind;
     data_type data_type;
     unsigned line;
+    expr_kind kind;
     union {
         dstr str;
         int int_val;
         double double_val;
+        bool bool_val;
         struct {
             op_binary op;
             ast_expr_t *right;
@@ -160,7 +166,7 @@ ast_prog_t *ast_prog_create();
  *
  * @return AST funkce
  */
-ast_expr_t *ast_func_create(unsigned line);
+ast_func_t *ast_func_create(unsigned line);
 
 /**
  * @bried Vytvoří strukturu AST příkazu (allokuje paměť)
@@ -185,16 +191,22 @@ ast_expr_t *ast_expr_create(unsigned line, expr_kind kind);
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
  *
+ * Datový typ je brán automaticky z operandu, jinak je TYPE_UNKNOWN
+ *
  * @param line Číslo řádku
  * @param type Druh unární operace
  * @param operand Operand výrazu
  *
  * @return AST unárního výrazu
  */
-ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand);
+ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu,
+                                  ast_expr_t *operand);
 
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ *
+ * Datový typ je brán automaticky z levé strany, pokud je levá strana nullptr,
+ * tak se bere z pravé, jinak je TYPE_UNKNOWN
  *
  * @param line Číslo řádku
  * @param type Druh binární operace
@@ -203,23 +215,28 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *opera
  *
  * @return AST binárního výrazu
  */
-ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right);
+ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb,
+                                   ast_expr_t *left, ast_expr_t *right);
 
 /**
  * @brief Přídát příkaz do blocku
  *
  * @param[in,out] block Block do kterého přidátvat
  * @param[in] stmt Příkaz co přidát
+ *
+ * @return Stav úspěchu
  */
-void ast_block_append(ast_block_t *block, ast_stmt_t *stmt);
+bool ast_block_append(ast_block_t *block, ast_stmt_t *stmt);
 
 /**
  * @brief Přídát funkci do programu
  *
  * @param[in,out] program Program do kterého přidátvat
  * @param[in] func Funkce co přidát
+ *
+ * @return Stav úspěchu
  */
-void ast_prog_append(ast_prog_t *program, ast_func_t *func);
+bool ast_prog_append(ast_prog_t *program, ast_func_t *func);
 
 /**
  * @brief Rekurzivně uvolní všechy data součástí AST programu spolu s programem
@@ -235,3 +252,5 @@ void ast_prog_free(ast_prog_t *program);
  * @param out Výstupní `stream`
  */
 void ast_prog_dump(const ast_prog_t *program, FILE *out);
+
+#endif
