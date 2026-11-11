@@ -3,7 +3,10 @@
 /**
  * @brief Magicke cislo
  */
-#define HASH_MAGIC_NUMBER 5'381UL;
+#define HTAB_MAGIC_NUMBER 5'381UL
+#define HTAB_MAGIC_NUMBER_2 33UL
+#define HTAB_EXPAND_TRESHHOLD 0.75
+
 /**
  * @enum Symbol_kind
  * @brief Urcuje druh symbolu v tabluce symbolu
@@ -21,7 +24,7 @@ typedef enum {
 typedef enum {
     DT_INT,
     DT_STRING,
-    DT_Double,
+    DT_DOUBLE,
     DT_UNIT,
     DT_BOOLEAN,
 } symbol_data_type;
@@ -76,7 +79,7 @@ hash_item *hashtable_search(hash_table *table, char *key);
  * @param key klic, znak hodnoty ktera bude prevedena na hash kod
  * @return vraci index v tabulce
  */
-int hash_function(int capacity, char *key); // prevedeni znaku na hash
+int hash_function(unsigned capacity, const char *key); // prevedeni znaku na hash
 
 /**
  * @brief Inicializace tabulky

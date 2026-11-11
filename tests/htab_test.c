@@ -1,8 +1,8 @@
+#include "htab.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include "htab.h"
 
 // Pomocná funkce pro bezpečné dynamické alokování klíčů
 char *create_key(const char *str) {
@@ -15,11 +15,14 @@ char *create_key(const char *str) {
 
 int main() {
     hash_table table;
-    int initial_capacity = 4; // Schválně malá počáteční kapacita, abychom vynutili zvětšení pole
+    int initial_capacity =
+        4; // Schválně malá počáteční kapacita, abychom vynutili zvětšení pole
 
     printf("--- 1. INICIALIZACE ---\n");
     if (hashtable_init(&table, initial_capacity)) {
-        printf("[OK] Tabulka uspesne vytvorena (kapacita: %d, aktivni prvky: %d)\n", table.capacity, table.active_size);
+        printf("[OK] Tabulka uspesne vytvorena (kapacita: %d, aktivni prvky: "
+               "%d)\n",
+               table.capacity, table.active_size);
     } else {
         printf("[FAIL] Inicializace selhala!\n");
         return 1;
@@ -35,31 +38,38 @@ int main() {
     printf("[OK] Vlozen klic 'alfa'\n");
     hashtable_insert(&table, klic2);
     printf("[OK] Vlozen klic 'beta'\n");
-    
-    printf("-> Kapacita pred 3. prvkem: %d, aktivni: %d\n", table.capacity, table.active_size);
-    
+
+    printf("-> Kapacita pred 3. prvkem: %d, aktivni: %d\n", table.capacity,
+           table.active_size);
+
     // Třetí prvek podmínku nesplní (2 není >= 3), takže se nezvětšuje
-    hashtable_insert(&table, klic3); 
+    hashtable_insert(&table, klic3);
     printf("[OK] Vlozen klic 'gamma' (kapacita je stale 4, protoze 2 < 3)\n");
 
-    printf("-> Kapacita pred 4. prvkem: %d, aktivni: %d\n", table.capacity, table.active_size);
+    printf("-> Kapacita pred 4. prvkem: %d, aktivni: %d\n", table.capacity,
+           table.active_size);
 
     // Čtvrtý prvek podmínku splní (3 >= 3), takže spustí tvůj rehashing
-    hashtable_insert(&table, klic4); 
+    hashtable_insert(&table, klic4);
     printf("[OK] Vlozen klic 'delta' (zde doslo ke zvetseni tabulky)\n");
-    
+
     if (table.capacity == 8) {
-        printf("[OK] Tabulka se uspesne zvetsila na kapacitu: %d\n", table.capacity);
+        printf("[OK] Tabulka se uspesne zvetsila na kapacitu: %d\n",
+               table.capacity);
     } else {
-        printf("[FAIL] Tabulka se nezvetsila! Kapacita je stale: %d\n", table.capacity);
+        printf("[FAIL] Tabulka se nezvetsila! Kapacita je stale: %d\n",
+               table.capacity);
     }
 
-    // Test na duplikát (znovu vkládáme "alfa", klíč z mallocu uvolníme hned, ať není leak, použije se ten původní)
+    // Test na duplikát (znovu vkládáme "alfa", klíč z mallocu uvolníme hned, ať
+    // není leak, použije se ten původní)
     char *klic1_duplikat = create_key("alfa");
     hash_item *duplikat = hashtable_insert(&table, klic1_duplikat);
     if (duplikat != NULL) {
-        printf("[OK] Duplikat 'alfa' spravne odhalen (vratil existujici prihradku).\n");
-        free(klic1_duplikat); // Uvolníme pokusný duplikát, tabulka si drží svůj původní 'klic1'
+        printf("[OK] Duplikat 'alfa' spravne odhalen (vratil existujici "
+               "prihradku).\n");
+        free(klic1_duplikat); // Uvolníme pokusný duplikát, tabulka si drží svůj
+                              // původní 'klic1'
     }
 
     printf("\n--- 3. VYHLEDAVANI (SEARCH) ---\n");
@@ -79,7 +89,8 @@ int main() {
 
     printf("\n--- 4. MAZANI (REMOVE) ---\n");
     if (hashtable_remove(&table, "beta")) {
-        printf("[OK] Klic 'beta' uspesne smazan. Prihradka by mela mit stav STATE_DELETE.\n");
+        printf("[OK] Klic 'beta' uspesne smazan. Prihradka by mela mit stav "
+               "STATE_DELETE.\n");
     } else {
         printf("[FAIL] Klic 'beta' se nepodarilo smazat.\n");
     }
@@ -90,14 +101,16 @@ int main() {
         printf("[FAIL] Klic 'beta' jde stale vyhledat!\n");
     }
 
-    // Vyhledání prvku vložného za smazaným (test nepřetržení vyhledávání přes STATE_DELETE)
+    // Vyhledání prvku vložného za smazaným (test nepřetržení vyhledávání přes
+    // STATE_DELETE)
     if (hashtable_search(&table, "gamma") != NULL) {
-        printf("[OK] Klic 'gamma' bezpecne nalezen i presto, ze jsme mazali jine prvky.\n");
+        printf("[OK] Klic 'gamma' bezpecne nalezen i presto, ze jsme mazali "
+               "jine prvky.\n");
     }
 
     printf("\n--- 5. UKLID PAMETI (DISPOSE) ---\n");
     hashtable_dispose(&table);
-    
+
     if (table.array == NULL && table.capacity == 0) {
         printf("[OK] Pamet byla uspesne uvolnena a tabulka je cista.\n");
     } else {
