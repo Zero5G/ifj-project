@@ -249,7 +249,7 @@ void ast_prog_free(ast_prog_t *program) {
 #define COUNT_OF(a) (sizeof(a) / sizeof((a)[0]))
 #define NAME_OF(tbl, i) name_lookup((tbl), COUNT_OF(tbl), (size_t)(i))
 
-static const char *const TYPE_NAMES[] = {
+static const char *const type_names[] = {
     [TYPE_UNKNOWN] = "unknown",
     [TYPE_INT]     = "int",
     [TYPE_DOUBLE]  = "double",
@@ -259,13 +259,13 @@ static const char *const TYPE_NAMES[] = {
     [TYPE_ANY]     = "any",
 };
 
-static const char *const UNARY_NAMES[] = {
+static const char *const unary_names[] = {
     [OPU_NEG]  = "neg",
     [OPU_PLUS] = "plus",
     [OPU_NOT]  = "not",
 };
 
-static const char *const BINARY_NAMES[] = {
+static const char *const binary_names[] = {
     [OPU_ADD] = "add",
     [OPU_SUB] = "sub",
     [OPU_MUL] = "mul",
@@ -290,187 +290,51 @@ static void expr_dump(const ast_expr_t *expr, FILE *out);
 static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out);
 static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out);
 
+
 static void expr_dump(const ast_expr_t *expr, FILE *out) {
-    fprintf(out, "EXPR: TYPE(");
-    switch (expr->data_type) {
-        case TYPE_UNKNOWN:
-            fprintf(out, "unknown");
-            break;
-        case TYPE_INT:
-            fprintf(out, "int");
-            break;
-        case TYPE_DOUBLE:
-            fprintf(out, "double");
-            break;
-        case TYPE_STRING:
-            fprintf(out, "string");
-            break;
-        case TYPE_UNIT:
-            fprintf(out, "unit");
-            break;
-        case TYPE_BOOL:
-            fprintf(out, "bool");
-            break;
-        case TYPE_ANY:
-            fprintf(out, "any");
-            break;
-        break;
+    if (expr == nullptr) {
+        fputs("EXPR: NULL", out);
+        return;
     }
-    fprintf(out, "): ");
+    fprintf(out, "EXPR: TYPE(%s): ", NAME_OF(type_names, expr->data_type));
     switch (expr->kind) {
         case E_UNARY:
-            fprintf(out, "UNARY(");
-            switch (expr->as.unary.op) {
-                case OPU_NEG:
-                    fprintf(out, "neg");
-                    break;
-                case OPU_PLUS:
-                    fprintf(out, "plus");
-                    break;
-                case OPU_NOT:
-                    fprintf(out, "not");
-                    break;
-                break;
-            }
-            fprintf(out, "): ");
+            fprintf(out, "UNARY(%s): ", NAME_OF(unary_names, expr->as.unary.op));
             expr_dump(expr->as.unary.operand, out);
             break;
         case E_BINARY:
-            fprintf(out, "BINARY(");
-            fprintf(out, "left(");
+            fputs("BINARY(left(", out);
             expr_dump(expr->as.binary.left, out);
-            fprintf(out, ") ");
-            switch (expr->as.binary.op) {
-                case OPU_ADD:
-                    fprintf(out, "add"); break;
-                case OPU_SUB:
-                    fprintf(out, "sub"); break;
-                case OPU_MUL:
-                    fprintf(out, "mul"); break;
-                case OPU_DIV:
-                    fprintf(out, "div"); break;
-                case OPU_AND:
-                    fprintf(out, "and"); break;
-                case OPU_OR:
-                    fprintf(out, "or"); break;
-                case OPU_LT:
-                    fprintf(out, "lt"); break;
-                case OPU_LTE:
-                    fprintf(out, "lte"); break;
-                case OPU_GT:
-                    fprintf(out, "gt"); break;
-                case OPU_GTE:
-                    fprintf(out, "gte"); break;
-                case OPU_EQ:
-                    fprintf(out, "eq"); break;
-                case OPU_NE:
-                    fprintf(out, "ne"); break;
-                    break;
-                }
-            fprintf(out, " right(");
+            fprintf(out, ") %s right(", NAME_OF(binary_names, expr->as.binary.op));
             expr_dump(expr->as.binary.right, out);
-            fprintf(out, ")");
+            fputs("))", out);
             break;
         case E_FUNC:
             fprintf(out, "FUNC: %s(", expr->as.func.name->raw);
             for (size_t i = 0; i < expr->as.func.argc; i++) {
+                if (i > 0) {
+                    fputc(',', out);
+                }
                 expr_dump(expr->as.func.args[i], out);
-                fprintf(out, ",");
             }
-            getc(out);
-            fprintf(out, ")");
+            fputc(')', out);
             break;
         case E_UNIT_LIT:
-            printf("UNIT");
+            fputs("UNIT", out);
             break;
         case E_INT_LIT:
-            printf("INT(%d)", expr->as.int_val);
+            fprintf(out, "INT(%d)", expr->as.int_val);
             break;
         case E_DOUBLE_LIT:
-            printf("DOUBLE(%f)", expr->as.double_val);
+            fprintf(out, "DOUBLE(%f)", expr->as.double_val);
             break;
         case E_STRING_LIT:
-            printf("STRING(%s)", expr->as.str->raw);
+            fprintf(out, "STRING(%s)", expr->as.str->raw);
             break;
         case E_BOOLEAN_LIT:
-            printf("BOOL(%s)", expr->as.bool_val ? "true" : "false");
+            fputs(expr->as.bool_val ? "BOOL(true)" : "BOOL(false)", out);
             break;
-        break;
     }
-}
-
-static void block_dump(const ast_block_t *block, FILE *out) {
-    if (block == nullptr) {
-        return;
-    }
-    fprintf(out, "\tBLOCK(%lu):", block->count);
-    ast_stmt_t *stmt = block->first;
-    while (stmt != nullptr) {
-        ast_stmt_t *next = stmt->next;
-        fprintf(out, "\t\t");
-        stmt_dump(stmt, out);
-        fprintf(out, "\n");
-        stmt = next;
-    }
-    fprintf(out, "\n");
-}
-
-static void stmt_dump(const ast_stmt_t *stmt, FILE *out) {
-    fprintf(out, "\tSTMT: ");
-    switch (stmt->kind) {
-        case STMT_VAR_DEF:
-            fprintf(out, "VARDEF: MUT(%s) TYPE(%d) %s(id: %u) INIT:",
-                stmt->as.var_def.is_mut ? "true" : "false",
-                stmt->as.var_def.type,
-                stmt->as.var_def.name->raw,
-                stmt->as.var_def.var_id
-            );
-            break;
-        case STMT_EXPR:
-            expr_dump(stmt->as.expr, out);
-            break;
-        case STMT_RET:
-            fprintf(out, "RET: ");
-            expr_dump(stmt->as.expr, out);
-            break;
-        case STMT_ASSIGN:
-            fprintf(out, "ASSIGN: %s(%u) =",
-                stmt->as.assign.name->raw,
-                stmt->as.assign.var_id
-            );
-            expr_dump(stmt->as.assign.val, out);
-            break;
-        case STMT_IF:
-            fprintf(out, "IF: COND:");
-            expr_dump(stmt->as.if_stmt.cond, out);
-            fprintf(out, "THEN:");
-            block_dump(stmt->as.if_stmt.then_blk, out);
-            fprintf(out, "ELSE:");
-            block_dump(stmt->as.if_stmt.else_blk, out);
-        case STMT_WHILE:
-            fprintf(out, "WHILE: COND:");
-            expr_dump(stmt->as.while_stmt.cond, out);
-            fprintf(out, "BLOCK:");
-            block_dump(stmt->as.while_stmt.block, out);
-        break;
-    }
-    fprintf(out, "\n");
-}
-
-void ast_prog_dump(const ast_prog_t *program, FILE *out) {
-    ast_func_t *func = program->first;
-    while (func != nullptr) {
-        ast_func_t *next_f = func->next;
-        fprintf(out, "%s", func->name->raw);
-        ast_stmt_t *stmt = func->body.first;
-        while (stmt != nullptr) {
-            ast_stmt_t *next_s = stmt->next;
-            stmt = next_s;
-        }
-        func = next_f;
-        fprintf(out, "\n");
-    }
-    fprintf(out, "\n");
 }
 
 // NOLINTEND(cert-err33-c)
