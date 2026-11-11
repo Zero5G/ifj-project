@@ -182,8 +182,7 @@ static void block_free(ast_block_t *block) {
     if (block == nullptr) {
         return;
     }
-    ast_stmt_t *stmt = block->first;
-    while (stmt != nullptr) {
+    for (ast_stmt_t *stmt = block->first; stmt != nullptr;) {
         ast_stmt_t *next = stmt->next;
         stmt_free(stmt);
         stmt = next;
@@ -286,15 +285,15 @@ static const char *name_lookup(const char *const *tbl, size_t n, size_t idx) {
 
 // NOLINTBEGIN(cert-err33-c)
 
-static void indent(int depth, FILE *out) {
-    for (int i = 0; i < depth; i++) {
+static void indent(unsigned depth, FILE *out) {
+    for (unsigned i = 0; i < depth; i++) {
         fputc('\t', out);
     }
 }
 
 static void expr_dump(const ast_expr_t *expr, FILE *out);
-static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out);
-static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out);
+static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out);
+static void block_dump(const char *label, const ast_block_t *block, unsigned depth, FILE *out);
 
 static void expr_dump(const ast_expr_t *expr, FILE *out) {
     if (expr == nullptr) {
@@ -342,14 +341,14 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
     }
 }
 
-static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out) {
+static void block_dump(const char *label, const ast_block_t *block, unsigned depth, FILE *out) {
     if (block == nullptr) {
         return;
     }
     indent(depth, out);
     fprintf(out, "%s(%zu):\n", label, block->count);
-    for (const ast_stmt_t *s = block->first; s != nullptr; s = s->next) {
-        stmt_dump(s, depth + 1, out);
+    for (const ast_stmt_t *stmt = block->first; stmt != nullptr; stmt = stmt->next) {
+        stmt_dump(stmt, depth + 1, out);
     }
 }
 
