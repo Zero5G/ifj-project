@@ -246,97 +246,139 @@ void ast_prog_free(ast_prog_t *program) {
     program->count = 0;
 }
 
-static void stmt_dump(const ast_stmt_t *stmt, FILE *out);
+#define COUNT_OF(a) (sizeof(a) / sizeof((a)[0]))
+#define NAME_OF(tbl, i) name_lookup((tbl), COUNT_OF(tbl), (size_t)(i))
+
+static const char *const TYPE_NAMES[] = {
+    [TYPE_UNKNOWN] = "unknown",
+    [TYPE_INT]     = "int",
+    [TYPE_DOUBLE]  = "double",
+    [TYPE_STRING]  = "string",
+    [TYPE_UNIT]    = "unit",
+    [TYPE_BOOL]    = "bool",
+    [TYPE_ANY]     = "any",
+};
+
+static const char *const UNARY_NAMES[] = {
+    [OPU_NEG]  = "neg",
+    [OPU_PLUS] = "plus",
+    [OPU_NOT]  = "not",
+};
+
+static const char *const BINARY_NAMES[] = {
+    [OPU_ADD] = "add",
+    [OPU_SUB] = "sub",
+    [OPU_MUL] = "mul",
+    [OPU_DIV] = "div",
+    [OPU_AND] = "and",
+    [OPU_OR]  = "or",
+    [OPU_LT]  = "lt",
+    [OPU_LTE] = "lte",
+    [OPU_GT]  = "gt",
+    [OPU_GTE] = "gte",
+    [OPU_EQ]  = "eq",
+    [OPU_NE]  = "ne",
+};
+
+static const char *name_lookup(const char *const *tbl, size_t n, size_t idx) {
+    return (idx < n && tbl[idx] != nullptr) ? tbl[idx] : "?";
+}
+
+// NOLINTBEGIN(cert-err33-c)
+
+static void expr_dump(const ast_expr_t *expr, FILE *out);
+static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out);
+static void block_dump(const char *label, const ast_block_t *block, int depth, FILE *out);
 
 static void expr_dump(const ast_expr_t *expr, FILE *out) {
-    fprintf(out, "EXPR: TYPE("); // NOLINT
+    fprintf(out, "EXPR: TYPE(");
     switch (expr->data_type) {
         case TYPE_UNKNOWN:
-            fprintf(out, "unknown"); // NOLINT
+            fprintf(out, "unknown");
             break;
         case TYPE_INT:
-            fprintf(out, "int"); // NOLINT
+            fprintf(out, "int");
             break;
         case TYPE_DOUBLE:
-            fprintf(out, "double"); // NOLINT
+            fprintf(out, "double");
             break;
         case TYPE_STRING:
-            fprintf(out, "string"); // NOLINT
+            fprintf(out, "string");
             break;
         case TYPE_UNIT:
-            fprintf(out, "unit"); // NOLINT
+            fprintf(out, "unit");
             break;
         case TYPE_BOOL:
-            fprintf(out, "bool"); // NOLINT
+            fprintf(out, "bool");
             break;
         case TYPE_ANY:
-            fprintf(out, "any"); // NOLINT
+            fprintf(out, "any");
             break;
         break;
     }
-    fprintf(out, "): "); // NOLINT
+    fprintf(out, "): ");
     switch (expr->kind) {
         case E_UNARY:
-            fprintf(out, "UNARY("); // NOLINT
+            fprintf(out, "UNARY(");
             switch (expr->as.unary.op) {
                 case OPU_NEG:
-                    fprintf(out, "neg"); // NOLINT
+                    fprintf(out, "neg");
                     break;
                 case OPU_PLUS:
-                    fprintf(out, "plus"); // NOLINT
+                    fprintf(out, "plus");
                     break;
                 case OPU_NOT:
-                    fprintf(out, "not"); // NOLINT
+                    fprintf(out, "not");
                     break;
                 break;
             }
-            fprintf(out, "): "); // NOLINT
+            fprintf(out, "): ");
             expr_dump(expr->as.unary.operand, out);
             break;
         case E_BINARY:
-            fprintf(out, "BINARY("); // NOLINT
-            fprintf(out, "left("); // NOLINT
+            fprintf(out, "BINARY(");
+            fprintf(out, "left(");
             expr_dump(expr->as.binary.left, out);
-            fprintf(out, ") "); // NOLINT
+            fprintf(out, ") ");
             switch (expr->as.binary.op) {
                 case OPU_ADD:
-                    fprintf(out, "add"); break; // NOLINT
+                    fprintf(out, "add"); break;
                 case OPU_SUB:
-                    fprintf(out, "sub"); break; // NOLINT
+                    fprintf(out, "sub"); break;
                 case OPU_MUL:
-                    fprintf(out, "mul"); break; // NOLINT
+                    fprintf(out, "mul"); break;
                 case OPU_DIV:
-                    fprintf(out, "div"); break; // NOLINT
+                    fprintf(out, "div"); break;
                 case OPU_AND:
-                    fprintf(out, "and"); break; // NOLINT
+                    fprintf(out, "and"); break;
                 case OPU_OR:
-                    fprintf(out, "or"); break; // NOLINT
+                    fprintf(out, "or"); break;
                 case OPU_LT:
-                    fprintf(out, "lt"); break; // NOLINT
+                    fprintf(out, "lt"); break;
                 case OPU_LTE:
-                    fprintf(out, "lte"); break; // NOLINT
+                    fprintf(out, "lte"); break;
                 case OPU_GT:
-                    fprintf(out, "gt"); break; // NOLINT
+                    fprintf(out, "gt"); break;
                 case OPU_GTE:
-                    fprintf(out, "gte"); break; // NOLINT
+                    fprintf(out, "gte"); break;
                 case OPU_EQ:
-                    fprintf(out, "eq"); break; // NOLINT
+                    fprintf(out, "eq"); break;
                 case OPU_NE:
-                    fprintf(out, "ne"); break; // NOLINT
+                    fprintf(out, "ne"); break;
                     break;
                 }
-            fprintf(out, " right("); // NOLINT
+            fprintf(out, " right(");
             expr_dump(expr->as.binary.right, out);
-            fprintf(out, ")"); // NOLINT
+            fprintf(out, ")");
             break;
         case E_FUNC:
-            fprintf(out, "FUNC: %s(", expr->as.func.name->raw); // NOLINT
+            fprintf(out, "FUNC: %s(", expr->as.func.name->raw);
             for (size_t i = 0; i < expr->as.func.argc; i++) {
                 expr_dump(expr->as.func.args[i], out);
-                fprintf(out, ","); // NOLINT
+                fprintf(out, ",");
             }
-            getc(out); // NOLINT
-            fprintf(out, ")"); // NOLINT
+            getc(out);
+            fprintf(out, ")");
             break;
         case E_UNIT_LIT:
             printf("UNIT");
@@ -361,7 +403,7 @@ static void block_dump(const ast_block_t *block, FILE *out) {
     if (block == nullptr) {
         return;
     }
-    fprintf(out, "\tBLOCK(%lu):", block->count); // NOLINT
+    fprintf(out, "\tBLOCK(%lu):", block->count);
     ast_stmt_t *stmt = block->first;
     while (stmt != nullptr) {
         ast_stmt_t *next = stmt->next;
@@ -374,10 +416,10 @@ static void block_dump(const ast_block_t *block, FILE *out) {
 }
 
 static void stmt_dump(const ast_stmt_t *stmt, FILE *out) {
-    fprintf(out, "\tSTMT: "); // NOLINT
+    fprintf(out, "\tSTMT: ");
     switch (stmt->kind) {
         case STMT_VAR_DEF:
-            fprintf(out, "VARDEF: MUT(%s) TYPE(%d) %s(id: %u) INIT:", // NOLINT
+            fprintf(out, "VARDEF: MUT(%s) TYPE(%d) %s(id: %u) INIT:",
                 stmt->as.var_def.is_mut ? "true" : "false",
                 stmt->as.var_def.type,
                 stmt->as.var_def.name->raw,
@@ -388,27 +430,27 @@ static void stmt_dump(const ast_stmt_t *stmt, FILE *out) {
             expr_dump(stmt->as.expr, out);
             break;
         case STMT_RET:
-            fprintf(out, "RET: "); // NOLINT
+            fprintf(out, "RET: ");
             expr_dump(stmt->as.expr, out);
             break;
         case STMT_ASSIGN:
-            fprintf(out, "ASSIGN: %s(%u) =", // NOLINT
+            fprintf(out, "ASSIGN: %s(%u) =",
                 stmt->as.assign.name->raw,
                 stmt->as.assign.var_id
             );
             expr_dump(stmt->as.assign.val, out);
             break;
         case STMT_IF:
-            fprintf(out, "IF: COND:"); // NOLINT
+            fprintf(out, "IF: COND:");
             expr_dump(stmt->as.if_stmt.cond, out);
-            fprintf(out, "THEN:"); // NOLINT
+            fprintf(out, "THEN:");
             block_dump(stmt->as.if_stmt.then_blk, out);
-            fprintf(out, "ELSE:"); // NOLINT
+            fprintf(out, "ELSE:");
             block_dump(stmt->as.if_stmt.else_blk, out);
         case STMT_WHILE:
-            fprintf(out, "WHILE: COND:"); // NOLINT
+            fprintf(out, "WHILE: COND:");
             expr_dump(stmt->as.while_stmt.cond, out);
-            fprintf(out, "BLOCK:"); // NOLINT
+            fprintf(out, "BLOCK:");
             block_dump(stmt->as.while_stmt.block, out);
         break;
     }
@@ -419,14 +461,16 @@ void ast_prog_dump(const ast_prog_t *program, FILE *out) {
     ast_func_t *func = program->first;
     while (func != nullptr) {
         ast_func_t *next_f = func->next;
-        fprintf(out, "%s", func->name->raw); // NOLINT
+        fprintf(out, "%s", func->name->raw);
         ast_stmt_t *stmt = func->body.first;
         while (stmt != nullptr) {
             ast_stmt_t *next_s = stmt->next;
             stmt = next_s;
         }
         func = next_f;
-        fprintf(out, "\n"); // NOLINT
+        fprintf(out, "\n");
     }
     fprintf(out, "\n");
 }
+
+// NOLINTEND(cert-err33-c)
