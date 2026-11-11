@@ -352,5 +352,46 @@ static void block_dump(const char *label, const ast_block_t *block, unsigned dep
     }
 }
 
+static void stmt_dump(const ast_stmt_t *stmt, int depth, FILE *out) {
+    indent(depth, out);
+    fputs("STMT: ", out);
+    switch (stmt->kind) {
+        case STMT_VAR_DEF:
+            fprintf(out, "VARDEF: MUT(%s) TYPE(%s) %s(id: %u) INIT: ",
+                stmt->as.var_def.is_mut ? "true" : "false",
+                NAME_OF(type_names, stmt->as.var_def.type),
+                stmt->as.var_def.name->raw,
+                stmt->as.var_def.var_id);
+            expr_dump(stmt->as.var_def.init, out);
+            break;
+        case STMT_EXPR:
+            expr_dump(stmt->as.expr, out);
+            break;
+        case STMT_RET:
+            fputs("RET: ", out);
+            expr_dump(stmt->as.ret_val, out);
+            break;
+        case STMT_ASSIGN:
+            fprintf(out, "ASSIGN: %s(%u) = ",
+                stmt->as.assign.name->raw,
+                stmt->as.assign.var_id);
+            expr_dump(stmt->as.assign.val, out);
+            break;
+        case STMT_IF:
+            fputs("IF: COND: ", out);
+            expr_dump(stmt->as.if_stmt.cond, out);
+            fputc('\n', out);
+            block_dump("THEN", stmt->as.if_stmt.then_blk, depth + 1, out);
+            block_dump("ELSE", stmt->as.if_stmt.else_blk, depth + 1, out);
+            return;
+        case STMT_WHILE:
+            fputs("WHILE: COND: ", out);
+            expr_dump(stmt->as.while_stmt.cond, out);
+            fputc('\n', out);
+            block_dump("BLOCK", stmt->as.while_stmt.block, depth + 1, out);
+            return;
+    }
+    fputc('\n', out);
+}
 
 // NOLINTEND(cert-err33-c)
