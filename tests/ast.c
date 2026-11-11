@@ -1,6 +1,7 @@
-// NOLINTBEGIN(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp, readability-magic-numbers)
+// NOLINTBEGIN(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp,
+// readability-magic-numbers)
 
-#define _POSIX_C_SOURCE 200809L /* open_memstream */
+#define _POSIX_C_SOURCE 200'809L /* open_memstream */
 
 #include <criterion/criterion.h>
 
@@ -9,12 +10,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Any type != TYPE_UNKNOWN. Swap for a real one from types.h (e.g. TYPE_INT). */
+/* Any type != TYPE_UNKNOWN. Swap for a real one from types.h (e.g. TYPE_INT).
+ */
 #define NON_UNKNOWN_TYPE ((data_type)(TYPE_UNKNOWN + 1))
 
 /*
  * Create/append tests free nodes with plain free() on purpose: they test only
- * create + append, not ast_prog_free. Only the ast_free suite uses ast_prog_free.
+ * create + append, not ast_prog_free. Only the ast_free suite uses
+ * ast_prog_free.
  */
 
 /* ---------- helpers ---------- */
@@ -275,4 +278,5 @@ Test(ast_dump, empty_program_prints_nothing) {
     free(prog);
 }
 
-// NOLINTEND(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp, readability-magic-numbers)
+// NOLINTEND(bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp,
+// readability-magic-numbers)
