@@ -1,3 +1,12 @@
+/**
+ * @file htab.c
+ *
+ * @author Vojta Buchmaier
+ * @author Jakub Manoušek
+ * @brief Implementace modulu pro hašovací tabulku
+ *
+ * @details
+ */
 #include "htab.h"
 #include <stdbool.h>
 #include <stdlib.h>

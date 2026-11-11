@@ -1,3 +1,11 @@
+/**
+ * @file htab.h
+ *
+ * @author Vojta Buchmaier
+ * @brief Modul pro hašovací tabulku
+ *
+ * @details
+ */
 #ifndef HTAB_H
 #define HTAB_H
 /**
@@ -54,7 +62,7 @@ typedef struct {
 
 // Struktura hash tabulky
 /**
- * @enum Hash_table
+ * @enum hash_table
  * @brief Struktura ktera obsahuje info o hash tabulce
  */
 typedef struct {
