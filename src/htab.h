@@ -67,8 +67,8 @@ typedef struct {
  */
 typedef struct {
     hash_item *array;
-    int capacity;
-    int active_size;
+    unsigned capacity;
+    unsigned active_size;
 } hash_table;
 
 /**
@@ -87,7 +87,8 @@ hash_item *hashtable_search(hash_table *table, char *key);
  * @param key klic, znak hodnoty ktera bude prevedena na hash kod
  * @return vraci index v tabulce
  */
-int hash_function(unsigned capacity, const char *key); // prevedeni znaku na hash
+int hash_function(unsigned capacity,
+                  const char *key); // prevedeni znaku na hash
 
 /**
  * @brief Inicializace tabulky
