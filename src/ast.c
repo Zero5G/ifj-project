@@ -9,6 +9,7 @@
 #include "ast.h"
 #include "dstr.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 ast_prog_t *ast_prog_create() {
@@ -243,4 +244,189 @@ void ast_prog_free(ast_prog_t *program) {
     program->first = nullptr;
     program->last = nullptr;
     program->count = 0;
+}
+
+static void stmt_dump(const ast_stmt_t *stmt, FILE *out);
+
+static void expr_dump(const ast_expr_t *expr, FILE *out) {
+    fprintf(out, "EXPR: TYPE("); // NOLINT
+    switch (expr->data_type) {
+        case TYPE_UNKNOWN:
+            fprintf(out, "unknown"); // NOLINT
+            break;
+        case TYPE_INT:
+            fprintf(out, "int"); // NOLINT
+            break;
+        case TYPE_DOUBLE:
+            fprintf(out, "double"); // NOLINT
+            break;
+        case TYPE_STRING:
+            fprintf(out, "string"); // NOLINT
+            break;
+        case TYPE_UNIT:
+            fprintf(out, "unit"); // NOLINT
+            break;
+        case TYPE_BOOL:
+            fprintf(out, "bool"); // NOLINT
+            break;
+        case TYPE_ANY:
+            fprintf(out, "any"); // NOLINT
+            break;
+        break;
+    }
+    fprintf(out, "): "); // NOLINT
+    switch (expr->kind) {
+        case E_UNARY:
+            fprintf(out, "UNARY("); // NOLINT
+            switch (expr->as.unary.op) {
+                case OPU_NEG:
+                    fprintf(out, "neg"); // NOLINT
+                    break;
+                case OPU_PLUS:
+                    fprintf(out, "plus"); // NOLINT
+                    break;
+                case OPU_NOT:
+                    fprintf(out, "not"); // NOLINT
+                    break;
+                break;
+            }
+            fprintf(out, "): "); // NOLINT
+            expr_dump(expr->as.unary.operand, out);
+            break;
+        case E_BINARY:
+            fprintf(out, "BINARY("); // NOLINT
+            fprintf(out, "left("); // NOLINT
+            expr_dump(expr->as.binary.left, out);
+            fprintf(out, ") "); // NOLINT
+            switch (expr->as.binary.op) {
+                case OPU_ADD:
+                    fprintf(out, "add"); break; // NOLINT
+                case OPU_SUB:
+                    fprintf(out, "sub"); break; // NOLINT
+                case OPU_MUL:
+                    fprintf(out, "mul"); break; // NOLINT
+                case OPU_DIV:
+                    fprintf(out, "div"); break; // NOLINT
+                case OPU_AND:
+                    fprintf(out, "and"); break; // NOLINT
+                case OPU_OR:
+                    fprintf(out, "or"); break; // NOLINT
+                case OPU_LT:
+                    fprintf(out, "lt"); break; // NOLINT
+                case OPU_LTE:
+                    fprintf(out, "lte"); break; // NOLINT
+                case OPU_GT:
+                    fprintf(out, "gt"); break; // NOLINT
+                case OPU_GTE:
+                    fprintf(out, "gte"); break; // NOLINT
+                case OPU_EQ:
+                    fprintf(out, "eq"); break; // NOLINT
+                case OPU_NE:
+                    fprintf(out, "ne"); break; // NOLINT
+                    break;
+                }
+            fprintf(out, " right("); // NOLINT
+            expr_dump(expr->as.binary.right, out);
+            fprintf(out, ")"); // NOLINT
+            break;
+        case E_FUNC:
+            fprintf(out, "FUNC: %s(", expr->as.func.name->raw); // NOLINT
+            for (size_t i = 0; i < expr->as.func.argc; i++) {
+                expr_dump(expr->as.func.args[i], out);
+                fprintf(out, ","); // NOLINT
+            }
+            getc(out); // NOLINT
+            fprintf(out, ")"); // NOLINT
+            break;
+        case E_UNIT_LIT:
+            printf("UNIT");
+            break;
+        case E_INT_LIT:
+            printf("INT(%d)", expr->as.int_val);
+            break;
+        case E_DOUBLE_LIT:
+            printf("DOUBLE(%f)", expr->as.double_val);
+            break;
+        case E_STRING_LIT:
+            printf("STRING(%s)", expr->as.str->raw);
+            break;
+        case E_BOOLEAN_LIT:
+            printf("BOOL(%s)", expr->as.bool_val ? "true" : "false");
+            break;
+        break;
+    }
+}
+
+static void block_dump(const ast_block_t *block, FILE *out) {
+    if (block == nullptr) {
+        return;
+    }
+    fprintf(out, "\tBLOCK(%lu):", block->count); // NOLINT
+    ast_stmt_t *stmt = block->first;
+    while (stmt != nullptr) {
+        ast_stmt_t *next = stmt->next;
+        fprintf(out, "\t\t");
+        stmt_dump(stmt, out);
+        fprintf(out, "\n");
+        stmt = next;
+    }
+    fprintf(out, "\n");
+}
+
+static void stmt_dump(const ast_stmt_t *stmt, FILE *out) {
+    fprintf(out, "\tSTMT: "); // NOLINT
+    switch (stmt->kind) {
+        case STMT_VAR_DEF:
+            fprintf(out, "VARDEF: MUT(%s) TYPE(%d) %s(id: %u) INIT:", // NOLINT
+                stmt->as.var_def.is_mut ? "true" : "false",
+                stmt->as.var_def.type,
+                stmt->as.var_def.name->raw,
+                stmt->as.var_def.var_id
+            );
+            break;
+        case STMT_EXPR:
+            expr_dump(stmt->as.expr, out);
+            break;
+        case STMT_RET:
+            fprintf(out, "RET: "); // NOLINT
+            expr_dump(stmt->as.expr, out);
+            break;
+        case STMT_ASSIGN:
+            fprintf(out, "ASSIGN: %s(%u) =", // NOLINT
+                stmt->as.assign.name->raw,
+                stmt->as.assign.var_id
+            );
+            expr_dump(stmt->as.assign.val, out);
+            break;
+        case STMT_IF:
+            fprintf(out, "IF: COND:"); // NOLINT
+            expr_dump(stmt->as.if_stmt.cond, out);
+            fprintf(out, "THEN:"); // NOLINT
+            block_dump(stmt->as.if_stmt.then_blk, out);
+            fprintf(out, "ELSE:"); // NOLINT
+            block_dump(stmt->as.if_stmt.else_blk, out);
+        case STMT_WHILE:
+            fprintf(out, "WHILE: COND:"); // NOLINT
+            expr_dump(stmt->as.while_stmt.cond, out);
+            fprintf(out, "BLOCK:"); // NOLINT
+            block_dump(stmt->as.while_stmt.block, out);
+        break;
+    }
+    fprintf(out, "\n");
+}
+
+void ast_prog_dump(const ast_prog_t *program, FILE *out) {
+    ast_func_t *func = program->first;
+    while (func != nullptr) {
+        ast_func_t *next_f = func->next;
+        fprintf(out, "%s", func->name->raw); // NOLINT
+        ast_stmt_t *stmt = func->body.first;
+        while (stmt != nullptr) {
+            ast_stmt_t *next_s = stmt->next;
+            stmt = next_s;
+        }
+        func = next_f;
+        fprintf(out, "\n"); // NOLINT
+    }
+    fprintf(out, "\n");
 }

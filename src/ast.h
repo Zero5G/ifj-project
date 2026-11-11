@@ -49,7 +49,7 @@ typedef enum op_binary {
     OPU_NE,
 } op_binary;
 
-typedef enum stmt_kind: uint8_t {
+typedef enum stmt_kind : uint8_t {
     STMT_VAR_DEF,
     STMT_EXPR,
     STMT_RET,
@@ -66,6 +66,7 @@ struct ast_expr {
         dstr str;
         int int_val;
         double double_val;
+        bool bool_val;
         struct {
             op_binary op;
             ast_expr_t *right;
@@ -194,7 +195,8 @@ ast_expr_t *ast_expr_create(unsigned line, expr_kind kind);
  *
  * @return AST unárního výrazu
  */
-ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *operand);
+ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu,
+                                  ast_expr_t *operand);
 
 /**
  * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
@@ -209,7 +211,8 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu, ast_expr_t *opera
  *
  * @return AST binárního výrazu
  */
-ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb, ast_expr_t *left, ast_expr_t *right);
+ast_expr_t *ast_expr_binary_create(unsigned line, op_binary opb,
+                                   ast_expr_t *left, ast_expr_t *right);
 
 /**
  * @brief Přídát příkaz do blocku
