@@ -22,7 +22,8 @@ struct dstr {
 /**
  * @brief Realocuje pamět
  *
- * Expanduje
+ * Rozřuje buď o potřebné místo nebo 2 * kapacita, co je větší
+ * (jen pokud je potřeba)
  *
  * @param str
  * @param needed
