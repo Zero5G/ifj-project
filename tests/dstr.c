@@ -1,30 +1,20 @@
 #include "dstr.h"
 #include <criterion/criterion.h>
 #include <stdbool.h>
-#include <string.h>
 
-// expand
-Test(expand, expand_valid) {
-    dstr str = dstr_create("Test");
-    bool result = expand(str, 20);
-
-    cr_assert_eq(result, true);
-    cr_assert_geq(str->cap, 21);
-
-    dstr_delete(str);
-}
+#define LEN_5 5
 
 // dstr_create
 Test(dstr_create, create_valid) {
     char *text = "Hello";
-    unsigned len = 5;
+    unsigned len = LEN_5;
     dstr dstring = dstr_create(text);
 
     cr_assert_not_null(dstring);
-    cr_assert_not_null(dstring->raw);
-    cr_assert_eq(dstring->len, len);
-    cr_assert_geq(dstring->cap, dstring->len);
-    cr_assert_str_eq(dstring->raw, text);
+    cr_assert_not_null(dstr_cstr(dstring));
+    cr_assert_eq(dstr_len(dstring), len);
+    // cr_assert_geq(dstring->cap, dstr_len(dstring));
+    cr_assert_str_eq(dstr_cstr(dstring), text);
 
     dstr_delete(dstring);
 }
@@ -34,8 +24,8 @@ Test(dstr_create, create_empty) {
     dstr dstring = dstr_create(text);
 
     cr_assert_not_null(dstring);
-    cr_assert_eq(dstring->len, 0);
-    cr_assert_str_eq(dstring->raw, "");
+    cr_assert_eq(dstr_len(dstring), 0);
+    cr_assert_str_eq(dstr_cstr(dstring), "");
 
     dstr_delete(dstring);
 }
@@ -46,8 +36,8 @@ Test(dstr_concat_raw, concat_raw_valid) {
     bool result = dstr_concat_raw(str, " World");
 
     cr_assert_eq(result, true);
-    cr_assert_str_eq(str->raw, "Hello World");
-    cr_assert_eq(str->len, 11);
+    cr_assert_str_eq(dstr_cstr(str), "Hello World");
+    cr_assert_eq(dstr_len(str), 11);
 
     dstr_delete(str);
 }
@@ -59,8 +49,8 @@ Test(dstr_concat, concat_valid) {
     bool result = dstr_concat(str_a, str_b);
 
     cr_assert_eq(result, true);
-    cr_assert_str_eq(str_a->raw, "FooBar");
-    cr_assert_eq(str_a->len, 6);
+    cr_assert_str_eq(dstr_cstr(str_a), "FooBar");
+    cr_assert_eq(dstr_len(str_a), 6);
 
     dstr_delete(str_a);
     dstr_delete(str_b);
@@ -94,8 +84,8 @@ Test(dstr_push_char, push_char_valid) {
     bool result = dstr_push_char(str, 'B');
 
     cr_assert_eq(result, true);
-    cr_assert_str_eq(str->raw, "AB");
-    cr_assert_eq(str->len, 2);
+    cr_assert_str_eq(dstr_cstr(str), "AB");
+    cr_assert_eq(dstr_len(str), 2);
 
     dstr_delete(str);
 }
@@ -105,8 +95,8 @@ Test(dstr_delete_char, delete_char_valid) {
     dstr str = dstr_create("Word");
     dstr_delete_char(str, 2);
 
-    cr_assert_str_eq(str->raw, "Wod");
-    cr_assert_eq(str->len, 3);
+    cr_assert_str_eq(dstr_cstr(str), "Wod");
+    cr_assert_eq(dstr_len(str), 3);
 
     dstr_delete(str);
 }
@@ -116,8 +106,8 @@ Test(dstr_clear, clear_valid) {
     dstr str = dstr_create("Data");
     dstr_clear(str);
 
-    cr_assert_eq(str->len, 0);
-    cr_assert_str_eq(str->raw, "");
+    cr_assert_eq(dstr_len(str), 0);
+    cr_assert_str_eq(dstr_cstr(str), "");
 
     dstr_delete(str);
 }
@@ -139,9 +129,9 @@ Test(dstr_dup, dup_valid) {
 
     cr_assert_not_null(copy);
     cr_assert_neq(original, copy);
-    cr_assert_neq(original->raw, copy->raw);
-    cr_assert_str_eq(copy->raw, original->raw);
-    cr_assert_eq(copy->len, original->len);
+    cr_assert_neq(dstr_cstr(original), dstr_cstr(copy));
+    cr_assert_str_eq(dstr_cstr(copy), dstr_cstr(original));
+    cr_assert_eq(dstr_len(copy), dstr_len(original));
 
     dstr_delete(original);
     dstr_delete(copy);
@@ -152,8 +142,8 @@ Test(dstr_dup, dup_empty) {
     dstr copy = dstr_dup(original);
 
     cr_assert_not_null(copy);
-    cr_assert_str_eq(copy->raw, "");
-    cr_assert_eq(copy->len, 0);
+    cr_assert_str_eq(dstr_cstr(copy), "");
+    cr_assert_eq(dstr_len(copy), 0);
 
     dstr_delete(original);
     dstr_delete(copy);

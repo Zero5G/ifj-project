@@ -2,98 +2,131 @@
  * @file dstr.c
  *
  * @author Jakub Machač
+ * @author Jakub Manoušek
  * @brief Implementace modulu pro dynamické řetězce
  *
  * @details
  */
 #include "dstr.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
-bool expand(dstr str, unsigned len_cap) {
-    unsigned cap = str->cap * 2;
-    if (str->cap + len_cap > cap) {
-        cap = str->cap + len_cap;
+struct dstr {
+    char *buf;
+    size_t len;
+    size_t cap;
+};
+
+/**
+ * @brief Realocuje pamět
+ *
+ * Rozřuje buď o potřebné místo nebo 2 * kapacita, co je větší
+ * (jen pokud je potřeba)
+ *
+ * @param str
+ * @param needed
+ * @return False nebo true podle toho jestli se povedla nebo ne
+ */
+static bool expand(dstr str, size_t needed) {
+    if (str->cap > needed) {
+        return true;
     }
-    char *src = realloc(str->raw, cap * sizeof(char));
+
+    size_t cap = str->cap * 2;
+    if (needed > cap) {
+        cap = needed;
+    }
+
+    char *src = realloc(str->buf, cap * sizeof(char));
     if (src == nullptr) {
         return false;
     }
-    str->raw = src;
+
+    str->buf = src;
     str->cap = cap;
     return true;
 }
 
-dstr dstr_create(char *str) {
-    dstr dstring = malloc(sizeof(struct dstr_t));
+dstr dstr_create(const char *str) {
+    dstr dstring = malloc(sizeof(struct dstr));
     if (dstring == nullptr) {
         return nullptr;
     }
-    int len = strlen(str);
+    size_t len = strlen(str);
     char *string = malloc((len + 1) * sizeof(char));
     if (string == nullptr) {
         free(dstring);
         return nullptr;
     }
     strcpy(string, str);
-    dstring->raw = string;
+    dstring->buf = string;
     dstring->len = len;
     dstring->cap = len + 1;
 
     return dstring;
 }
 
-bool dstr_concat_raw(dstr str_a, char *str_b) {
-    int len = strlen(str_b) + str_a->len;
-    if (expand(str_a, len) == false) {
+bool dstr_concat_raw(dstr str_a, const char *str_b) {
+    size_t len = strlen(str_b) + dstr_len(str_a);
+    if (!expand(str_a, len)) {
         return false;
     }
     str_a->len = len;
-    strcat(str_a->raw, str_b);
+    strcat(str_a->buf, str_b);
     return true;
 }
 
-bool dstr_concat(dstr str_a, dstr str_b) {
-    int len = str_b->len + str_a->len;
-    if (expand(str_a, len) == false) {
+bool dstr_concat(dstr str_a, const struct dstr *str_b) {
+    size_t len = dstr_len(str_a) + dstr_len(str_b);
+    if (!expand(str_a, len)) {
         return false;
     }
     str_a->len = len;
-    strcat(str_a->raw, str_b->raw);
+    strcat(str_a->buf, str_b->buf);
     return true;
 }
 
-dstr dstr_dup(dstr str) { return dstr_create(str->raw); }
+dstr dstr_dup(const struct dstr *str) { return dstr_create(str->buf); }
 
-int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->raw, str_b->raw); }
+int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) {
+    return strcmp(str_a->buf, str_b->buf);
+}
 
-int dstr_cmp_raw(dstr str_a, char *str_b) { return strcmp(str_a->raw, str_b); }
+int dstr_cmp_raw(dstr str_a, const char *str_b) {
+    return strcmp(str_a->buf, str_b);
+}
 
 bool dstr_push_char(dstr str, char chr) {
-    if (expand(str, (str->cap + 1)) == false) {
+    if (!expand(str, (str->len + 2))) {
         return false;
     }
-    str->raw[str->len] = chr;
+    str->buf[dstr_len(str)] = chr;
     str->len += 1;
-    str->raw[str->len] = '\0';
+    str->buf[dstr_len(str)] = '\0';
     return true;
 }
 
 void dstr_delete_char(dstr str, unsigned pos) {
-    char *dchar = str->raw + pos;
-    memmove(dchar, dchar + 1, str->len - pos);
+    char *dchar = str->buf + pos;
+    memmove(dchar, dchar + 1, dstr_len(str) - pos);
     str->len -= 1;
 }
 
 void dstr_clear(dstr str) {
-    str->raw[0] = '\0';
+    str->buf[0] = '\0';
     str->len = 0;
 }
 
 void dstr_delete(dstr str) {
-    free(str->raw);
+    if (str == nullptr) {
+        return;
+    }
+    free(str->buf);
     free(str);
 }
 
-unsigned dstr_len(dstr str) { return str->len; }
+size_t dstr_len(const struct dstr *str) { return str->len; }
+
+const char *dstr_cstr(const struct dstr *str) { return str->buf; }

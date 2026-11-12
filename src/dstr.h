@@ -11,50 +11,39 @@
 #ifndef DSTR_H
 #define DSTR_H
 
-struct dstr_t {
-    char *raw;
-    unsigned len;
-    unsigned cap;
-};
+#include <stddef.h>
 
-typedef struct dstr_t *dstr;
+typedef struct dstr *dstr;
 
 /**
  * @brief vytvoří a alokuje pamět pro strukturu
  * @param str
  * @return ukazatel na vytvořený dynamický řetězec
  */
-dstr dstr_create(char *str);
+dstr dstr_create(const char *str);
 
 /**
- * @brief Realocuje pamět
- * @param str
- * @param len_cap
- * @return False nebo true podle toho jestli se povedla nebo ne
- */
-bool expand(dstr str, unsigned len_cap);
-/**
  * @brief připojí řetezec na konec dynamického řetezce
- * @param str_a
+ * @param str_a cíl
  * @param str_b
  * @return ukazatel na cílový řetězec
  */
-bool dstr_concat_raw(dstr str_a, char *str_b);
+bool dstr_concat_raw(dstr str_a, const char *str_b);
 
 /**
  * @brief připojí jednoho dynamického řetezce na konec druhého
- * @param str_a
+ * @param str_a cíl
  * @param str_b
  * @return Vrací false nebo true podle toho jestli se povede
  */
-bool dstr_concat(dstr str_a, dstr str_b);
+bool dstr_concat(dstr str_a, const struct dstr *str_b);
 
 /**
  * @brief duplikuje řetezec
  * @param str
  * @return ukazatel na kopii
  */
-dstr dstr_dup(dstr str);
+dstr dstr_dup(const struct dstr *str);
 
 /**
  * @brief porovná dva stringy
@@ -62,7 +51,7 @@ dstr dstr_dup(dstr str);
  * @param str_b
  * @return vrací <0,0,>0
  */
-int dstr_cmp(dstr str_a, dstr str_b);
+int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b);
 
 /**
  * @brief porovná dynamický řetězec s obyčejným char *
@@ -70,7 +59,7 @@ int dstr_cmp(dstr str_a, dstr str_b);
  * @param str_b
  * @return vrací <0,0,>0
  */
-int dstr_cmp_raw(dstr str_a, char *str_b);
+int dstr_cmp_raw(dstr str_a, const char *str_b);
 
 /**
  * @brief vloží znak na konec řetězce
@@ -104,6 +93,13 @@ void dstr_delete(dstr str);
  * @param str
  * @return délku stringu
  */
-unsigned dstr_len(dstr str);
+size_t dstr_len(const struct dstr *str);
+
+/**
+ * @brief Vrátí C řetězec
+ * @param str
+ * @return řetězec terminovaný nulou
+ */
+const char *dstr_cstr(const struct dstr *str);
 
 #endif

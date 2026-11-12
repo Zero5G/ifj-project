@@ -306,7 +306,7 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
         fputs("))", out);
         break;
     case E_FUNC:
-        fprintf(out, "FUNC: %s(", expr->as.func.name->raw);
+        fprintf(out, "FUNC: %s(", dstr_cstr(expr->as.func.name));
         for (size_t i = 0; i < expr->as.func.argc; i++) {
             if (i > 0) {
                 fputc(',', out);
@@ -325,13 +325,14 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
         fprintf(out, "DOUBLE(%f)", expr->as.double_val);
         break;
     case E_STRING_LIT:
-        fprintf(out, "STRING(%s)", expr->as.str->raw);
+        fprintf(out, "STRING(%s)", dstr_cstr(expr->as.str));
         break;
     case E_BOOLEAN_LIT:
         fputs(expr->as.bool_val ? "BOOL(true)" : "BOOL(false)", out);
         break;
     case E_VAR:
-        fprintf(out, "VAR(%s:%u)", expr->as.var.name->raw, expr->as.var.var_id);
+        fprintf(out, "VAR(%s:%u)", dstr_cstr(expr->as.var.name),
+                expr->as.var.var_id);
         break;
     }
 }
@@ -357,7 +358,7 @@ static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out) {
         fprintf(out, "VARDEF: MUT(%s) TYPE(%s) %s(id: %u) INIT: ",
                 stmt->as.var_def.is_mut ? "true" : "false",
                 NAME_OF(type_names, stmt->as.var_def.type),
-                stmt->as.var_def.name->raw, stmt->as.var_def.var_id);
+                dstr_cstr(stmt->as.var_def.name), stmt->as.var_def.var_id);
         expr_dump(stmt->as.var_def.init, out);
         break;
     case STMT_EXPR:
@@ -368,7 +369,7 @@ static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out) {
         expr_dump(stmt->as.ret_val, out);
         break;
     case STMT_ASSIGN:
-        fprintf(out, "ASSIGN: %s(%u) = ", stmt->as.assign.name->raw,
+        fprintf(out, "ASSIGN: %s(%u) = ", dstr_cstr(stmt->as.assign.name),
                 stmt->as.assign.var_id);
         expr_dump(stmt->as.assign.val, out);
         break;
@@ -395,12 +396,12 @@ void ast_prog_dump(const ast_prog_t *program, FILE *out) {
     for (const ast_func_t *func = program->first; func != nullptr;
          func = func->next) {
         fprintf(out, "FUNC%s: %s(", func->is_main ? " [main]" : "",
-                func->name->raw);
+                dstr_cstr(func->name));
         for (size_t i = 0; i < func->param_count; i++) {
             if (i > 0) {
                 fputs(", ", out);
             }
-            fprintf(out, "%s: %s", func->params[i].name->raw,
+            fprintf(out, "%s: %s", dstr_cstr(func->params[i].name),
                     NAME_OF(type_names, func->params[i].type));
         }
         fputc(')', out);
