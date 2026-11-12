@@ -11,6 +11,7 @@
 #ifndef DSTR_H
 #define DSTR_H
 
+#include <stddef.h>
 typedef struct dstr *dstr;
 
 /**
@@ -91,7 +92,7 @@ void dstr_delete(dstr str);
  * @param str
  * @return délku stringu
  */
-unsigned dstr_len(const struct dstr *str);
+size_t dstr_len(const struct dstr *str);
 
 /**
  * @brief Vrátí C řetězec

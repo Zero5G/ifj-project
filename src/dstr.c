@@ -24,8 +24,8 @@ struct dstr {
  * @param len_cap
  * @return False nebo true podle toho jestli se povedla nebo ne
  */
-static bool expand(dstr str, unsigned len_cap) {
-    unsigned cap = str->cap * 2;
+static bool expand(dstr str, size_t len_cap) {
+    size_t cap = str->cap * 2;
     if (str->cap + len_cap > cap) {
         cap = str->cap + len_cap;
     }
@@ -58,7 +58,7 @@ dstr dstr_create(const char *str) {
 }
 
 bool dstr_concat_raw(dstr str_a, const char *str_b) {
-    size_t len = strlen(str_b) + str_a->len;
+    size_t len = strlen(str_b) + dstr_len(str_a);
     if (expand(str_a, len) == false) {
         return false;
     }
@@ -68,7 +68,7 @@ bool dstr_concat_raw(dstr str_a, const char *str_b) {
 }
 
 bool dstr_concat(dstr str_a, const struct dstr *str_b) {
-    size_t len = str_b->len + str_a->len;
+    size_t len = dstr_len(str_a) + dstr_len(str_b);
     if (expand(str_a, len) == false) {
         return false;
     }
@@ -109,7 +109,7 @@ void dstr_delete(dstr str) {
     free(str);
 }
 
-unsigned dstr_len(const struct dstr *str) { return str->len; }
+size_t dstr_len(const struct dstr *str) { return str->len; }
 
 const char *dstr_cstr(const struct dstr *str) {
     return str->buf;
