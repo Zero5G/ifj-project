@@ -13,10 +13,26 @@
 #include "types.h"
 #include <stddef.h>
 
+typedef struct ast_func ast_func_t;
+
 typedef enum sym_kind {
     SYM_VAR,
     SYM_FUNC,
 } sym_kind;
+
+typedef enum {
+    SYM_OK,
+    SYM_EXISTS,
+    SYM_NOMEM,
+} sym_result;
+
+typedef enum {
+    RET_EXPLICIT,
+    RET_UNRESOLVED,
+    RET_INFERRING,
+    RET_INFERRED,
+} return_state;
+
 
 /**
  * @brief Struktura symbolu
@@ -31,11 +47,9 @@ typedef struct symbol {
 
     data_type *param_types; /**< pole typů */
     size_t param_count;
-    bool is_buildin;
-    bool ret_explicit;      /**< jestli decl má definovaný typ, nebo ne
-                               (`TYPE_UNKNOWN`) */
-    bool infer_in_progress; /**< typ co vrací funkce se hledá */
-    ast_func_t *decl;       /**< funkce, kterou vytvořil uživatel */
+    bool is_builtin;
+    return_state ret_state;
+    ast_func_t *decl; /**< funkce, kterou vytvořil uživatel */
 } symbol;
 
 typedef struct symtable symtable;
@@ -62,7 +76,7 @@ void symtable_destroy(symtable *stab);
  *
  * @return Ukazatel na přidaný symbol, `nullptr` pokud již existuje
  */
-symbol *symtable_add_func(symtable *stab, const char *name);
+sym_result *symtable_add_func(symtable *stab, const char *name, symbol **out);
 
 /**
  * @brief Přidá funkci do tabulky symbolů
@@ -72,7 +86,7 @@ symbol *symtable_add_func(symtable *stab, const char *name);
  *
  * @return Ukazatel na symbol, `nullptr` pokud nenalezen
  */
-symbol *symtable_find_func(const symtable *stab, const char *name);
+sym_result *symtable_find_func(const symtable *stab, const char *name, symbol **out);
 
 /**
  * @brief Přejít do dalšího rozsahu platnosti
@@ -96,7 +110,7 @@ void symtable_leave_scope(symtable *stab);
  *
  * @return Ukazatel na symbol, `nullptr` pokud již existuje
  */
-symbol *symtable_add_var(symtable *stab, const char *name);
+sym_result *symtable_add_var(symtable *stab, const char *name, symbol **out);
 
 /**
  * @brief Přidá proměnnou do tabulky symbolů
@@ -106,6 +120,6 @@ symbol *symtable_add_var(symtable *stab, const char *name);
  *
  * @return Ukazatel na symbol, `nullptr` pokud nenalezen
  */
-symbol *symtable_find_var(const symtable *stab, const char *name);
+sym_result *symtable_find_var(const symtable *stab, const char *name, symbol **out);
 
 #endif
