@@ -106,6 +106,9 @@ void dstr_clear(dstr str) {
 }
 
 void dstr_delete(dstr str) {
+    if (str == nullptr) {
+        return;
+    }
     free(str->buf);
     free(str);
 }
