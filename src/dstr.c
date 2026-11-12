@@ -89,9 +89,13 @@ bool dstr_concat(dstr str_a, const struct dstr *str_b) {
 
 dstr dstr_dup(const struct dstr *str) { return dstr_create(str->buf); }
 
-int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) { return strcmp(str_a->buf, str_b->buf); }
+int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) {
+    return strcmp(str_a->buf, str_b->buf);
+}
 
-int dstr_cmp_raw(dstr str_a, const char *str_b) { return strcmp(str_a->buf, str_b); }
+int dstr_cmp_raw(dstr str_a, const char *str_b) {
+    return strcmp(str_a->buf, str_b);
+}
 
 bool dstr_push_char(dstr str, char chr) {
     if (!expand(str, (str->len + 2))) {
@@ -124,6 +128,4 @@ void dstr_delete(dstr str) {
 
 size_t dstr_len(const struct dstr *str) { return str->len; }
 
-const char *dstr_cstr(const struct dstr *str) {
-    return str->buf;
-}
+const char *dstr_cstr(const struct dstr *str) { return str->buf; }

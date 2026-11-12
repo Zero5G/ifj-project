@@ -331,7 +331,8 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
         fputs(expr->as.bool_val ? "BOOL(true)" : "BOOL(false)", out);
         break;
     case E_VAR:
-        fprintf(out, "VAR(%s:%u)", dstr_cstr(expr->as.var.name), expr->as.var.var_id);
+        fprintf(out, "VAR(%s:%u)", dstr_cstr(expr->as.var.name),
+                expr->as.var.var_id);
         break;
     }
 }
