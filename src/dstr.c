@@ -37,7 +37,7 @@ static bool expand(dstr str, unsigned len_cap) {
     return true;
 }
 
-dstr dstr_create(char *str) {
+dstr dstr_create(const char *str) {
     dstr dstring = malloc(sizeof(struct dstr));
     if (dstring == nullptr) {
         return nullptr;
@@ -56,7 +56,7 @@ dstr dstr_create(char *str) {
     return dstring;
 }
 
-bool dstr_concat_raw(dstr str_a, char *str_b) {
+bool dstr_concat_raw(dstr str_a, const char *str_b) {
     int len = strlen(str_b) + str_a->len;
     if (expand(str_a, len) == false) {
         return false;
@@ -66,7 +66,7 @@ bool dstr_concat_raw(dstr str_a, char *str_b) {
     return true;
 }
 
-bool dstr_concat(dstr str_a, dstr str_b) {
+bool dstr_concat(dstr str_a, const struct dstr *str_b) {
     int len = str_b->len + str_a->len;
     if (expand(str_a, len) == false) {
         return false;
@@ -76,11 +76,11 @@ bool dstr_concat(dstr str_a, dstr str_b) {
     return true;
 }
 
-dstr dstr_dup(dstr str) { return dstr_create(str->buf); }
+dstr dstr_dup(const struct dstr *str) { return dstr_create(str->buf); }
 
-int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->buf, str_b->buf); }
+int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) { return strcmp(str_a->buf, str_b->buf); }
 
-int dstr_cmp_raw(dstr str_a, char *str_b) { return strcmp(str_a->buf, str_b); }
+int dstr_cmp_raw(dstr str_a, const char *str_b) { return strcmp(str_a->buf, str_b); }
 
 bool dstr_push_char(dstr str, char chr) {
     if (expand(str, (str->cap + 1)) == false) {
@@ -108,8 +108,8 @@ void dstr_delete(dstr str) {
     free(str);
 }
 
-unsigned dstr_len(dstr str) { return str->len; }
+unsigned dstr_len(const struct dstr *str) { return str->len; }
 
-const char *dstr_cstr(dstr str) {
+const char *dstr_cstr(const struct dstr *str) {
     return str->buf;
 }
