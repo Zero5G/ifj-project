@@ -27,13 +27,6 @@ typedef struct dstr_t *dstr;
 dstr dstr_create(char *str);
 
 /**
- * @brief Realocuje pamět
- * @param str
- * @param len_cap
- * @return False nebo true podle toho jestli se povedla nebo ne
- */
-bool expand(dstr str, unsigned len_cap);
-/**
  * @brief připojí řetezec na konec dynamického řetezce
  * @param str_a
  * @param str_b

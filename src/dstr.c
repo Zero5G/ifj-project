@@ -11,7 +11,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool expand(dstr str, unsigned len_cap) {
+/**
+ * @brief Realocuje pamět
+ * @param str
+ * @param len_cap
+ * @return False nebo true podle toho jestli se povedla nebo ne
+ */
+static bool expand(dstr str, unsigned len_cap) {
     unsigned cap = str->cap * 2;
     if (str->cap + len_cap > cap) {
         cap = str->cap + len_cap;
