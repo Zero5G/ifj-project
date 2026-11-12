@@ -73,6 +73,7 @@ bool symtable_enter_scope(symtable *stab) {
 
     scp->parent = stab->current;
     stab->current = scp;
+
     return true;
 }
 
@@ -117,5 +118,29 @@ symbol *symtable_find_var(const symtable *stab, const char *name) {
             break;
         }
     }
+
     return nullptr;
+}
+
+bool symtable_enter_func(symtable *stab) {
+    unsigned saved = stab->next_var_id;
+    if (!symtable_enter_scope(stab)) {
+        return false;
+    }
+
+    stab->current->is_func_parent = true;
+    stab->current->saved_next_var_id = saved;
+    stab->next_var_id = 0;
+
+    return true;
+}
+
+unsigned symtable_leave_func(symtable *stab) {
+    unsigned count = stab->next_var_id;
+    unsigned saved = stab->current->saved_next_var_id;
+    symtable_leave_scope(stab);
+
+    stab->next_var_id = saved;
+
+    return count; /**< se rovná ast_func.var_count */
 }
