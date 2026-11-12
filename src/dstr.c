@@ -11,6 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct dstr {
+    char *buf;
+    unsigned len;
+    unsigned cap;
+};
+
 /**
  * @brief Realocuje pamět
  * @param str
@@ -22,17 +28,17 @@ static bool expand(dstr str, unsigned len_cap) {
     if (str->cap + len_cap > cap) {
         cap = str->cap + len_cap;
     }
-    char *src = realloc(str->raw, cap * sizeof(char));
+    char *src = realloc(str->buf, cap * sizeof(char));
     if (src == nullptr) {
         return false;
     }
-    str->raw = src;
+    str->buf = src;
     str->cap = cap;
     return true;
 }
 
 dstr dstr_create(char *str) {
-    dstr dstring = malloc(sizeof(struct dstr_t));
+    dstr dstring = malloc(sizeof(struct dstr));
     if (dstring == nullptr) {
         return nullptr;
     }
@@ -43,7 +49,7 @@ dstr dstr_create(char *str) {
         return nullptr;
     }
     strcpy(string, str);
-    dstring->raw = string;
+    dstring->buf = string;
     dstring->len = len;
     dstring->cap = len + 1;
 
@@ -56,7 +62,7 @@ bool dstr_concat_raw(dstr str_a, char *str_b) {
         return false;
     }
     str_a->len = len;
-    strcat(str_a->raw, str_b);
+    strcat(str_a->buf, str_b);
     return true;
 }
 
@@ -66,40 +72,44 @@ bool dstr_concat(dstr str_a, dstr str_b) {
         return false;
     }
     str_a->len = len;
-    strcat(str_a->raw, str_b->raw);
+    strcat(str_a->buf, str_b->buf);
     return true;
 }
 
-dstr dstr_dup(dstr str) { return dstr_create(str->raw); }
+dstr dstr_dup(dstr str) { return dstr_create(str->buf); }
 
-int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->raw, str_b->raw); }
+int dstr_cmp(dstr str_a, dstr str_b) { return strcmp(str_a->buf, str_b->buf); }
 
-int dstr_cmp_raw(dstr str_a, char *str_b) { return strcmp(str_a->raw, str_b); }
+int dstr_cmp_raw(dstr str_a, char *str_b) { return strcmp(str_a->buf, str_b); }
 
 bool dstr_push_char(dstr str, char chr) {
     if (expand(str, (str->cap + 1)) == false) {
         return false;
     }
-    str->raw[str->len] = chr;
+    str->buf[str->len] = chr;
     str->len += 1;
-    str->raw[str->len] = '\0';
+    str->buf[str->len] = '\0';
     return true;
 }
 
 void dstr_delete_char(dstr str, unsigned pos) {
-    char *dchar = str->raw + pos;
+    char *dchar = str->buf + pos;
     memmove(dchar, dchar + 1, str->len - pos);
     str->len -= 1;
 }
 
 void dstr_clear(dstr str) {
-    str->raw[0] = '\0';
+    str->buf[0] = '\0';
     str->len = 0;
 }
 
 void dstr_delete(dstr str) {
-    free(str->raw);
+    free(str->buf);
     free(str);
 }
 
 unsigned dstr_len(dstr str) { return str->len; }
+
+const char *dstr_cstr(dstr str) {
+    return str->buf;
+}

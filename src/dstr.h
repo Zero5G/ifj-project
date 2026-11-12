@@ -11,13 +11,7 @@
 #ifndef DSTR_H
 #define DSTR_H
 
-struct dstr_t {
-    char *raw;
-    unsigned len;
-    unsigned cap;
-};
-
-typedef struct dstr_t *dstr;
+typedef struct dstr *dstr;
 
 /**
  * @brief vytvoří a alokuje pamět pro strukturu
@@ -28,7 +22,7 @@ dstr dstr_create(char *str);
 
 /**
  * @brief připojí řetezec na konec dynamického řetezce
- * @param str_a
+ * @param str_a cíl
  * @param str_b
  * @return ukazatel na cílový řetězec
  */
@@ -36,7 +30,7 @@ bool dstr_concat_raw(dstr str_a, char *str_b);
 
 /**
  * @brief připojí jednoho dynamického řetezce na konec druhého
- * @param str_a
+ * @param str_a cíl
  * @param str_b
  * @return Vrací false nebo true podle toho jestli se povede
  */
@@ -98,5 +92,12 @@ void dstr_delete(dstr str);
  * @return délku stringu
  */
 unsigned dstr_len(dstr str);
+
+/**
+ * @brief Vrátí C řetězec
+ * @param str
+ * @return řetězec terminovaný nulou
+ */
+const char *dstr_cstr(dstr str);
 
 #endif
