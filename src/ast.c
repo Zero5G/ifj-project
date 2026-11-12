@@ -171,6 +171,9 @@ static void expr_free(ast_expr_t *expr) {
     case E_STRING_LIT:
         dstr_delete(expr->as.str);
         break;
+    case E_VAR:
+        dstr_delete(expr->as.var.name);
+        break;
     case E_UNIT_LIT:
     case E_INT_LIT:
     case E_DOUBLE_LIT:
@@ -327,6 +330,9 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
         break;
     case E_BOOLEAN_LIT:
         fputs(expr->as.bool_val ? "BOOL(true)" : "BOOL(false)", out);
+        break;
+    case E_VAR:
+        fprintf(out, "VAR(%s:%u)", expr->as.var.name->raw, expr->as.var.var_id);
         break;
     }
 }
