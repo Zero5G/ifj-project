@@ -76,7 +76,7 @@ void symtable_destroy(symtable *stab);
  *
  * @return Ukazatel na přidaný symbol, `nullptr` pokud již existuje
  */
-sym_result *symtable_add_func(symtable *stab, const char *name, symbol **out);
+sym_result symtable_add_func(symtable *stab, const char *name, symbol **out);
 
 /**
  * @brief Přidá funkci do tabulky symbolů
@@ -86,21 +86,21 @@ sym_result *symtable_add_func(symtable *stab, const char *name, symbol **out);
  *
  * @return Ukazatel na symbol, `nullptr` pokud nenalezen
  */
-sym_result *symtable_find_func(const symtable *stab, const char *name, symbol **out);
+symbol *symtable_find_func(const symtable *stab, const char *name);
 
 /**
  * @brief Přejít do dalšího rozsahu platnosti
  *
  * @param[in,out] stab Ukazatel na tabulku symbolů
  */
-void symtable_enter_scope(symtable *stab);
+bool symtable_enter_scope(symtable *stab);
 
 /**
  * @brief Přejít do předchozího rozsahu platnosti
  *
  * @param[in,out] stab Ukazatel na tabulku symbolů
  */
-void symtable_leave_scope(symtable *stab);
+bool symtable_leave_scope(symtable *stab);
 
 /**
  * @brief Přidá proměnnou do tabulky symbolů
@@ -110,7 +110,7 @@ void symtable_leave_scope(symtable *stab);
  *
  * @return Ukazatel na symbol, `nullptr` pokud již existuje
  */
-sym_result *symtable_add_var(symtable *stab, const char *name, symbol **out);
+sym_result symtable_add_var(symtable *stab, const char *name, symbol **out);
 
 /**
  * @brief Přidá proměnnou do tabulky symbolů
@@ -120,6 +120,6 @@ sym_result *symtable_add_var(symtable *stab, const char *name, symbol **out);
  *
  * @return Ukazatel na symbol, `nullptr` pokud nenalezen
  */
-sym_result *symtable_find_var(const symtable *stab, const char *name, symbol **out);
+symbol *symtable_find_var(const symtable *stab, const char *name);
 
 #endif

@@ -16,6 +16,8 @@
 typedef struct scope {
     hash_table vars;
     struct scope *parent;
+    bool is_func_parent;
+    unsigned saved_next_var_id;
 } scope;
 
 struct symtable {
@@ -43,29 +45,46 @@ void symtable_destroy(symtable *stab) {
     if (stab == nullptr) {
         return;
     }
+
     while (stab->current != nullptr) {
         scope *parent = stab->current->parent;
         hashtable_dispose(&stab->current->vars);
         free(stab->current);
         stab->current = parent;
     }
+
     hashtable_dispose(&stab->funcs);
     free(stab);
 }
 
-void symtable_enter_scope(symtable *stab) {
+bool symtable_enter_scope(symtable *stab) {
+    if (stab == nullptr) {
+        return false;
+    }
     scope *scp = calloc(1, sizeof(struct scope));
     if (scp == nullptr) {
-        return;
+        return false;
     }
-    hashtable_init(&scp->vars, HTAB_BASE_SIZE);
+
+    if (!hashtable_init(&scp->vars, HTAB_BASE_SIZE)) {
+        free(scp);
+        return false;
+    }
+
     scp->parent = stab->current;
     stab->current = scp;
+    return true;
 }
 
-void symtable_leave_scope(symtable *stab) {
+bool symtable_leave_scope(symtable *stab) {
+    if (stab == nullptr) {
+        return false;
+    }
+
     scope *child = stab->current;
     stab->current = child->parent;
     hashtable_dispose(&child->vars);
     free(child);
+
+    return true;
 }
