@@ -2,6 +2,7 @@
  * @file dstr.c
  *
  * @author Jakub Machač
+ * @author Jakub Manoušek
  * @brief Implementace modulu pro dynamické řetězce
  *
  * @details
@@ -21,13 +22,13 @@ struct dstr {
 /**
  * @brief Realocuje pamět
  * @param str
- * @param len_cap
+ * @param needed
  * @return False nebo true podle toho jestli se povedla nebo ne
  */
-static bool expand(dstr str, size_t len_cap) {
+static bool expand(dstr str, size_t needed) {
     size_t cap = str->cap * 2;
-    if (str->cap + len_cap > cap) {
-        cap = str->cap + len_cap;
+    if (str->cap + needed > cap) {
+        cap = str->cap + needed;
     }
     char *src = realloc(str->buf, cap * sizeof(char));
     if (src == nullptr) {
@@ -59,7 +60,7 @@ dstr dstr_create(const char *str) {
 
 bool dstr_concat_raw(dstr str_a, const char *str_b) {
     size_t len = strlen(str_b) + dstr_len(str_a);
-    if (expand(str_a, len) == false) {
+    if (!expand(str_a, len)) {
         return false;
     }
     str_a->len = len;
@@ -69,7 +70,7 @@ bool dstr_concat_raw(dstr str_a, const char *str_b) {
 
 bool dstr_concat(dstr str_a, const struct dstr *str_b) {
     size_t len = dstr_len(str_a) + dstr_len(str_b);
-    if (expand(str_a, len) == false) {
+    if (!expand(str_a, len)) {
         return false;
     }
     str_a->len = len;
@@ -84,7 +85,7 @@ int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) { return strcmp
 int dstr_cmp_raw(dstr str_a, const char *str_b) { return strcmp(str_a->buf, str_b); }
 
 bool dstr_push_char(dstr str, char chr) {
-    if (expand(str, (str->cap + 1)) == false) {
+    if (!expand(str, (str->cap + 1))) {
         return false;
     }
     str->buf[str->len] = chr;
