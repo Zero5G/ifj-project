@@ -171,6 +171,9 @@ static void expr_free(ast_expr_t *expr) {
     case E_STRING_LIT:
         dstr_delete(expr->as.str);
         break;
+    case E_VAR:
+        dstr_delete(expr->as.var.name);
+        break;
     case E_UNIT_LIT:
     case E_INT_LIT:
     case E_DOUBLE_LIT:
@@ -215,15 +218,14 @@ static void stmt_free(ast_stmt_t *stmt) {
         break;
     case STMT_IF:
         expr_free(stmt->as.if_stmt.cond);
-        block_free(stmt->as.if_stmt.then_blk);
-        free(stmt->as.if_stmt.then_blk);
-        block_free(stmt->as.if_stmt.else_blk);
-        free(stmt->as.if_stmt.else_blk);
+        block_free(&stmt->as.if_stmt.then_blk);
+        if (stmt->as.if_stmt.has_else) {
+            block_free(&stmt->as.if_stmt.else_blk);
+        }
         break;
     case STMT_WHILE:
         expr_free(stmt->as.while_stmt.cond);
-        block_free(stmt->as.while_stmt.block);
-        free(stmt->as.while_stmt.block);
+        block_free(&stmt->as.while_stmt.block);
         break;
     }
     free(stmt);
@@ -263,9 +265,9 @@ static const char *const unary_names[] = {
 };
 
 static const char *const binary_names[] = {
-    [OPU_ADD] = "add", [OPU_SUB] = "sub", [OPU_MUL] = "mul", [OPU_DIV] = "div",
-    [OPU_AND] = "and", [OPU_OR] = "or",   [OPU_LT] = "lt",   [OPU_LTE] = "lte",
-    [OPU_GT] = "gt",   [OPU_GTE] = "gte", [OPU_EQ] = "eq",   [OPU_NE] = "ne",
+    [OPB_ADD] = "add", [OPB_SUB] = "sub", [OPB_MUL] = "mul", [OPB_DIV] = "div",
+    [OPB_AND] = "and", [OPB_OR] = "or",   [OPB_LT] = "lt",   [OPB_LTE] = "lte",
+    [OPB_GT] = "gt",   [OPB_GTE] = "gte", [OPB_EQ] = "eq",   [OPB_NE] = "ne",
 };
 
 static const char *name_lookup(const char *const *tbl, size_t n, size_t idx) {
@@ -328,6 +330,9 @@ static void expr_dump(const ast_expr_t *expr, FILE *out) {
     case E_BOOLEAN_LIT:
         fputs(expr->as.bool_val ? "BOOL(true)" : "BOOL(false)", out);
         break;
+    case E_VAR:
+        fprintf(out, "VAR(%s:%u)", expr->as.var.name->raw, expr->as.var.var_id);
+        break;
     }
 }
 
@@ -371,14 +376,16 @@ static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out) {
         fputs("IF: COND: ", out);
         expr_dump(stmt->as.if_stmt.cond, out);
         fputc('\n', out);
-        block_dump("THEN", stmt->as.if_stmt.then_blk, depth + 1, out);
-        block_dump("ELSE", stmt->as.if_stmt.else_blk, depth + 1, out);
+        block_dump("THEN", &stmt->as.if_stmt.then_blk, depth + 1, out);
+        if (stmt->as.if_stmt.has_else) {
+            block_dump("ELSE", &stmt->as.if_stmt.else_blk, depth + 1, out);
+        }
         return;
     case STMT_WHILE:
         fputs("WHILE: COND: ", out);
         expr_dump(stmt->as.while_stmt.cond, out);
         fputc('\n', out);
-        block_dump("BLOCK", stmt->as.while_stmt.block, depth + 1, out);
+        block_dump("BLOCK", &stmt->as.while_stmt.block, depth + 1, out);
         return;
     }
     fputc('\n', out);

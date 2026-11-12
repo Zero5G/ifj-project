@@ -25,6 +25,7 @@ typedef enum expr_kind {
     E_UNARY,
     E_BINARY,
     E_FUNC,
+    E_VAR,
     E_UNIT_LIT,
     E_INT_LIT,
     E_DOUBLE_LIT,
@@ -39,18 +40,18 @@ typedef enum op_unary {
 } op_unary;
 
 typedef enum op_binary {
-    OPU_ADD,
-    OPU_SUB,
-    OPU_MUL,
-    OPU_DIV,
-    OPU_AND,
-    OPU_OR,
-    OPU_LT,
-    OPU_LTE,
-    OPU_GT,
-    OPU_GTE,
-    OPU_EQ,
-    OPU_NE,
+    OPB_ADD,
+    OPB_SUB,
+    OPB_MUL,
+    OPB_DIV,
+    OPB_AND,
+    OPB_OR,
+    OPB_LT,
+    OPB_LTE,
+    OPB_GT,
+    OPB_GTE,
+    OPB_EQ,
+    OPB_NE,
 } op_binary;
 
 typedef enum stmt_kind : uint8_t {
@@ -88,6 +89,7 @@ struct ast_expr {
             dstr name;
             ast_expr_t **args;
             size_t argc;
+            ast_func_t *target; /**< nullptr = builtin */
         } func;
     } as;
 };
@@ -119,12 +121,13 @@ struct ast_stmt {
         ast_expr_t *ret_val;
         struct {
             ast_expr_t *cond;
-            ast_block_t *then_blk;
-            ast_block_t *else_blk;
+            ast_block_t then_blk;
+            bool has_else;
+            ast_block_t else_blk;
         } if_stmt;
         struct {
             ast_expr_t *cond;
-            ast_block_t *block;
+            ast_block_t block;
         } while_stmt;
     } as;
 };
@@ -160,7 +163,7 @@ typedef struct ast_prog {
 ast_prog_t *ast_prog_create();
 
 /**
- * @bried Vytvoří strukturu AST funkce (allokuje paměť)
+ * @brief Vytvoří strukturu AST funkce (allokuje paměť)
  *
  * @param line Číslo řádku
  *
@@ -169,7 +172,7 @@ ast_prog_t *ast_prog_create();
 ast_func_t *ast_func_create(unsigned line);
 
 /**
- * @bried Vytvoří strukturu AST příkazu (allokuje paměť)
+ * @brief Vytvoří strukturu AST příkazu (allokuje paměť)
  *
  * @param line Číslo řádku
  * @param type Druh příkazu
@@ -179,7 +182,7 @@ ast_func_t *ast_func_create(unsigned line);
 ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind);
 
 /**
- * @bried Vytvoří strukturu AST výrazu (allokuje paměť)
+ * @brief Vytvoří strukturu AST výrazu (allokuje paměť)
  *
  * @param line Číslo řádku
  * @param type Druh výrazu
@@ -189,7 +192,7 @@ ast_stmt_t *ast_stmt_create(unsigned line, stmt_kind kind);
 ast_expr_t *ast_expr_create(unsigned line, expr_kind kind);
 
 /**
- * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ * @brief Vytvoří strukturu AST unárního výrazu (allokuje paměť)
  *
  * Datový typ je brán automaticky z operandu, jinak je TYPE_UNKNOWN
  *
@@ -203,7 +206,7 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu,
                                   ast_expr_t *operand);
 
 /**
- * @bried Vytvoří strukturu AST unárního výrazu (allokuje paměť)
+ * @brief Vytvoří strukturu AST unárního výrazu (allokuje paměť)
  *
  * Datový typ je brán automaticky z levé strany, pokud je levá strana nullptr,
  * tak se bere z pravé, jinak je TYPE_UNKNOWN
