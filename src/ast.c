@@ -218,15 +218,14 @@ static void stmt_free(ast_stmt_t *stmt) {
         break;
     case STMT_IF:
         expr_free(stmt->as.if_stmt.cond);
-        block_free(stmt->as.if_stmt.then_blk);
-        free(stmt->as.if_stmt.then_blk);
-        block_free(stmt->as.if_stmt.else_blk);
-        free(stmt->as.if_stmt.else_blk);
+        block_free(&stmt->as.if_stmt.then_blk);
+        if (stmt->as.if_stmt.has_else) {
+            block_free(&stmt->as.if_stmt.else_blk);
+        }
         break;
     case STMT_WHILE:
         expr_free(stmt->as.while_stmt.cond);
-        block_free(stmt->as.while_stmt.block);
-        free(stmt->as.while_stmt.block);
+        block_free(&stmt->as.while_stmt.block);
         break;
     }
     free(stmt);
@@ -377,14 +376,16 @@ static void stmt_dump(const ast_stmt_t *stmt, unsigned depth, FILE *out) {
         fputs("IF: COND: ", out);
         expr_dump(stmt->as.if_stmt.cond, out);
         fputc('\n', out);
-        block_dump("THEN", stmt->as.if_stmt.then_blk, depth + 1, out);
-        block_dump("ELSE", stmt->as.if_stmt.else_blk, depth + 1, out);
+        block_dump("THEN", &stmt->as.if_stmt.then_blk, depth + 1, out);
+        if (stmt->as.if_stmt.has_else) {
+            block_dump("ELSE", &stmt->as.if_stmt.else_blk, depth + 1, out);
+        }
         return;
     case STMT_WHILE:
         fputs("WHILE: COND: ", out);
         expr_dump(stmt->as.while_stmt.cond, out);
         fputc('\n', out);
-        block_dump("BLOCK", stmt->as.while_stmt.block, depth + 1, out);
+        block_dump("BLOCK", &stmt->as.while_stmt.block, depth + 1, out);
         return;
     }
     fputc('\n', out);

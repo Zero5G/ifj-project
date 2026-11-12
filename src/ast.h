@@ -121,12 +121,13 @@ struct ast_stmt {
         ast_expr_t *ret_val;
         struct {
             ast_expr_t *cond;
-            ast_block_t *then_blk;
-            ast_block_t *else_blk;
+            ast_block_t then_blk;
+            bool has_else;
+            ast_block_t else_blk;
         } if_stmt;
         struct {
             ast_expr_t *cond;
-            ast_block_t *block;
+            ast_block_t block;
         } while_stmt;
     } as;
 };
