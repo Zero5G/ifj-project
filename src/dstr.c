@@ -8,13 +8,14 @@
  */
 #include "dstr.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 struct dstr {
     char *buf;
-    unsigned len;
-    unsigned cap;
+    size_t len;
+    size_t cap;
 };
 
 /**
@@ -42,7 +43,7 @@ dstr dstr_create(const char *str) {
     if (dstring == nullptr) {
         return nullptr;
     }
-    int len = strlen(str);
+    size_t len = strlen(str);
     char *string = malloc((len + 1) * sizeof(char));
     if (string == nullptr) {
         free(dstring);
@@ -57,7 +58,7 @@ dstr dstr_create(const char *str) {
 }
 
 bool dstr_concat_raw(dstr str_a, const char *str_b) {
-    int len = strlen(str_b) + str_a->len;
+    size_t len = strlen(str_b) + str_a->len;
     if (expand(str_a, len) == false) {
         return false;
     }
@@ -67,7 +68,7 @@ bool dstr_concat_raw(dstr str_a, const char *str_b) {
 }
 
 bool dstr_concat(dstr str_a, const struct dstr *str_b) {
-    int len = str_b->len + str_a->len;
+    size_t len = str_b->len + str_a->len;
     if (expand(str_a, len) == false) {
         return false;
     }
