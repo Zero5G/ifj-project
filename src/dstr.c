@@ -21,19 +21,28 @@ struct dstr {
 
 /**
  * @brief Realocuje pamět
+ *
+ * Expanduje
+ *
  * @param str
  * @param needed
  * @return False nebo true podle toho jestli se povedla nebo ne
  */
 static bool expand(dstr str, size_t needed) {
-    size_t cap = str->cap * 2;
-    if (str->cap + needed > cap) {
-        cap = str->cap + needed;
+    if (str->cap > needed) {
+        return true;
     }
+
+    size_t cap = str->cap * 2;
+    if (needed > cap) {
+        cap = needed;
+    }
+
     char *src = realloc(str->buf, cap * sizeof(char));
     if (src == nullptr) {
         return false;
     }
+
     str->buf = src;
     str->cap = cap;
     return true;
@@ -85,18 +94,18 @@ int dstr_cmp(const struct dstr *str_a, const struct dstr *str_b) { return strcmp
 int dstr_cmp_raw(dstr str_a, const char *str_b) { return strcmp(str_a->buf, str_b); }
 
 bool dstr_push_char(dstr str, char chr) {
-    if (!expand(str, (str->cap + 1))) {
+    if (!expand(str, (str->len + 2))) {
         return false;
     }
-    str->buf[str->len] = chr;
+    str->buf[dstr_len(str)] = chr;
     str->len += 1;
-    str->buf[str->len] = '\0';
+    str->buf[dstr_len(str)] = '\0';
     return true;
 }
 
 void dstr_delete_char(dstr str, unsigned pos) {
     char *dchar = str->buf + pos;
-    memmove(dchar, dchar + 1, str->len - pos);
+    memmove(dchar, dchar + 1, dstr_len(str) - pos);
     str->len -= 1;
 }
 
