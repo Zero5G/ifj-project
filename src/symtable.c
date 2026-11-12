@@ -88,3 +88,34 @@ bool symtable_leave_scope(symtable *stab) {
 
     return true;
 }
+
+sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
+    symbol *sym = symtable_find_var(stab, name);
+    if (sym != nullptr) {
+        return SYM_EXISTS;
+        *out = sym;
+    }
+
+    sym = malloc(sizeof(struct symbol));
+    if (sym == nullptr) {
+        return SYM_NOMEM;
+    }
+
+    stab->next_var_id++;
+    *out = sym;
+
+    return SYM_OK;
+}
+
+symbol *symtable_find_var(const symtable *stab, const char *name) {
+    for (scope *scp = stab->current; scp != nullptr; scp = scp->parent) {
+        symbol *sym = symtable_find_var(stab, name);
+        if (sym != nullptr) {
+            return sym;
+        }
+        if (scp->is_func_parent) {
+            break;
+        }
+    }
+    return nullptr;
+}

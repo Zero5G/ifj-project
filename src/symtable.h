@@ -122,4 +122,8 @@ sym_result symtable_add_var(symtable *stab, const char *name, symbol **out);
  */
 symbol *symtable_find_var(const symtable *stab, const char *name);
 
+bool symtable_enter_func(symtable *stab);
+
+unsigned symtable_leave_func(symtable *stab);
+
 #endif
