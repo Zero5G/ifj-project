@@ -40,18 +40,18 @@ typedef enum op_unary {
 } op_unary;
 
 typedef enum op_binary {
-    OPU_ADD,
-    OPU_SUB,
-    OPU_MUL,
-    OPU_DIV,
-    OPU_AND,
-    OPU_OR,
-    OPU_LT,
-    OPU_LTE,
-    OPU_GT,
-    OPU_GTE,
-    OPU_EQ,
-    OPU_NE,
+    OPB_ADD,
+    OPB_SUB,
+    OPB_MUL,
+    OPB_DIV,
+    OPB_AND,
+    OPB_OR,
+    OPB_LT,
+    OPB_LTE,
+    OPB_GT,
+    OPB_GTE,
+    OPB_EQ,
+    OPB_NE,
 } op_binary;
 
 typedef enum stmt_kind : uint8_t {

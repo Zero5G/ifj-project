@@ -199,11 +199,11 @@ Test(ast_expr, binary_sets_fields) {
     ast_expr_t *left = ast_expr_create(1, E_INT_LIT);
     ast_expr_t *right = ast_expr_create(1, E_INT_LIT);
 
-    ast_expr_t *expr = ast_expr_binary_create(3, OPU_ADD, left, right);
+    ast_expr_t *expr = ast_expr_binary_create(3, OPB_ADD, left, right);
     cr_assert_not_null(expr);
     cr_assert_eq(expr->line, 3);
     cr_assert_eq(expr->kind, E_BINARY);
-    cr_assert_eq(expr->as.binary.op, OPU_ADD);
+    cr_assert_eq(expr->as.binary.op, OPB_ADD);
     cr_assert_eq(expr->as.binary.left, left);
     cr_assert_eq(expr->as.binary.right, right);
 
@@ -217,7 +217,7 @@ Test(ast_expr, binary_takes_left_type) {
     ast_expr_t *right = ast_expr_create(1, E_INT_LIT);
     left->data_type = NON_UNKNOWN_TYPE;
 
-    ast_expr_t *expr = ast_expr_binary_create(1, OPU_MUL, left, right);
+    ast_expr_t *expr = ast_expr_binary_create(1, OPB_MUL, left, right);
     cr_assert_eq(expr->data_type, NON_UNKNOWN_TYPE);
 
     free(left);
@@ -229,7 +229,7 @@ Test(ast_expr, binary_null_left_takes_right_type) {
     ast_expr_t *right = ast_expr_create(1, E_INT_LIT);
     right->data_type = NON_UNKNOWN_TYPE;
 
-    ast_expr_t *expr = ast_expr_binary_create(1, OPU_SUB, nullptr, right);
+    ast_expr_t *expr = ast_expr_binary_create(1, OPB_SUB, nullptr, right);
     cr_assert_eq(expr->data_type, NON_UNKNOWN_TYPE);
 
     free(right);
@@ -237,7 +237,7 @@ Test(ast_expr, binary_null_left_takes_right_type) {
 }
 
 Test(ast_expr, binary_both_null_is_unknown) {
-    ast_expr_t *expr = ast_expr_binary_create(1, OPU_EQ, nullptr, nullptr);
+    ast_expr_t *expr = ast_expr_binary_create(1, OPB_EQ, nullptr, nullptr);
     cr_assert_not_null(expr);
     cr_assert_eq(expr->data_type, TYPE_UNKNOWN);
 
@@ -252,7 +252,7 @@ Test(ast_free, nested_tree_no_crash) {
     left->as.int_val = 1;
     ast_expr_t *right = ast_expr_create(1, E_INT_LIT);
     right->as.int_val = 2;
-    ast_expr_t *sum = ast_expr_binary_create(1, OPU_ADD, left, right);
+    ast_expr_t *sum = ast_expr_binary_create(1, OPB_ADD, left, right);
     ast_expr_t *neg = ast_expr_unary_create(1, OPU_NEG, sum);
 
     ast_stmt_t *ret = ast_stmt_create(1, STMT_RET);

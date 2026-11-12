@@ -266,9 +266,9 @@ static const char *const unary_names[] = {
 };
 
 static const char *const binary_names[] = {
-    [OPU_ADD] = "add", [OPU_SUB] = "sub", [OPU_MUL] = "mul", [OPU_DIV] = "div",
-    [OPU_AND] = "and", [OPU_OR] = "or",   [OPU_LT] = "lt",   [OPU_LTE] = "lte",
-    [OPU_GT] = "gt",   [OPU_GTE] = "gte", [OPU_EQ] = "eq",   [OPU_NE] = "ne",
+    [OPB_ADD] = "add", [OPB_SUB] = "sub", [OPB_MUL] = "mul", [OPB_DIV] = "div",
+    [OPB_AND] = "and", [OPB_OR] = "or",   [OPB_LT] = "lt",   [OPB_LTE] = "lte",
+    [OPB_GT] = "gt",   [OPB_GTE] = "gte", [OPB_EQ] = "eq",   [OPB_NE] = "ne",
 };
 
 static const char *name_lookup(const char *const *tbl, size_t n, size_t idx) {
