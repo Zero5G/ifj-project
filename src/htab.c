@@ -57,7 +57,7 @@ bool hashtable_remove(hash_table *table, char *key) {
     return false;
 }
 
-hash_item *hashtable_search(hash_table *table, char *key) {
+hash_item *hashtable_search(const hash_table *table, const char *key) {
     unsigned index = hash_function(table->capacity, key);
     for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[index].state == STATE_EMPTY) {

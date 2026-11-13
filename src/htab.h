@@ -76,7 +76,7 @@ typedef struct {
  * @param key klic hledaneho prvku, hledana hodnota
  * @return adresa hledaneho prvku
  */
-hash_item *hashtable_search(hash_table *table, char *key);
+hash_item *hashtable_search(const hash_table *table, const char *key);
 
 /**
  * @brief Prevede vstup na hash code
