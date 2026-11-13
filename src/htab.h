@@ -2,6 +2,7 @@
  * @file htab.h
  *
  * @author Vojta Buchmaier
+ * @author Jakub Manoušek
  * @brief Modul pro hašovací tabulku
  *
  * @details
