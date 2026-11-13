@@ -7,6 +7,8 @@
  * @details
  */
 
+#include "ast.h"
+#include <string.h>
 #define HTAB_BASE_SIZE 12
 
 #include "symtable.h"
@@ -97,8 +99,23 @@ sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
         *out = sym;
     }
 
+    sym->name = strdup(name);
+    if (sym->name == nullptr) {
+        free(sym);
+        return SYM_NOMEM;
+    }
+
     sym = malloc(sizeof(struct symbol));
     if (sym == nullptr) {
+        return SYM_NOMEM;
+    }
+
+    sym->kind = SYM_VAR;
+    sym->type = TYPE_UNKNOWN;
+    sym->ret_state = RET_UNRESOLVED;
+    if (!hashtable_insert(&stab->funcs, sym->name)) {
+        free(sym->name);
+        free(sym);
         return SYM_NOMEM;
     }
 
