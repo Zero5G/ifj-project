@@ -2,6 +2,7 @@
  * @file htab.h
  *
  * @author Vojta Buchmaier
+ * @author Jakub Manoušek
  * @brief Modul pro hašovací tabulku
  *
  * @details
@@ -11,6 +12,7 @@
 /**
  * @brief Magicke cislo
  */
+#include "symtable.h"
 #define HTAB_MAGIC_NUMBER 5'381UL
 #define HTAB_MAGIC_NUMBER_2 33UL
 #define HTAB_EXPAND_TRESHHOLD 0.75
@@ -45,7 +47,7 @@ typedef enum {
     STATE_EMPTY,
     STATE_FULL,
     STATE_DELETE,
-} symbol_state;
+} item_state;
 
 /**
  * @enum Haash_item
@@ -53,11 +55,8 @@ typedef enum {
  */
 typedef struct {
     char *key;
-    symbol_kind kind;
-    symbol_data_type data_type;
-    symbol_state state;
-    int param_count;
-    symbol_data_type *param_types;
+    symbol *symbol;
+    item_state state;
 } hash_item;
 
 // Struktura hash tabulky
@@ -78,7 +77,7 @@ typedef struct {
  * @param key klic hledaneho prvku, hledana hodnota
  * @return adresa hledaneho prvku
  */
-hash_item *hashtable_search(hash_table *table, char *key);
+hash_item *hashtable_search(const hash_table *table, const char *key);
 
 /**
  * @brief Prevede vstup na hash code

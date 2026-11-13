@@ -47,6 +47,7 @@ bool hashtable_remove(hash_table *table, char *key) {
         if (table->array[index].state == STATE_FULL &&
             strcmp(table->array[index].key, key) == 0) {
             free(table->array[index].key);
+            free(table->array[i].symbol);
             table->array[index].key = nullptr;
             table->array[index].state = STATE_DELETE;
             table->active_size--;
@@ -57,7 +58,7 @@ bool hashtable_remove(hash_table *table, char *key) {
     return false;
 }
 
-hash_item *hashtable_search(hash_table *table, char *key) {
+hash_item *hashtable_search(const hash_table *table, const char *key) {
     unsigned index = hash_function(table->capacity, key);
     for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[index].state == STATE_EMPTY) {
@@ -78,30 +79,32 @@ bool hashtable_resize(hash_table *table) {
         return true;
     }
 
-    hash_item *old_array = table->array;
-    table->array = malloc(sizeof(hash_item) * table->capacity * 2);
+    unsigned old_capacity = table->capacity;
+    unsigned new_capacity = old_capacity * 2;
+
+    hash_item *new_array = malloc(sizeof(hash_item) * new_capacity);
     if (table->array == nullptr) {
         return false;
     }
-    unsigned old_capacity = table->capacity;
-    table->capacity = table->capacity * 2;
-    // inicializace noveho pole
+
     for (unsigned i = 0; i < table->capacity; i++) {
         table->array[i].state = STATE_EMPTY;
         table->array[i].key = nullptr;
     }
     // presun starych prvku do noveho pole
     for (unsigned i = 0; i < old_capacity; i++) {
-        if (old_array[i].state == STATE_FULL) {
-            unsigned new_index =
-                hash_function(table->capacity, old_array[i].key);
-            while (table->array[new_index].state == STATE_FULL) {
-                new_index = (new_index + 1) % table->capacity;
+        if (table->array[i].state == STATE_FULL) {
+            unsigned idx = hash_function(new_capacity, table->array[i].key);
+            while (new_array[idx].state == STATE_FULL) {
+                idx = (idx + 1) % new_capacity;
             }
-            table->array[new_index] = old_array[i];
+            new_array[idx] = table->array[i];
         }
     }
-    free(old_array);
+
+    free(table->array);
+    table->array = new_array;
+    table->capacity = new_capacity;
     return true;
 }
 
@@ -134,6 +137,7 @@ void hashtable_dispose(hash_table *table) {
     for (unsigned i = 0; i < table->capacity; i++) {
         if (table->array[i].state == STATE_FULL) {
             free(table->array[i].key);
+            free(table->array[i].symbol);
             table->array[i].state = STATE_EMPTY;
         }
     }
