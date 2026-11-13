@@ -9,10 +9,12 @@
  */
 #ifndef HTAB_H
 #define HTAB_H
+
+#include "symtable.h"
+
 /**
  * @brief Magicke cislo
  */
-#include "symtable.h"
 #define HTAB_MAGIC_NUMBER 5'381UL
 #define HTAB_MAGIC_NUMBER_2 33UL
 #define HTAB_EXPAND_TRESHHOLD 0.75

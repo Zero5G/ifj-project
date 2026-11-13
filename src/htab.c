@@ -23,6 +23,7 @@ bool hashtable_init(hash_table *table, int initial_capacity) {
     for (unsigned i = 0; i < table->capacity; i++) {
         table->array[i].state = STATE_EMPTY;
         table->array[i].key = nullptr;
+        table->array[i].symbol = nullptr;
     }
 
     return true;
@@ -47,8 +48,9 @@ bool hashtable_remove(hash_table *table, char *key) {
         if (table->array[index].state == STATE_FULL &&
             strcmp(table->array[index].key, key) == 0) {
             free(table->array[index].key);
-            free(table->array[i].symbol);
+            free(table->array[index].symbol);
             table->array[index].key = nullptr;
+            table->array[index].symbol = nullptr;
             table->array[index].state = STATE_DELETE;
             table->active_size--;
             return true;
@@ -83,13 +85,14 @@ bool hashtable_resize(hash_table *table) {
     unsigned new_capacity = old_capacity * 2;
 
     hash_item *new_array = malloc(sizeof(hash_item) * new_capacity);
-    if (table->array == nullptr) {
+    if (new_array == nullptr) {
         return false;
     }
 
-    for (unsigned i = 0; i < table->capacity; i++) {
-        table->array[i].state = STATE_EMPTY;
-        table->array[i].key = nullptr;
+    for (unsigned i = 0; i < new_capacity; i++) {
+        new_array[i].state = STATE_EMPTY;
+        new_array[i].key = nullptr;
+        new_array[i].symbol = nullptr;
     }
     // presun starych prvku do noveho pole
     for (unsigned i = 0; i < old_capacity; i++) {
