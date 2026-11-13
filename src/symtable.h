@@ -33,7 +33,6 @@ typedef enum {
     RET_INFERRED,
 } return_state;
 
-
 /**
  * @brief Struktura symbolu
  */
