@@ -34,8 +34,8 @@ static sym_result symtable_insert(hash_table *htab, const char *name, sym_kind k
         return SYM_NOMEM;
     }
 
-    sym->name = strdup(name);
-    if (sym->name == nullptr) {
+    char *name_dup = strdup(name);
+    if (name_dup == nullptr) {
         free(sym);
         return SYM_NOMEM;
     }
@@ -43,8 +43,8 @@ static sym_result symtable_insert(hash_table *htab, const char *name, sym_kind k
     sym->kind = kind;
     sym->type = TYPE_UNKNOWN;
     sym->ret_state = RET_UNRESOLVED;
-    if (!hashtable_insert(htab, sym->name)) {
-        free(sym->name);
+    if (!hashtable_insert(htab, name_dup)) {
+        free(name_dup);
         free(sym);
         return SYM_NOMEM;
     }
@@ -120,8 +120,8 @@ bool symtable_leave_scope(symtable *stab) {
 sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
     symbol *sym = symtable_find_var(stab, name);
     if (sym != nullptr) {
-        return SYM_EXISTS;
         *out = sym;
+        return SYM_EXISTS;
     }
 
     sym_result res = symtable_insert(&stab->current->vars, name, SYM_VAR, out);
@@ -171,8 +171,8 @@ unsigned symtable_leave_func(symtable *stab) {
 sym_result symtable_add_func(symtable *stab, const char *name, symbol **out) {
     symbol *sym = symtable_find_func(stab, name);
     if (sym != nullptr) {
-        return SYM_EXISTS;
         *out = sym;
+        return SYM_EXISTS;
     }
 
     sym_result res = symtable_insert(&stab->funcs, name, SYM_FUNC, out);
@@ -181,7 +181,6 @@ sym_result symtable_add_func(symtable *stab, const char *name, symbol **out) {
     return res;
 }
 
-// TODO:
-/* symbol *symtable_find_func(const symtable *stab, const char *name) {
-    return hashtable_search(&stab->funcs, name)->val;
-}*/
+symbol *symtable_find_func(const symtable *stab, const char *name) {
+    return hashtable_search(&stab->funcs, name)->symbol;
+}

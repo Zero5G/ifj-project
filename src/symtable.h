@@ -39,7 +39,6 @@ typedef enum {
  */
 typedef struct symbol {
     sym_kind kind;
-    char *name; /** vlastní je hašovací tabulka */
     data_type type;
 
     bool is_mut;
