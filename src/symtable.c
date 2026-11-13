@@ -28,6 +28,31 @@ struct symtable {
     unsigned next_var_id;
 };
 
+static sym_result symtable_insert(hash_table *htab, const char *name, sym_kind kind, symbol **out) {
+    symbol *sym = malloc(sizeof(struct symbol));
+    if (sym == nullptr) {
+        return SYM_NOMEM;
+    }
+
+    sym->name = strdup(name);
+    if (sym->name == nullptr) {
+        free(sym);
+        return SYM_NOMEM;
+    }
+
+    sym->kind = kind;
+    sym->type = TYPE_UNKNOWN;
+    sym->ret_state = RET_UNRESOLVED;
+    if (!hashtable_insert(htab, sym->name)) {
+        free(sym->name);
+        free(sym);
+        return SYM_NOMEM;
+    }
+
+    *out = sym;
+    return SYM_OK;
+}
+
 symtable *symtable_create() {
     symtable *symtable = calloc(1, sizeof(struct symtable));
     if (symtable == nullptr) {
@@ -99,30 +124,11 @@ sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
         *out = sym;
     }
 
-    sym->name = strdup(name);
-    if (sym->name == nullptr) {
-        free(sym);
-        return SYM_NOMEM;
-    }
-
-    sym = malloc(sizeof(struct symbol));
-    if (sym == nullptr) {
-        return SYM_NOMEM;
-    }
-
-    sym->kind = SYM_VAR;
-    sym->type = TYPE_UNKNOWN;
-    sym->ret_state = RET_UNRESOLVED;
-    if (!hashtable_insert(&stab->funcs, sym->name)) {
-        free(sym->name);
-        free(sym);
-        return SYM_NOMEM;
-    }
-
+    sym_result res = symtable_insert(&stab->current->vars, name, SYM_VAR, out);
     stab->next_var_id++;
-    *out = sym;
 
-    return SYM_OK;
+    *out = sym;
+    return res;
 }
 
 symbol *symtable_find_var(const symtable *stab, const char *name) {
@@ -161,3 +167,21 @@ unsigned symtable_leave_func(symtable *stab) {
 
     return count; /**< se rovná ast_func.var_count */
 }
+
+sym_result symtable_add_func(symtable *stab, const char *name, symbol **out) {
+    symbol *sym = symtable_find_func(stab, name);
+    if (sym != nullptr) {
+        return SYM_EXISTS;
+        *out = sym;
+    }
+
+    sym_result res = symtable_insert(&stab->funcs, name, SYM_FUNC, out);
+
+    *out = sym;
+    return res;
+}
+
+// TODO:
+/* symbol *symtable_find_func(const symtable *stab, const char *name) {
+    return hashtable_search(&stab->funcs, name)->val;
+}*/
