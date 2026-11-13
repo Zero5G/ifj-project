@@ -111,6 +111,9 @@ bool symtable_leave_scope(symtable *stab) {
     if (stab == nullptr) {
         return false;
     }
+    if (stab->current == nullptr) {
+        return false;
+    }
 
     scope *child = stab->current;
     stab->current = child->parent;
