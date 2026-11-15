@@ -5,3 +5,5 @@ test_runner
 interpreter
 compile_commands.json
 dokumentace.pdf
+.vscode/settings.json
+.gitignore
