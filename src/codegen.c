@@ -34,5 +34,21 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         case E_INT_LIT:
             fprintf(ctx->out, "PUSHS int@%d\n", expr->as.int_val);
             break;
+        case E_UNARY:
+            break;
+        case E_BINARY:
+            break;
+        case E_FUNC:
+            break;
+        case E_VAR:
+            break;
+        case E_UNIT_LIT:
+            break;
+        case E_DOUBLE_LIT:
+            break;
+        case E_STRING_LIT:
+            break;
+        case E_BOOLEAN_LIT:
+            break;
     }
 }
