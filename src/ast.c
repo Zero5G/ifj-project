@@ -401,7 +401,8 @@ void ast_prog_dump(const ast_prog_t *program, FILE *out) {
             if (i > 0) {
                 fputs(", ", out);
             }
-            fprintf(out, "%s: %s", dstr_cstr(func->params[i].name),
+            fprintf(out, "%s(id: %u): %s", dstr_cstr(func->params[i].name),
+                    func->params[i].var_id,
                     NAME_OF(type_names, func->params[i].type));
         }
         fputc(')', out);

@@ -135,6 +135,7 @@ struct ast_stmt {
 typedef struct ast_func_param {
     dstr name;
     data_type type;
+    unsigned var_id;
 } ast_func_param_t;
 
 struct ast_func {
@@ -208,8 +209,7 @@ ast_expr_t *ast_expr_unary_create(unsigned line, op_unary opu,
 /**
  * @brief Vytvoří strukturu AST unárního výrazu (allokuje paměť)
  *
- * Datový typ je brán automaticky z levé strany, pokud je levá strana nullptr,
- * tak se bere z pravé, jinak je TYPE_UNKNOWN
+ * Datový typ je TYPE_UNKNOWN, při vytvoření
  *
  * @param line Číslo řádku
  * @param type Druh binární operace
