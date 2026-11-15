@@ -9,9 +9,30 @@
 
 #include "codegen.h"
 #include "ast.h"
+#include <stdio.h>
 
 typedef struct {
     FILE *out;
     unsigned label_id;
     ast_func_t *current_func;
 } codegen_ctx_t;
+
+static void print_string(FILE *out, const char *s) {
+    fputs("string@", out);
+    for (const unsigned char *p = (const unsigned char *)s; *p != '\0'; p++) {
+        if (*p <= 32 || *p == '#' || *p == '\\') {
+            fprintf(out, "\\%03u", *p);
+        }
+        else {
+            fputc(*p, out);
+        }
+    }
+}
+
+static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
+    switch (expr->kind) {
+        case E_INT_LIT:
+            fprintf(ctx->out, "PUSHS int@%d\n", expr->as.int_val);
+            break;
+    }
+}
