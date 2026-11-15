@@ -11,26 +11,30 @@
 #include "ast.h"
 #include <stdio.h>
 
+#define SPECIAL_CHAR_LAST 32
+
 typedef struct {
     FILE *out;
     unsigned label_id;
     ast_func_t *current_func;
 } codegen_ctx_t;
 
-static void print_string(FILE *out, const char *s) {
+// NOLINTBEGIN(cert-err33-c)
+
+static void print_string(FILE *out, const char *str) {
     fputs("string@", out);
-    for (const unsigned char *p = (const unsigned char *)s; *p != '\0'; p++) {
-        if (*p <= 32 || *p == '#' || *p == '\\') {
-            fprintf(out, "\\%03u", *p);
+    for (const unsigned char *ptr = (const unsigned char *)str; *ptr != '\0'; ptr++) {
+        if (*ptr <= SPECIAL_CHAR_LAST || *ptr == '#' || *ptr == '\\') {
+            fprintf(out, "\\%03u", *ptr);
         }
         else {
-            fputc(*p, out);
+            fputc(*ptr, out);
         }
     }
 }
 
 static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
-    switch (expr->kind) {
+    switch (expr->kind) {   
         case E_INT_LIT:
             fprintf(ctx->out, "PUSHS int@%d\n", expr->as.int_val);
             break;
@@ -52,3 +56,4 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
             break;
     }
 }
+// NOLINTEND(cert-err33-c)
