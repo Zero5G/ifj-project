@@ -10,6 +10,7 @@
 #include "ast.h"
 #include "dstr.h"
 #include "symtable.h"
+#include <stddef.h>
 #include "semantic.h"
 
 typedef struct sematic_ctx {
@@ -44,7 +45,6 @@ static bool declare_funcs(sematic_ctx *ctx) {
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
-static void analyze_func(sematic_ctx *ctx, symbol *sym);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     if (!symtable_enter_scope(ctx->stab)) {
@@ -154,6 +154,50 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             break;
         }
     }
+}
+
+
+static void analyze_func(sematic_ctx *ctx, symbol *sym) {
+    ast_func_t *func = sym->decl;
+    ast_func_t *saved_func = ctx->current_func;
+    symbol *saved_sym = ctx->current_sym;
+    bool saved_seen = ctx->saw_return;
+
+    ctx->current_func = func;
+    ctx->current_sym = sym;
+    ctx->saw_return = false;
+
+    if (sym->ret_state == RET_UNRESOLVED) {
+        sym->ret_state = RET_INFERRING;
+    }
+
+    if (symtable_enter_func(ctx->stab)) {
+        for (size_t i = 0; i < func->param_count; i++) {
+            symbol *param = nullptr;
+            if (symtable_add_var(ctx->stab, dstr_cstr(func->params[i].name), &param) == SYM_OK) {
+                param->kind = SYM_VAR;
+                param->is_mut = false;
+                param->type = func->params[i].type;
+            } else {
+                // ERR
+            }
+        }
+        analyze_block(ctx, &func->body);
+        func->var_count = symtable_leave_func(ctx->stab);
+    } else {
+        // ERR
+    }
+
+    if (sym->ret_state == RET_INFERRING) {
+        if (sym->type == TYPE_UNKNOWN && !ctx->saw_return) {
+            sym->type = TYPE_UNIT;
+        }
+        sym->ret_state = RET_INFERRED;
+    }
+
+    ctx->current_func = saved_func;
+    ctx->current_sym = saved_sym;
+    ctx->saw_return = saved_seen;
 }
 
 
