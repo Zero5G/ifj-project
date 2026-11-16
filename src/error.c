@@ -56,12 +56,12 @@ void error_printf(error_code code, char *fmt, ...) {
     va_end(args);
 }
 
-void error_fatal(error_code code) {
+[[noreturn]] void error_fatal(error_code code) {
     error_print(code);
     exit((int)code);
 }
 
-void error_fatalf(error_code code, const char *fmt, ...) {
+[[noreturn]] void error_fatalf(error_code code, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     error_vprintf(code, fmt, args);
@@ -82,9 +82,9 @@ void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
     exit((int)code);
 }
 
-void error_fatal_cleanup(error_code code) { die(code); }
+[[noreturn]] void error_fatal_cleanup(error_code code) { die(code); }
 
-void error_fatalf_cleanup(error_code code, const char *fmt, ...) {
+[[noreturn]] void error_fatalf_cleanup(error_code code, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     error_vprintf(code, fmt, args);
