@@ -1,5 +1,5 @@
 /**
- * @file expr.h
+ * @file expr.c
  *
  * @author Matěj Krňák
  * @brief Implementace modulu pro zpracování výrazů precedenční syntaktickou
