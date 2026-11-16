@@ -29,7 +29,7 @@ static bool declare_funcs(sematic_ctx *ctx) {
                 break;
             case SYM_EXISTS: // NOLINT
                 // ERR
-                return false;
+                continue;
             case SYM_NOMEM:
                 // ERR
                 return false;
@@ -103,7 +103,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
                 analyze_expr(ctx, ret_val);
             }
 
-            data_type type = ret_val != nullptr ? func->type : TYPE_UNIT;
+            data_type type = ret_val != nullptr ? ret_val->data_type : TYPE_UNIT;
             ctx->saw_return = true;
 
             if (type == TYPE_UNKNOWN) {
