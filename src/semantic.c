@@ -7,11 +7,13 @@
  * @details
  */
 
+#include "semantic.h"
 #include "ast.h"
 #include "dstr.h"
 #include "symtable.h"
+#include "error.h"
+
 #include <stddef.h>
-#include "semantic.h"
 
 typedef struct sematic_ctx {
     ast_prog_t *prog;
@@ -28,10 +30,10 @@ static bool declare_funcs(sematic_ctx *ctx) {
             case SYM_OK:
                 break;
             case SYM_EXISTS: // NOLINT
-                // ERR
+                error_fatal_cleanup(ERR_SEM_REDEF);
                 continue;
             case SYM_NOMEM:
-                // ERR
+                error_fatal_cleanup(ERR_OTHER);
                 return false;
         }
         sym->decl = func;
@@ -49,7 +51,7 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     if (!symtable_enter_scope(ctx->stab)) {
-        return;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     for (ast_stmt_t *stmt = block->first; stmt != nullptr; stmt = stmt->next) {
@@ -71,18 +73,16 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             symbol *sym = nullptr;
             switch (symtable_add_var(ctx->stab, dstr_cstr(stmt->as.var_def.name), &sym)) {
                 case SYM_OK: break;
-                case SYM_EXISTS: // NOLINT
-                    return; // ERR
-                    break;
+                case SYM_EXISTS:
+                    error_fatal_cleanup(ERR_SEM_REDEF);
                 case SYM_NOMEM:
-                    return; // ERR
-                    break;
+                    error_fatal_cleanup(ERR_OTHER);
             }
             data_type type = stmt->as.var_def.type;
             if (type == TYPE_UNKNOWN && init != nullptr) {
                 type = init->data_type;
             } else if (init != nullptr && init->data_type != TYPE_UNKNOWN && type != init->data_type) {
-                // ERR
+                error_fatal_cleanup(ERR_SEM_TYPE);
             }
 
             sym->kind = SYM_VAR;
@@ -113,7 +113,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             if (func->type == TYPE_UNKNOWN) {
                 func->type = type;
             } else if (func->type != type) {
-                // ERR
+                error_fatal_cleanup(ERR_SEM_TYPE);
             }
             break;
         }
@@ -123,14 +123,14 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
 
             symbol *sym = symtable_find_var(ctx->stab, dstr_cstr(stmt->as.assign.name));
             if (sym == nullptr) {
-                return; // ERR
+                error_fatal_cleanup(ERR_SEM_UNDEF);
             }
             if (!sym->is_mut) {
-                return;; // ERR
+                error_fatal_cleanup(ERR_SEM_ROAE);
             }
 
             if (sym->type != TYPE_UNKNOWN && val->data_type != TYPE_UNKNOWN && sym->type != val->data_type) {
-                return; // ERR
+                error_fatal_cleanup(ERR_SEM_TYPE);
             }
 
             stmt->as.assign.var_id = sym->var_id;
@@ -141,7 +141,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             analyze_expr(ctx, cond);
 
             if ((cond->data_type != TYPE_UNKNOWN) && (cond->data_type != TYPE_BOOL)) {
-                // ERR
+                error_fatal_cleanup(ERR_SEM_TYPE);
             }
 
             analyze_block(ctx, &stmt->as.if_stmt.then_blk);
@@ -154,7 +154,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             ast_expr_t *cond = stmt->as.while_stmt.cond;
             analyze_expr(ctx, cond);
             if (cond->data_type != TYPE_UNKNOWN && cond->data_type != TYPE_BOOL) {
-                // ERR
+                error_fatal_cleanup(ERR_SEM_TYPE);
             }
             analyze_block(ctx, &stmt->as.while_stmt.block);
             break;
@@ -180,15 +180,14 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 case OPU_NEG:
                 case OPU_PLUS:
                     if (!is_num(operand->data_type)) {
-                        // ERR
+                        error_fatal_cleanup(ERR_SEM_TYPE);
                         break;
                     }
                     expr->data_type = operand->data_type;
                     break;
                 case OPU_NOT:
                     if (operand->data_type != TYPE_BOOL) {
-                        // ERR
-                        break;
+                        error_fatal_cleanup(ERR_SEM_TYPE);
                     }
                     expr->data_type = TYPE_BOOL;
                     break;
@@ -206,7 +205,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 }
 
                 if (left->data_type != right->data_type) {
-                    // ERR
+                    error_fatal_cleanup(ERR_SEM_TYPE);
                     break;
                 }
 
@@ -217,16 +216,14 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                     case OPB_MUL:
                     case OPB_DIV:
                         if (!is_num(type)) {
-                            // ERR
-                            break;
+                            error_fatal_cleanup(ERR_SEM_TYPE);
                         }
                         expr->data_type = type;
                         break;
                     case OPB_AND:
                     case OPB_OR:
                         if (type != TYPE_BOOL) {
-                            // ERR
-                            break;
+                            error_fatal_cleanup(ERR_SEM_TYPE);
                         }
                         expr->data_type = TYPE_BOOL;
                         break;
@@ -235,8 +232,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                     case OPB_GT:
                     case OPB_GTE:
                         if (!is_num(type)) {
-                            // ERR
-                            break;
+                            error_fatal_cleanup(ERR_SEM_TYPE);
                         }
                         expr->data_type = TYPE_BOOL;
                         break;
@@ -255,29 +251,29 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
 
                 symbol *callee = symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
                 if (callee == nullptr) {
-                    // ERR
-                    break;
+                    error_fatal_cleanup(ERR_SEM_UNDEF);
                 }
                 if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
                     analyze_func(ctx, callee);
                 }
                 if (callee->ret_state == RET_INFERRING && callee->type == TYPE_UNKNOWN) {
-                    // ERR
-                } else {
-                    expr->data_type = callee->type;
+                    error_fatal_cleanup(ERR_SEM_TYPE);
                 }
+                /* else {
+                    expr->data_type = callee->type;
+                } */
 
                 expr->as.func.target = callee->decl;
 
                 if (expr->as.func.argc != callee->param_count) {
-                    // ERR
+                    error_fatal_cleanup(ERR_SEM_BADARGS);
                     break;
                 }
                 for (size_t i = 0; i < expr->as.func.argc; i++) {
                     data_type wanted = callee->is_builtin ? callee->param_types[i] : callee->decl->params[i].type;
                     data_type gotten = expr->as.func.args[i]->data_type;
                     if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN && gotten != wanted) {
-                        // ERR
+                        error_fatal_cleanup(ERR_SEM_BADARGS);
                     }
                 }
             }
@@ -285,7 +281,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         case E_VAR:
             symbol *sym = symtable_find_var(ctx->stab, dstr_cstr(expr->as.var.name));
             if (sym == nullptr) {
-                // ERR?
+                error_fatal_cleanup(ERR_SEM_UNDEF);
                 expr->data_type = TYPE_UNKNOWN;
                 return;
             }
@@ -325,22 +321,27 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
         sym->ret_state = RET_INFERRING;
     }
 
-    if (symtable_enter_func(ctx->stab)) {
-        for (size_t i = 0; i < func->param_count; i++) {
-            symbol *param = nullptr;
-            if (symtable_add_var(ctx->stab, dstr_cstr(func->params[i].name), &param) == SYM_OK) {
+    if (!symtable_enter_func(ctx->stab)) {
+        error_fatal_cleanup(ERR_OTHER);
+    }
+
+    for (size_t i = 0; i < func->param_count; i++) {
+        symbol *param = nullptr;
+        switch (symtable_add_var(ctx->stab, dstr_cstr(func->params[i].name), &param)) {
+
+            case SYM_OK:
                 param->kind = SYM_VAR;
                 param->is_mut = false;
                 param->type = func->params[i].type;
-            } else {
-                // ERR
-            }
+                break;
+            case SYM_EXISTS:
+                error_fatal_cleanup(ERR_SEM_REDEF);
+            case SYM_NOMEM:
+                error_fatal_cleanup(ERR_OTHER);
         }
-        analyze_block(ctx, &func->body);
-        func->var_count = symtable_leave_func(ctx->stab);
-    } else {
-        // ERR
     }
+    analyze_block(ctx, &func->body);
+    func->var_count = symtable_leave_func(ctx->stab);
 
     if (sym->ret_state == RET_INFERRING) {
         if (sym->type == TYPE_UNKNOWN && !ctx->saw_return) {
