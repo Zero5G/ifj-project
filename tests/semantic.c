@@ -9,6 +9,8 @@
 #include "symtable.h"
 #include "types.h"
 
+// NOLINTBEGIN(readability-*)
+
 /*
  * Errors are not reported yet, so error cases can't assert on messages.
  * They assert what is observable instead:
@@ -115,7 +117,7 @@ static ast_expr_t *call(const char *name, size_t argc, ...) {
     e->as.func.args = nullptr;
     e->as.func.target = nullptr;
     if (argc > 0) {
-        e->as.func.args = malloc(argc * sizeof(ast_expr_t *));
+        e->as.func.args = (ast_expr_t**)malloc(argc * sizeof(ast_expr_t *));
         cr_assert_not_null(e->as.func.args);
         va_list ap;
         va_start(ap, argc);
@@ -930,3 +932,5 @@ Test(sema, duplicate_function_calls_still_resolve) {
     run();
     cr_assert_eq(cal->data_type, TYPE_INT);
 }
+
+// NOLINTEND(readability-*)
