@@ -96,17 +96,22 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             break;
         case STMT_RET: {
             ast_expr_t *ret_val = stmt->as.ret_val;
-            ast_func_t *func = ctx->current_func;
+            symbol *func = ctx->current_sym;
+
             if (ret_val != nullptr) {
                 analyze_expr(ctx, ret_val);
             }
-            if (!func->has_ret_type) {
-                if (ret_val != nullptr) {
-                    // ERR
-                }
-            } else if (ret_val == nullptr) {
-                // ERR
-            } else if (ret_val->data_type != TYPE_UNKNOWN && ret_val->data_type != func->ret_type) {
+
+            data_type type = ret_val != nullptr ? func->type : TYPE_UNIT;
+            ctx->saw_return = true;
+
+            if (type == TYPE_UNKNOWN) {
+                break;
+            }
+
+            if (func->type == TYPE_UNKNOWN) {
+                func->type = type;
+            } else if (func->type != type) {
                 // ERR
             }
             break;
@@ -155,7 +160,6 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
         }
     }
 }
-
 
 static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     ast_func_t *func = sym->decl;
