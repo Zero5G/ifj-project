@@ -176,6 +176,9 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
             ast_expr_t *operand = expr->as.unary.operand;
             analyze_expr(ctx, operand);
             expr->data_type = TYPE_UNKNOWN;
+            if (operand->data_type == TYPE_UNKNOWN) {
+                break;
+            }
             switch (expr->as.unary.op) {
                 case OPU_NEG:
                 case OPU_PLUS:
@@ -262,6 +265,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 /* else {
                     expr->data_type = callee->type;
                 } */
+                expr->data_type = callee->type;
 
                 expr->as.func.target = callee->decl;
 
