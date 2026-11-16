@@ -45,6 +45,7 @@ static bool declare_funcs(sematic_ctx *ctx) {
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
+static void analyze_func(sematic_ctx *ctx, symbol *sym);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     if (!symtable_enter_scope(ctx->stab)) {
@@ -165,6 +166,7 @@ static inline bool is_num(data_type type) {
     return (bool)(type == TYPE_DOUBLE || type == TYPE_INT);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     if (expr == nullptr) {
         return;
@@ -245,7 +247,41 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 }
             }
             break;
-        case E_FUNC:
+        case E_FUNC:{
+                for (size_t i = 0; i < expr->as.func.argc; i++) {
+                    analyze_expr(ctx, expr->as.func.args[i]);
+                }
+                expr->data_type = TYPE_UNKNOWN;
+
+                symbol *callee = symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
+                if (callee == nullptr) {
+                    // ERR
+                    break;
+                }
+                if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
+                    analyze_func(ctx, callee);
+                }
+                if (callee->ret_state == RET_INFERRING && callee->type == TYPE_UNKNOWN) {
+                    // ERR
+                } else {
+                    expr->data_type = callee->type;
+                }
+
+                expr->as.func.target = callee->decl;
+
+                if (expr->as.func.argc != callee->param_count) {
+                    // ERR
+                    break;
+                }
+                for (size_t i = 0; i < expr->as.func.argc; i++) {
+                    data_type wanted = callee->is_builtin ? callee->param_types[i] : callee->decl->params[i].type;
+                    data_type gotten = expr->as.func.args[i]->data_type;
+                    if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN && gotten != wanted) {
+                        // ERR
+                    }
+                }
+            }
+            break;
         case E_VAR:
             symbol *sym = symtable_find_var(ctx->stab, dstr_cstr(expr->as.var.name));
             if (sym == nullptr) {
