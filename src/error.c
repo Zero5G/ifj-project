@@ -14,7 +14,7 @@
 /**
  * @brief Statický ukazatel na cleanup funkci (nastaven pro každý soubor zvlášť)
  */
-static void (*global_cleanup)(void) = NULL;
+static void (*g_cleanup)(void) = NULL;
 
 const char *error_string(error_code code) {
     switch (code) {
@@ -23,19 +23,19 @@ const char *error_string(error_code code) {
     case ERR_SYNT:
         return "Chyba syntaktické analýzy";
     case ERR_SEM_UNDEF:
-        return "Chyba sematiky: nedefinovaný znak";
+        return "Chyba sematiky - nedefinovaný znak";
     case ERR_SEM_REDEF:
-        return "Chyba sematiky: redefinovaný znak";
+        return "Chyba sematiky - redefinovaný znak";
     case ERR_SEM_BADARGS:
-        return "Chyba sematiky: špatné argumenty/nepovolené paramentry";
+        return "Chyba sematiky - špatné argumenty/nepovolené paramentry";
     case ERR_SEM_TYPE:
-        return "Chyba sematiky: chyba typu";
+        return "Chyba sematiky - chyba typu";
     case ERR_SEM_ROAE:
-        return "Chyba sematiky: zápis do read-only proměnné";
+        return "Chyba sematiky - zápis do read-only proměnné";
     case ERR_SEM_OTHER:
-        return "Chyba sematiky: jiné";
+        return "Chyba sematiky - jiné";
     case ERR_OTHER:
-        return "Ostatní: programové chyby, atd.";
+        return "Ostatní - programové chyby, atd.";
     }
     return "Neznámí chyboví kód.";
 }
@@ -70,12 +70,12 @@ void error_fatalf(error_code code, const char *fmt, ...) {
 }
 
 void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
-    global_cleanup = cleanup_func;
+    g_cleanup = cleanup_func;
 }
 
 [[noreturn]] static inline void die(error_code code) {
-    void (*cleanup_hook)(void) = global_cleanup;
-    global_cleanup = nullptr;
+    void (*cleanup_hook)(void) = g_cleanup;
+    g_cleanup = nullptr;
     if (cleanup_hook) {
         cleanup_hook();
     }
