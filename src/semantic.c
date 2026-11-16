@@ -161,6 +161,120 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
     }
 }
 
+static inline bool is_num(data_type type) {
+    return (bool)(type == TYPE_DOUBLE || type == TYPE_INT);
+}
+
+static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
+    if (expr == nullptr) {
+        return;
+    }
+    switch (expr->kind) {
+        case E_UNARY:
+            ast_expr_t *operand = expr->as.unary.operand;
+            analyze_expr(ctx, operand);
+            expr->data_type = TYPE_UNKNOWN;
+            switch (expr->as.unary.op) {
+                case OPU_NEG:
+                case OPU_PLUS:
+                    if (!is_num(operand->data_type)) {
+                        // ERR
+                        break;
+                    }
+                    expr->data_type = operand->data_type;
+                    break;
+                case OPU_NOT:
+                    if (operand->data_type != TYPE_BOOL) {
+                        // ERR
+                        break;
+                    }
+                    expr->data_type = TYPE_BOOL;
+                    break;
+            }
+            break;
+        case E_BINARY:{
+                ast_expr_t *left = expr->as.binary.left;
+                ast_expr_t *right = expr->as.binary.right;
+                analyze_expr(ctx, left);
+                analyze_expr(ctx, right);
+
+                expr->data_type = TYPE_UNKNOWN;
+                if (left->data_type == TYPE_UNKNOWN || right->data_type == TYPE_UNKNOWN) {
+                    break;
+                }
+
+                if (left->data_type != right->data_type) {
+                    // ERR
+                    break;
+                }
+
+                data_type type = left->data_type;
+                switch (expr->as.binary.op) {
+                    case OPB_ADD:
+                    case OPB_SUB:
+                    case OPB_MUL:
+                    case OPB_DIV:
+                        if (!is_num(type)) {
+                            // ERR
+                            break;
+                        }
+                        expr->data_type = type;
+                        break;
+                    case OPB_AND:
+                    case OPB_OR:
+                        if (type != TYPE_BOOL) {
+                            // ERR
+                            break;
+                        }
+                        expr->data_type = TYPE_BOOL;
+                        break;
+                    case OPB_LT:
+                    case OPB_LTE:
+                    case OPB_GT:
+                    case OPB_GTE:
+                        if (!is_num(type)) {
+                            // ERR
+                            break;
+                        }
+                        expr->data_type = TYPE_BOOL;
+                        break;
+                    case OPB_EQ:
+                    case OPB_NE:
+                        expr->data_type = TYPE_BOOL;
+                    break;
+                }
+            }
+            break;
+        case E_FUNC:
+        case E_VAR:
+            symbol *sym = symtable_find_var(ctx->stab, dstr_cstr(expr->as.var.name));
+            if (sym == nullptr) {
+                // ERR?
+                expr->data_type = TYPE_UNKNOWN;
+                return;
+            }
+
+            expr->data_type = sym->type;
+            expr->as.var.var_id = sym->var_id;
+            break;
+        case E_UNIT_LIT:
+            expr->data_type = TYPE_UNIT;
+            break;
+        case E_INT_LIT:
+            expr->data_type = TYPE_INT;
+            break;
+        case E_DOUBLE_LIT:
+            expr->data_type = TYPE_DOUBLE;
+            break;
+        case E_STRING_LIT:
+            expr->data_type = TYPE_STRING;
+            break;
+        case E_BOOLEAN_LIT:
+            expr->data_type = TYPE_BOOL;
+            break;
+    }
+}
+
 static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     ast_func_t *func = sym->decl;
     ast_func_t *saved_func = ctx->current_func;
