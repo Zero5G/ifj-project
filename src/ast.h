@@ -143,6 +143,7 @@ struct ast_func {
     bool is_main;
     ast_func_param_t *params;
     size_t param_count;
+    size_t var_count;
     bool has_ret_type;
     data_type ret_type;
     unsigned line;
