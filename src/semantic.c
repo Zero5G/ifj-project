@@ -9,15 +9,37 @@
 
 #include "ast.h"
 #include "dstr.h"
-#include "htab.h"
 #include "symtable.h"
 #include "semantic.h"
 
 typedef struct sematic_ctx {
     ast_prog_t *prog;
     symtable *stab;
-    ast_func_t *currect_func;
+    ast_func_t *current_func;
+    symbol *current_sym;
+    bool saw_return;
 } sematic_ctx;
+
+static bool declare_funcs(sematic_ctx *ctx) {
+    for (ast_func_t *func = ctx->prog->first; func != nullptr; func = func->next) {
+        symbol *sym = nullptr;
+        switch (symtable_add_func(ctx->stab, dstr_cstr(func->name), &sym)) {
+            case SYM_OK:
+                break;
+            case SYM_EXISTS: // NOLINT
+                // ERR
+                return false;
+            case SYM_NOMEM:
+                // ERR
+                return false;
+        }
+        sym->decl = func;
+        sym->param_count = func->param_count;
+        sym->ret_state = func->has_ret_type ? RET_EXPLICIT : RET_UNRESOLVED;
+        sym->type = func->has_ret_type ? func->ret_type : TYPE_UNKNOWN;
+    }
+    return true;
+}
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
@@ -72,7 +94,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             break;
         case STMT_RET: {
             ast_expr_t *ret_val = stmt->as.ret_val;
-            ast_func_t *func = ctx->currect_func;
+            ast_func_t *func = ctx->current_func;
             if (ret_val != nullptr) {
                 analyze_expr(ctx, ret_val);
             }
@@ -148,7 +170,7 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
         switch (symtable_add_func(ctx.stab, dstr_cstr(func->name), &sym_ptr)) {
             case SYM_OK:
                 if (symtable_enter_func(ctx.stab)) {
-                    ctx.currect_func = func;
+                    ctx.current_func = func;
                     analyze_block(&ctx, &func->body);
                     symtable_leave_func(ctx.stab);
                 } else {
