@@ -20,7 +20,7 @@ typedef struct {
 
 bool parser_init(parser_t *p, lexer *lx);
 
-bool parser(parser_t *p);
+bool parser_run(parser_t *p);
 
 void parser_destroy(parser_t *p);
 
