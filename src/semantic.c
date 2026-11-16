@@ -71,10 +71,19 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             analyze_expr(ctx, stmt->as.expr);
             break;
         case STMT_RET: {
-            analyze_expr(ctx, stmt->as.ret_val);
-            data_type type = stmt->as.ret_val->data_type;
-            if (ctx->currect_func->ret_type != type) {
-                return; // ERR
+            ast_expr_t *ret_val = stmt->as.ret_val;
+            ast_func_t *func = ctx->currect_func;
+            if (ret_val != nullptr) {
+                analyze_expr(ctx, ret_val);
+            }
+            if (!func->has_ret_type) {
+                if (ret_val != nullptr) {
+                    // ERR
+                }
+            } else if (ret_val == nullptr) {
+                // ERR
+            } else if (ret_val->data_type != TYPE_UNKNOWN && ret_val->data_type != func->ret_type) {
+                // ERR
             }
             break;
         }
@@ -97,24 +106,29 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             stmt->as.assign.var_id = sym->var_id;
             break;
         }
-        case STMT_IF:
+        case STMT_IF:{
             ast_expr_t *cond = stmt->as.if_stmt.cond;
             analyze_expr(ctx, cond);
+
             if ((cond->data_type != TYPE_UNKNOWN) && (cond->data_type != TYPE_BOOL)) {
                 // ERR
             }
+
             analyze_block(ctx, &stmt->as.if_stmt.then_blk);
             if (stmt->as.if_stmt.has_else) {
                 analyze_block(ctx, &stmt->as.if_stmt.else_blk);
             }
             break;
-        case STMT_WHILE:
-            symtable_enter_scope(ctx->stab);
-            if (stmt->as.if_stmt.cond->data_type != TYPE_BOOL) {
-                return; // ERR
+        }
+        case STMT_WHILE:{
+            ast_expr_t *cond = stmt->as.while_stmt.cond;
+            analyze_expr(ctx, cond);
+            if (cond->data_type != TYPE_UNKNOWN && cond->data_type != TYPE_BOOL) {
+                // ERR
             }
-            symtable_leave_scope(ctx->stab);
+            analyze_block(ctx, &stmt->as.while_stmt.block);
             break;
+        }
     }
 }
 
