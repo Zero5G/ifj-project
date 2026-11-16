@@ -20,6 +20,6 @@
 * @return true/false podle toho jestli se podarilo vygenerovat kod 
 */
 
-bool codegen(const ast_prog_t *prog, FILE *out);
+void codegen(const ast_prog_t *prog, FILE *out);
 
 #endif

@@ -69,6 +69,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
                     break;
                 case OPB_DIV:
                     fputs("DIVS\n", ctx->out);
+                    fputs("IDIVS\n", ctx->out);
                     break;
                 case OPB_MUL:
                     fputs("MULS\n", ctx->out);
@@ -203,4 +204,34 @@ static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
         }
     };
 }
+
+static void gen_func(codegen_ctx_t *ctx, const ast_func_t *func) {
+    fprintf(ctx->out, "LABEL &fn_%s\n",dstr_cstr(func->name));
+    de_var_block(ctx, &func->body);
+    gen_block(ctx, &func->body);
+    fputs("POPFRAME\n", ctx->out);
+    fputs("RETURN\n", ctx->out);
+}
+
+void codegen(const ast_prog_t *prog, FILE *out) {
+    codegen_ctx_t ctx = {.out = out, .label_id = 0};
+
+    fputs(".IFJcode26\n", out);
+    fputs("DEFVAR GF@tmp\n", out);
+    fputs("CREATEFRAME\n", out);
+    fputs("PUSHFRAME\n", out);
+
+    for (const ast_func_t *func = prog->first; func != nullptr; func = func->next) {
+        if(func->is_main) {
+            fprintf(out, "CALL &fn_%s\n", dstr_cstr(func->name));
+            break;
+        }
+    }
+    fputs("EXIT int@0\n", out);
+    
+    for (const ast_func_t *func = prog->first; func != nullptr; func = func->next) {
+        gen_func(&ctx, func);
+    }
+}
+
 // NOLINTEND(cert-err33-c)
