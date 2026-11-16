@@ -44,6 +44,7 @@ static bool declare_funcs(sematic_ctx *ctx) {
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
+static void analyze_func(sematic_ctx *ctx, symbol *sym);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     if (!symtable_enter_scope(ctx->stab)) {
@@ -57,6 +58,7 @@ static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     symtable_leave_scope(ctx->stab);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
     switch (stmt->kind) {
         case STMT_VAR_DEF: {
@@ -165,24 +167,18 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
         .stab = stab,
     };
 
+    if (!declare_funcs(&ctx)) {
+        return;
+    }
+
     for (ast_func_t *func = prog->first; func != nullptr; func = func->next) {
-        symbol *sym_ptr = nullptr;
-        switch (symtable_add_func(ctx.stab, dstr_cstr(func->name), &sym_ptr)) {
-            case SYM_OK:
-                if (symtable_enter_func(ctx.stab)) {
-                    ctx.current_func = func;
-                    analyze_block(&ctx, &func->body);
-                    symtable_leave_func(ctx.stab);
-                } else {
-                    return; // ERR
-                }
-                break;
-            case SYM_EXISTS: // NOLINT
-                return; // ERR
-                break;
-            case SYM_NOMEM:
-                return; // ERR
-                break;
+        symbol *sym = symtable_find_func(stab, dstr_cstr(func->name));
+        if (sym == nullptr || sym->decl != func) {
+            continue;
         }
+        if (sym->ret_state == RET_INFERRED) {
+            continue;
+        }
+        analyze_func(&ctx, sym);
     }
 }
