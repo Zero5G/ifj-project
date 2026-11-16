@@ -11,13 +11,14 @@
 #include "ast.h"
 #include "dstr.h"
 #include <stdio.h>
+#include <string.h>
 
 #define SPECIAL_CHAR_LAST 32
 
 typedef struct {
     FILE *out;
     unsigned label_id;
-    ast_func_t *current_func;
+    const ast_func_t *current_func;
 } codegen_ctx_t;
 
 // NOLINTBEGIN(cert-err33-c)
@@ -34,12 +35,13 @@ static void print_string(FILE *out, const char *str) {
     }
 }
 
-static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
+static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {      // NOLINT
     switch (expr->kind) {   
         case E_INT_LIT:
             fprintf(ctx->out, "PUSHS int@%d\n", expr->as.int_val);
             break;
         case E_UNARY:
+            gen_expr(ctx, expr->as.unary.operand);
             switch (expr->as.unary.op) {
                 case OPU_PLUS:
                     break;
@@ -62,14 +64,26 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
             gen_expr(ctx, expr->as.binary.right);
             switch (expr->as.binary.op) {
                 case OPB_ADD:
-                    fputs("ADDS\n", ctx->out);
+                    if (expr->data_type == TYPE_STRING) {
+                        fputs("POPS GF@tmp\n", ctx->out);
+                        fputs("POPS GF@tmp\n", ctx->out);
+                        fputs("CONCAT GF@tmp GFtmp GF@tmp2\n", ctx->out);
+                        fputs("PUSHS GF@tmp\n",ctx->out);
+                    }
+                    else {
+                        fputs("ADDS\n", ctx->out);
+                    }
                     break;
                 case OPB_SUB:
                     fputs("SUBS\n", ctx->out);
                     break;
                 case OPB_DIV:
-                    fputs("DIVS\n", ctx->out);
-                    fputs("IDIVS\n", ctx->out);
+                    if (expr->data_type == TYPE_INT) {
+                        fputs("IDIVS\n", ctx->out);
+                    }
+                    else {
+                        fputs("DIVS\n", ctx->out);
+                    }
                     break;
                 case OPB_MUL:
                     fputs("MULS\n", ctx->out);
@@ -97,31 +111,46 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {
                     break;
                 case OPB_NE:
                     fputs("EQS\nNOTS\n", ctx->out);
+                    break;
+                default:
+                    break;
             }
             break;
-        case E_FUNC:
+
+
+// DODELAT ostatni funkce
+        case E_FUNC: 
             if (expr->as.func.target == nullptr) {
-                gen_expr(ctx, expr->as.func.args[0]);
-                fputs("PUSHS GF@tmp\n", ctx->out);
-                fputs("POPS GF@tmp\n", ctx->out);
-                fputs("WRITE GF@tmp\n", ctx->out);
+                const char *func_name = dstr_cstr(expr->as.func.name);
+                if (strcmp(func_name, "print") == 0) {
+                    gen_expr(ctx, expr->as.func.args[0]);
+                    fputs("POPS GF@tmp\n", ctx->out);
+                    if (expr->as.func.args[0]->data_type == TYPE_UNIT) {
+                        fputs("WRITE string@()\n",ctx->out);
+                    }
+                    else {
+                        fputs("WRITE GF@tmp\n", ctx->out);
+                    }
+                    fputs("PUSHS nil@nil\n", ctx->out);
+                }
             }
             break;
         case E_VAR:
-            fprintf(ctx->out, "PUSH LF@v_%u\n", expr->as.var.var_id);
+            fprintf(ctx->out, "PUSHS LF@v_%u\n", expr->as.var.var_id);
             break;
         case E_UNIT_LIT:
+            fputs("PUSHS nil@nil\n", ctx->out); //musim dat na zasobnik, jinak by se mohl stat ze u POPS vznikne chyba kvuly prazdnemu zasobniku
             break;
         case E_DOUBLE_LIT:
             fprintf(ctx->out, "PUSHS float@%a\n", expr->as.double_val);
             break;
         case E_STRING_LIT:
-            fputs("PUSH", ctx->out);
+            fputs("PUSHS ", ctx->out);
             print_string(ctx->out, dstr_cstr(expr->as.str));
-            fputc('\n', ctx->out);
+            fputs("\n", ctx->out);
             break;
         case E_BOOLEAN_LIT:
-            fprintf(ctx->out, "PUSH bool@%s\n", expr->as.bool_val ? "true" : "false");
+            fprintf(ctx->out, "PUSHS bool@%s\n", expr->as.bool_val ? "true" : "false");
             break;
         default:
             break;
@@ -143,42 +172,53 @@ static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
     case STMT_RET:
         if (stmt->as.ret_val != nullptr) {
             gen_expr(ctx, stmt->as.ret_val);
+            if (ctx->current_func->ret_type == TYPE_UNIT) {
+                fputs("POPS GF@tmp\n", ctx->out);
+                fputs("PUSHS nil@nil\n", ctx->out);
+            }
         }
-        fprintf(ctx->out, "RETURN\n");
+        else {
+            fputs("PUSHS nil@nil\n", ctx->out);
+        }
+        
+        fprintf(ctx->out, "JUMP &fn_epilog_%s\n", dstr_cstr(ctx->current_func->name));
+
         break;
     case STMT_ASSIGN:
         gen_expr(ctx, stmt->as.assign.val);
-        fprintf(ctx->out, "POPS LF@v_%u/n", stmt->as.assign.var_id);
+        fprintf(ctx->out, "POPS LF@v_%u\n", stmt->as.assign.var_id);
         break;
-    case STMT_IF:
+    case STMT_IF:{
         unsigned if_id = ++ctx->label_id;
         gen_expr(ctx, stmt->as.if_stmt.cond);
         fputs("POPS GF@tmp\n", ctx->out);
-        fprintf(ctx->out, "JUMPIFEQ $if_else_%u GF@tmp bool@false\n", if_id);
+        fprintf(ctx->out, "JUMPIFEQ &if_else_%u GF@tmp bool@false\n", if_id);
 
         gen_block(ctx, &stmt->as.if_stmt.then_blk);
-        fprintf(ctx->out, "JUMP $if_end_%u\n", if_id);
+        fprintf(ctx->out, "JUMP &if_end_%u\n", if_id);
 
-        fprintf(ctx->out, "LABEL $if_else_%u\n", if_id);
+        fprintf(ctx->out, "LABEL &if_else_%u\n", if_id);
         if (stmt->as.if_stmt.has_else) {
             gen_block(ctx, &stmt->as.if_stmt.else_blk);
         }
         fprintf(ctx->out, "LABEL &if_end_%u\n", if_id);
         break;
-    case STMT_WHILE:
+        }
+    case STMT_WHILE:{
         unsigned while_id = ++ctx->label_id;
-        fprintf(ctx->out, "LABEL $while_start_%u\n", while_id);
+        fprintf(ctx->out, "LABEL &while_start_%u\n", while_id);
 
         gen_expr(ctx, stmt->as.while_stmt.cond);
         fputs("POPS GF@tmp\n", ctx->out);
 
-        fprintf(ctx->out, "JUMPIFEQ $while_end_%u GF@tmp bool@false\n", while_id);
+        fprintf(ctx->out, "JUMPIFEQ &while_end_%u GF@tmp bool@false\n", while_id);
 
         gen_block(ctx, &stmt->as.while_stmt.block);
 
         fprintf(ctx->out, "JUMP &while_start_%u\n", while_id);
         fprintf(ctx->out, "LABEL &while_end_%u\n", while_id);
         break;
+        }
     }
 }
 
@@ -202,13 +242,35 @@ static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
         else if (stmt->kind == STMT_WHILE) {
             de_var_block(ctx, &stmt->as.while_stmt.block);
         }
-    };
+    }
 }
 
 static void gen_func(codegen_ctx_t *ctx, const ast_func_t *func) {
-    fprintf(ctx->out, "LABEL &fn_%s\n",dstr_cstr(func->name));
+    ctx->current_func = func;
+    fprintf(ctx->out, "\nLABEL &fn_%s\n", dstr_cstr(func->name));
+
+    for (size_t i = 0; i < func->param_count; i++) {
+        fprintf(ctx->out, "DEFVAR LF@v_%u\n", func->params[i].var_id);
+    }
+    for (size_t i = func->param_count; i > 0; i--) {
+        fprintf(ctx->out, "POPS LF@v_%u\n", func->params[i - 1].var_id);
+    }
     de_var_block(ctx, &func->body);
-    gen_block(ctx, &func->body);
+    // osetreni funkce bez return
+    const ast_stmt_t *stmt = func->body.first;
+    while (stmt != nullptr && stmt != func->body.last) {
+        gen_stmt(ctx, stmt);
+        stmt = stmt->next;
+    }
+    if (stmt != nullptr && stmt->kind == STMT_EXPR && func->ret_type != TYPE_UNIT) {
+        gen_expr(ctx, stmt->as.expr);
+    } else {
+        if (stmt != nullptr) {
+            gen_stmt(ctx, stmt);
+        }
+        fputs("PUSHS nil@nil\n", ctx->out);
+    }
+    fprintf(ctx->out, "LABEL &fn_epilog_%s\n", dstr_cstr(func->name));
     fputs("POPFRAME\n", ctx->out);
     fputs("RETURN\n", ctx->out);
 }
