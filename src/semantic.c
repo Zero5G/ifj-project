@@ -16,6 +16,7 @@
 typedef struct sematic_ctx {
     ast_prog_t *prog;
     symtable *stab;
+    ast_func_t *currect_func;
 } sematic_ctx;
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
@@ -23,12 +24,15 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
-    if (block == nullptr) {
+    if (!symtable_enter_scope(ctx->stab)) {
         return;
     }
+
     for (ast_stmt_t *stmt = block->first; stmt != nullptr; stmt = stmt->next) {
         analyze_stmt(ctx, stmt);
     }
+
+    symtable_leave_scope(ctx->stab);
 }
 
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
@@ -66,9 +70,14 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
         case STMT_EXPR:
             analyze_expr(ctx, stmt->as.expr);
             break;
-        case STMT_RET:
+        case STMT_RET: {
             analyze_expr(ctx, stmt->as.ret_val);
+            data_type type = stmt->as.ret_val->data_type;
+            if (ctx->currect_func->ret_type != type) {
+                return; // ERR
+            }
             break;
+        }
         case STMT_ASSIGN: {
             ast_expr_t *val = stmt->as.assign.val;
             analyze_expr(ctx, val);
@@ -89,7 +98,22 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             break;
         }
         case STMT_IF:
+            ast_expr_t *cond = stmt->as.if_stmt.cond;
+            analyze_expr(ctx, cond);
+            if ((cond->data_type != TYPE_UNKNOWN) && (cond->data_type != TYPE_BOOL)) {
+                // ERR
+            }
+            analyze_block(ctx, &stmt->as.if_stmt.then_blk);
+            if (stmt->as.if_stmt.has_else) {
+                analyze_block(ctx, &stmt->as.if_stmt.else_blk);
+            }
+            break;
         case STMT_WHILE:
+            symtable_enter_scope(ctx->stab);
+            if (stmt->as.if_stmt.cond->data_type != TYPE_BOOL) {
+                return; // ERR
+            }
+            symtable_leave_scope(ctx->stab);
             break;
     }
 }
@@ -110,6 +134,7 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
         switch (symtable_add_func(ctx.stab, dstr_cstr(func->name), &sym_ptr)) {
             case SYM_OK:
                 if (symtable_enter_func(ctx.stab)) {
+                    ctx.currect_func = func;
                     analyze_block(&ctx, &func->body);
                     symtable_leave_func(ctx.stab);
                 } else {
