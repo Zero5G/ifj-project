@@ -8,19 +8,9 @@
 #include "semantic.h" /* ADAPT: header that declares semantic_analyze() */
 #include "symtable.h"
 #include "types.h"
+#include "error.h"
 
 // NOLINTBEGIN(readability-*)
-
-/*
- * Errors are not reported yet, so error cases can't assert on messages.
- * They assert what is observable instead:
- *   - expr->data_type == TYPE_UNKNOWN
- *   - var_id still == NO_ID (sentinel set by the builders below)
- *   - no crash / no hang
- * Once error reporting exists, add error-count asserts to those tests.
- */
-
-/* ---------- ADAPT to your project ---------- */
 
 #define HAVE_VAR_COUNT 1 /* set 0 if ast_func has no var_count field yet */
 
@@ -39,11 +29,16 @@ static dstr mk_name(const char *s) {
 static ast_prog_t *prog;
 static symtable *stab;
 
+/* stand-in for the cleanup main() registers; makes sure
+ * error_fatal_cleanup() has something safe to call in tests */
+static void noop_cleanup(void) {}
+
 static void setup(void) {
     prog = ast_prog_create();
     cr_assert_not_null(prog);
     stab = symtable_create();
     cr_assert_not_null(stab);
+    error_fatal_set_cleanup(noop_cleanup);
 }
 
 static void teardown(void) {
@@ -301,13 +296,18 @@ Test(sema, var_def_explicit_type_kept) {
     cr_assert_eq(d->as.var_def.type, TYPE_DOUBLE);
 }
 
-Test(sema, var_def_declared_type_wins_on_mismatch) {
+Test(sema, var_def_no_type_no_init_allowed) {
+    /* type stays unknown, later uses must not cascade (see no_cascade tests) */
     ast_func_t *m = mk_main();
-    ast_stmt_t *d = add(m, let_stmt("x", false, TYPE_INT, str_lit("s")));
-    ast_expr_t *use = probe(m, var("x"));
+    ast_stmt_t *d = add(m, let_stmt("x", false, TYPE_UNKNOWN, nullptr));
     run();
-    cr_assert_eq(d->as.var_def.type, TYPE_INT);
-    cr_assert_eq(use->data_type, TYPE_INT);
+    cr_assert_eq(d->as.var_def.type, TYPE_UNKNOWN);
+}
+
+Test(sema, var_def_init_type_mismatch, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    add(m, let_stmt("x", false, TYPE_INT, str_lit("s")));
+    run();
 }
 
 Test(sema, var_use_gets_type_and_id) {
@@ -321,30 +321,24 @@ Test(sema, var_use_gets_type_and_id) {
     cr_assert_eq(use->as.var.var_id, b->as.var_def.var_id);
 }
 
-Test(sema, undefined_var) {
+Test(sema, undefined_var, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *m = mk_main();
-    ast_expr_t *use = probe(m, var("nope"));
+    probe(m, var("nope"));
     run();
-    cr_assert_eq(use->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(use->as.var.var_id, NO_ID);
 }
 
-Test(sema, var_self_reference_is_undefined) {
+Test(sema, var_self_reference_is_undefined, .exit_code = ERR_SEM_UNDEF) {
     /* let x = x : init analyzed before x is declared */
     ast_func_t *m = mk_main();
-    ast_expr_t *init = var("x");
-    add(m, let_stmt("x", false, TYPE_UNKNOWN, init));
+    add(m, let_stmt("x", false, TYPE_UNKNOWN, var("x")));
     run();
-    cr_assert_eq(init->data_type, TYPE_UNKNOWN);
 }
 
-Test(sema, var_redeclaration_keeps_first) {
+Test(sema, var_redeclaration, .exit_code = ERR_SEM_REDEF) {
     ast_func_t *m = mk_main();
     add(m, let_stmt("x", false, TYPE_UNKNOWN, int_lit(1)));
     add(m, let_stmt("x", false, TYPE_UNKNOWN, dbl_lit(2.0)));
-    ast_expr_t *use = probe(m, var("x"));
     run();
-    cr_assert_eq(use->data_type, TYPE_INT);
 }
 
 Test(sema, var_ids_restart_per_func) {
@@ -370,35 +364,31 @@ Test(sema, assign_mutable_ok) {
     cr_assert_neq(as->as.assign.var_id, NO_ID);
 }
 
-Test(sema, assign_immutable_rejected) {
+Test(sema, assign_immutable, .exit_code = ERR_SEM_ROAE) {
     ast_func_t *m = mk_main();
     add(m, let_stmt("b", false, TYPE_UNKNOWN, int_lit(1)));
-    ast_stmt_t *as = add(m, assign_stmt("b", int_lit(2)));
+    add(m, assign_stmt("b", int_lit(2)));
     run();
-    cr_assert_eq(as->as.assign.var_id, NO_ID);
 }
 
-Test(sema, assign_undefined_rejected) {
+Test(sema, assign_undefined, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *m = mk_main();
-    ast_stmt_t *as = add(m, assign_stmt("x", int_lit(1)));
+    add(m, assign_stmt("x", int_lit(1)));
     run();
-    cr_assert_eq(as->as.assign.var_id, NO_ID);
 }
 
-Test(sema, assign_type_mismatch_rejected) {
+Test(sema, assign_type_mismatch, .exit_code = ERR_SEM_TYPE) {
     ast_func_t *m = mk_main();
     add(m, let_stmt("b", true, TYPE_INT, int_lit(1)));
-    ast_stmt_t *as = add(m, assign_stmt("b", str_lit("s")));
+    add(m, assign_stmt("b", str_lit("s")));
     run();
-    cr_assert_eq(as->as.assign.var_id, NO_ID);
 }
 
-Test(sema, assign_to_function_name_rejected) {
+Test(sema, assign_to_function_name, .exit_code = ERR_SEM_UNDEF) {
     mk_func("f", false, TYPE_UNKNOWN);
     ast_func_t *m = mk_main();
-    ast_stmt_t *as = add(m, assign_stmt("f", int_lit(1)));
+    add(m, assign_stmt("f", int_lit(1)));
     run();
-    cr_assert_eq(as->as.assign.var_id, NO_ID);
 }
 
 /* ===================== unary ===================== */
@@ -416,22 +406,39 @@ Test(sema, unary_types) {
     cr_assert_eq(not_b->data_type, TYPE_BOOL);
 }
 
-Test(sema, unary_bad_operand) {
+Test(sema, unary_not_on_int, .exit_code = ERR_SEM_TYPE) {
     ast_func_t *m = mk_main();
-    ast_expr_t *not_i = probe(m, un(OPU_NOT, int_lit(1)));
-    ast_expr_t *neg_b = probe(m, un(OPU_NEG, bool_lit(true)));
-    ast_expr_t *neg_s = probe(m, un(OPU_NEG, str_lit("s")));
+    probe(m, un(OPU_NOT, int_lit(1)));
     run();
-    cr_assert_eq(not_i->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(neg_b->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(neg_s->data_type, TYPE_UNKNOWN);
+}
+
+Test(sema, unary_neg_on_bool, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    probe(m, un(OPU_NEG, bool_lit(true)));
+    run();
+}
+
+Test(sema, unary_neg_on_string, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    probe(m, un(OPU_NEG, str_lit("s")));
+    run();
+}
+
+Test(sema, unary_undefined_operand, .exit_code = ERR_SEM_UNDEF) {
+    ast_func_t *m = mk_main();
+    probe(m, un(OPU_NEG, var("nope")));
+    run();
 }
 
 Test(sema, unary_unknown_operand_no_cascade) {
+    /* x has no type yet -> no second error from the operator */
     ast_func_t *m = mk_main();
-    ast_expr_t *e = probe(m, un(OPU_NEG, var("nope")));
+    add(m, let_stmt("x", false, TYPE_UNKNOWN, nullptr));
+    ast_expr_t *neg = probe(m, un(OPU_NEG, var("x")));
+    ast_expr_t *not_e = probe(m, un(OPU_NOT, var("x")));
     run();
-    cr_assert_eq(e->data_type, TYPE_UNKNOWN);
+    cr_assert_eq(neg->data_type, TYPE_UNKNOWN);
+    cr_assert_eq(not_e->data_type, TYPE_UNKNOWN);
 }
 
 /* ===================== binary ===================== */
@@ -483,34 +490,48 @@ Test(sema, binary_logic) {
     ast_func_t *m = mk_main();
     ast_expr_t *and_b = probe(m, bin(OPB_AND, bool_lit(true), bool_lit(false)));
     ast_expr_t *or_b = probe(m, bin(OPB_OR, bool_lit(true), bool_lit(false)));
-    ast_expr_t *and_i = probe(m, bin(OPB_AND, int_lit(1), int_lit(0)));
     run();
     cr_assert_eq(and_b->data_type, TYPE_BOOL);
     cr_assert_eq(or_b->data_type, TYPE_BOOL);
-    cr_assert_eq(and_i->data_type, TYPE_UNKNOWN);
 }
 
-Test(sema, binary_mixed_types_rejected) {
+Test(sema, binary_logic_on_ints, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    probe(m, bin(OPB_AND, int_lit(1), int_lit(0)));
+    run();
+}
+
+Test(sema, binary_mixed_arith, .exit_code = ERR_SEM_TYPE) {
     /* strict policy. If you add int->double promotion, change this test */
     ast_func_t *m = mk_main();
-    ast_expr_t *add_e = probe(m, bin(OPB_ADD, int_lit(1), dbl_lit(2.0)));
-    ast_expr_t *lt_e = probe(m, bin(OPB_LT, int_lit(1), dbl_lit(2.0)));
+    probe(m, bin(OPB_ADD, int_lit(1), dbl_lit(2.0)));
     run();
-    cr_assert_eq(add_e->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(lt_e->data_type, TYPE_UNKNOWN);
 }
 
-Test(sema, binary_string_arith_policy) {
+Test(sema, binary_mixed_compare, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    probe(m, bin(OPB_LT, int_lit(1), dbl_lit(2.0)));
+    run();
+}
+
+Test(sema, binary_string_arith, .exit_code = ERR_SEM_TYPE) {
     /* policy: strings not numeric. Change if + means concat */
     ast_func_t *m = mk_main();
-    ast_expr_t *e = probe(m, bin(OPB_ADD, str_lit("a"), str_lit("b")));
+    probe(m, bin(OPB_ADD, str_lit("a"), str_lit("b")));
     run();
-    cr_assert_eq(e->data_type, TYPE_UNKNOWN);
+}
+
+Test(sema, binary_undefined_operand, .exit_code = ERR_SEM_UNDEF) {
+    ast_func_t *m = mk_main();
+    probe(m, bin(OPB_ADD, var("nope"), int_lit(1)));
+    run();
 }
 
 Test(sema, binary_unknown_operand_no_cascade) {
+    /* x has no type yet -> neither the inner nor the outer op reports */
     ast_func_t *m = mk_main();
-    ast_expr_t *inner = bin(OPB_ADD, var("nope"), int_lit(1));
+    add(m, let_stmt("x", false, TYPE_UNKNOWN, nullptr));
+    ast_expr_t *inner = bin(OPB_ADD, var("x"), int_lit(1));
     ast_expr_t *outer = probe(m, bin(OPB_MUL, inner, int_lit(2)));
     run();
     cr_assert_eq(inner->data_type, TYPE_UNKNOWN);
@@ -545,14 +566,30 @@ Test(sema, if_cond_analyzed) {
     cr_assert_eq(cond->data_type, TYPE_BOOL);
 }
 
-Test(sema, if_var_scoped_to_block) {
+Test(sema, if_non_bool_cond, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    add(m, if_stmt(int_lit(1), nullptr, nullptr));
+    run();
+}
+
+Test(sema, if_var_scoped_to_block, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *m = mk_main();
     add(m, if_stmt(bool_lit(true),
                    let_stmt("x", false, TYPE_UNKNOWN, int_lit(1)), nullptr));
+    probe(m, var("x")); /* x died with the block */
+    run();
+}
+
+Test(sema, if_scope_balanced) {
+    /* inner x gone after block, outer x of same name is legal */
+    ast_func_t *m = mk_main();
+    add(m, if_stmt(bool_lit(true),
+                   let_stmt("x", false, TYPE_UNKNOWN, int_lit(1)), nullptr));
+    ast_stmt_t *outer = add(m, let_stmt("x", false, TYPE_UNKNOWN, dbl_lit(1.0)));
     ast_expr_t *use = probe(m, var("x"));
     run();
-    cr_assert_eq(use->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(use->as.var.var_id, NO_ID);
+    cr_assert_eq(use->data_type, TYPE_DOUBLE);
+    cr_assert_eq(use->as.var.var_id, outer->as.var_def.var_id);
 }
 
 Test(sema, if_block_sees_outer_var) {
@@ -582,18 +619,7 @@ Test(sema, then_and_else_scopes_independent) {
     add(m, if_stmt(bool_lit(true), then_x, else_x));
     run();
     cr_assert_eq(then_x->as.var_def.type, TYPE_INT);
-    cr_assert_eq(else_x->as.var_def.type, TYPE_DOUBLE); /* no SYM_EXISTS */
-}
-
-Test(sema, if_non_bool_cond_still_analyzes_block) {
-    ast_func_t *m = mk_main();
-    add(m, let_stmt("a", false, TYPE_UNKNOWN, int_lit(1)));
-    ast_expr_t *use = var("a");
-    ast_expr_t *cond = int_lit(1);
-    add(m, if_stmt(cond, expr_stmt(use), nullptr));
-    run();
-    cr_assert_eq(cond->data_type, TYPE_INT);
-    cr_assert_eq(use->data_type, TYPE_INT);
+    cr_assert_eq(else_x->as.var_def.type, TYPE_DOUBLE); /* no REDEF */
 }
 
 Test(sema, while_cond_and_block_analyzed) {
@@ -607,25 +633,18 @@ Test(sema, while_cond_and_block_analyzed) {
     cr_assert_eq(use->data_type, TYPE_INT);
 }
 
-Test(sema, while_var_scoped_to_block) {
+Test(sema, while_non_bool_cond, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *m = mk_main();
+    add(m, while_stmt(int_lit(1), nullptr));
+    run();
+}
+
+Test(sema, while_var_scoped_to_block, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *m = mk_main();
     add(m, while_stmt(bool_lit(true),
                       let_stmt("x", false, TYPE_UNKNOWN, int_lit(1))));
-    ast_expr_t *use = probe(m, var("x"));
+    probe(m, var("x"));
     run();
-    cr_assert_eq(use->data_type, TYPE_UNKNOWN);
-}
-
-Test(sema, scope_balanced_after_bad_cond) {
-    /* bad cond must not leave scope stack unbalanced:
-     * later let in same func must still get a sane id */
-    ast_func_t *m = mk_main();
-    add(m, if_stmt(int_lit(1), nullptr, nullptr));
-    ast_stmt_t *d = add(m, let_stmt("x", false, TYPE_UNKNOWN, int_lit(1)));
-    ast_expr_t *use = probe(m, var("x"));
-    run();
-    cr_assert_eq(d->as.var_def.var_id, 0u);
-    cr_assert_eq(use->data_type, TYPE_INT);
 }
 
 /* ===================== functions: return types ===================== */
@@ -638,11 +657,16 @@ Test(sema, explicit_ret_type) {
     cr_assert_eq(fsym("f")->ret_state, RET_EXPLICIT);
 }
 
-Test(sema, explicit_ret_mismatch_keeps_declared) {
+Test(sema, explicit_ret_mismatch, .exit_code = ERR_SEM_TYPE) {
     ast_func_t *f = mk_func("f", true, TYPE_INT);
     add(f, ret_stmt(str_lit("s")));
     run();
-    cr_assert_eq(fsym("f")->type, TYPE_INT);
+}
+
+Test(sema, bare_return_in_typed_func, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *f = mk_func("f", true, TYPE_INT);
+    add(f, ret_stmt(nullptr));
+    run();
 }
 
 Test(sema, infer_ret_from_return) {
@@ -667,12 +691,19 @@ Test(sema, infer_ret_bare_return_is_unit) {
     cr_assert_eq(fsym("f")->type, TYPE_UNIT);
 }
 
-Test(sema, infer_ret_first_return_wins) {
+Test(sema, infer_ret_same_type_twice) {
+    ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
+    add(f, ret_stmt(int_lit(1)));
+    add(f, ret_stmt(int_lit(2)));
+    run();
+    cr_assert_eq(fsym("f")->type, TYPE_INT);
+}
+
+Test(sema, infer_ret_mismatch_second_return, .exit_code = ERR_SEM_TYPE) {
     ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
     add(f, ret_stmt(int_lit(1)));
     add(f, ret_stmt(str_lit("s")));
     run();
-    cr_assert_eq(fsym("f")->type, TYPE_INT);
 }
 
 Test(sema, infer_ret_from_expression) {
@@ -705,22 +736,35 @@ Test(sema, params_visible_in_body) {
     cr_assert_neq(ua->as.var.var_id, ub->as.var.var_id);
 }
 
-Test(sema, params_not_visible_in_other_func) {
+Test(sema, params_not_visible_in_other_func, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
     add_param(f, "a", TYPE_INT);
     ast_func_t *g = mk_func("g", false, TYPE_UNKNOWN);
-    ast_expr_t *use = probe(g, var("a"));
+    probe(g, var("a"));
     run();
-    cr_assert_eq(use->data_type, TYPE_UNKNOWN);
 }
 
-Test(sema, locals_not_visible_in_other_func) {
+Test(sema, locals_not_visible_in_other_func, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
     add(f, let_stmt("x", false, TYPE_UNKNOWN, int_lit(1)));
     ast_func_t *g = mk_func("g", false, TYPE_UNKNOWN);
-    ast_expr_t *use = probe(g, var("x"));
+    probe(g, var("x"));
     run();
-    cr_assert_eq(use->data_type, TYPE_UNKNOWN);
+}
+
+Test(sema, duplicate_param, .exit_code = ERR_SEM_REDEF) {
+    ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
+    add_param(f, "a", TYPE_INT);
+    add_param(f, "a", TYPE_INT);
+    run();
+}
+
+Test(sema, local_redeclares_param, .exit_code = ERR_SEM_REDEF) {
+    /* policy: no shadowing of params. Drop test if shadowing is legal */
+    ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
+    add_param(f, "a", TYPE_INT);
+    add(f, let_stmt("a", false, TYPE_UNKNOWN, int_lit(1)));
+    run();
 }
 
 #if HAVE_VAR_COUNT
@@ -781,11 +825,10 @@ Test(sema, call_chain_inferred) {
     cr_assert_eq(fsym("b")->type, TYPE_STRING);
 }
 
-Test(sema, call_undefined_func) {
+Test(sema, call_undefined_func, .exit_code = ERR_SEM_UNDEF) {
     ast_func_t *m = mk_main();
-    ast_expr_t *c = probe(m, call("nope", 0));
+    probe(m, call("nope", 0));
     run();
-    cr_assert_eq(c->data_type, TYPE_UNKNOWN);
 }
 
 Test(sema, call_args_analyzed) {
@@ -799,27 +842,31 @@ Test(sema, call_args_analyzed) {
     cr_assert_eq(arg->data_type, TYPE_INT);
 }
 
-Test(sema, call_wrong_argc_still_typed) {
-    /* arg errors must not cascade: result type still resolved */
+Test(sema, call_too_few_args, .exit_code = ERR_SEM_BADARGS) {
     ast_func_t *f = mk_func("f", true, TYPE_INT);
     add_param(f, "a", TYPE_INT);
     add(f, ret_stmt(var("a")));
     ast_func_t *m = mk_main();
-    ast_expr_t *few = probe(m, call("f", 0));
-    ast_expr_t *many = probe(m, call("f", 2, int_lit(1), int_lit(2)));
+    probe(m, call("f", 0));
     run();
-    cr_assert_eq(few->data_type, TYPE_INT);
-    cr_assert_eq(many->data_type, TYPE_INT);
 }
 
-Test(sema, call_wrong_arg_type_still_typed) {
+Test(sema, call_too_many_args, .exit_code = ERR_SEM_BADARGS) {
     ast_func_t *f = mk_func("f", true, TYPE_INT);
     add_param(f, "a", TYPE_INT);
     add(f, ret_stmt(var("a")));
     ast_func_t *m = mk_main();
-    ast_expr_t *c = probe(m, call("f", 1, str_lit("s")));
+    probe(m, call("f", 2, int_lit(1), int_lit(2)));
     run();
-    cr_assert_eq(c->data_type, TYPE_INT);
+}
+
+Test(sema, call_wrong_arg_type, .exit_code = ERR_SEM_BADARGS) {
+    ast_func_t *f = mk_func("f", true, TYPE_INT);
+    add_param(f, "a", TYPE_INT);
+    add(f, ret_stmt(var("a")));
+    ast_func_t *m = mk_main();
+    probe(m, call("f", 1, str_lit("s")));
+    run();
 }
 
 Test(sema, call_as_operand) {
@@ -882,15 +929,6 @@ Test(sema, recursion_explicit_ret) {
     cr_assert_eq(c->data_type, TYPE_INT);
 }
 
-Test(sema, recursion_unannotated_terminates) {
-    /* type not yet known at the call -> unknown, but no hang/crash */
-    ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
-    ast_expr_t *c = probe(f, call("f", 0));
-    run();
-    cr_assert_eq(c->data_type, TYPE_UNKNOWN);
-    cr_assert_eq(fsym("f")->ret_state, RET_INFERRED);
-}
-
 Test(sema, recursion_after_return_ok) {
     /* first return fixes type, recursive call afterwards is typed */
     ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
@@ -902,35 +940,30 @@ Test(sema, recursion_after_return_ok) {
     cr_assert_eq(fsym("f")->type, TYPE_INT);
 }
 
-Test(sema, mutual_recursion_terminates) {
+/* the next two also prove termination: a hang would hit criterion timeout */
+
+Test(sema, recursion_unannotated, .exit_code = ERR_SEM_TYPE) {
+    ast_func_t *f = mk_func("f", false, TYPE_UNKNOWN);
+    probe(f, call("f", 0));
+    run();
+}
+
+Test(sema, mutual_recursion_unannotated, .exit_code = ERR_SEM_TYPE) {
     ast_func_t *a = mk_func("a", false, TYPE_UNKNOWN);
     ast_func_t *b = mk_func("b", false, TYPE_UNKNOWN);
     probe(a, call("b", 0));
     probe(b, call("a", 0));
     run();
-    cr_assert_eq(fsym("a")->ret_state, RET_INFERRED);
-    cr_assert_eq(fsym("b")->ret_state, RET_INFERRED);
 }
 
 /* ===================== duplicates ===================== */
 
-Test(sema, duplicate_function_keeps_first) {
+Test(sema, duplicate_function, .exit_code = ERR_SEM_REDEF) {
     ast_func_t *first = mk_func("f", true, TYPE_INT);
     add(first, ret_stmt(int_lit(1)));
     ast_func_t *second = mk_func("f", true, TYPE_DOUBLE);
     add(second, ret_stmt(dbl_lit(1.0)));
     run();
-    cr_assert_eq(fsym("f")->decl, first);
-    cr_assert_eq(fsym("f")->type, TYPE_INT);
-}
-
-Test(sema, duplicate_function_calls_still_resolve) {
-    mk_func("f", true, TYPE_INT);
-    mk_func("f", true, TYPE_DOUBLE);
-    ast_func_t *main = mk_main();
-    ast_expr_t *cal = probe(main, call("f", 0));
-    run();
-    cr_assert_eq(cal->data_type, TYPE_INT);
 }
 
 // NOLINTEND(readability-*)
