@@ -10,6 +10,7 @@
 #include "codegen.h"
 #include "ast.h"
 #include "dstr.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +35,8 @@ static void print_string(FILE *out, const char *str) {
         }
     }
 }
+
+static void gen_func_call (codegen_ctx_t *ctx, const ast_expr_t *expr);
 
 static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {      // NOLINT
     switch (expr->kind) {   
@@ -121,18 +124,15 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {      // NOLIN
 // DODELAT ostatni funkce
         case E_FUNC: 
             if (expr->as.func.target == nullptr) {
-                const char *func_name = dstr_cstr(expr->as.func.name);
-                if (strcmp(func_name, "print") == 0) {
-                    gen_expr(ctx, expr->as.func.args[0]);
-                    fputs("POPS GF@tmp\n", ctx->out);
-                    if (expr->as.func.args[0]->data_type == TYPE_UNIT) {
-                        fputs("WRITE string@()\n",ctx->out);
-                    }
-                    else {
-                        fputs("WRITE GF@tmp\n", ctx->out);
-                    }
-                    fputs("PUSHS nil@nil\n", ctx->out);
+                gen_func_call(ctx, expr);
+            }
+            else {
+                for (size_t idx = 0; idx < expr->as.func.argc; idx++) {
+                    gen_expr(ctx, expr->as.func.args[idx]);
                 }
+                fputs("CREATEFRAME\n", ctx->out);
+                fputs("PUSHFRAME\n", ctx->out);
+                fprintf(ctx->out ,"CALL &fn_%s\n", dstr_cstr(expr->as.func.target->name));
             }
             break;
         case E_VAR:
@@ -155,6 +155,49 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {      // NOLIN
         default:
             break;
     }
+}
+
+static void gen_func_call (codegen_ctx_t *ctx, const ast_expr_t *expr) {
+    const char *func_name = dstr_cstr(expr->as.func.name);
+
+    // print(value: Any): Unit
+    if (strcmp(func_name, "print") == 0) {
+        gen_expr(ctx, expr->as.func.args[0]);
+        fputs("POPS GF@tmp\n", ctx->out);
+        if (expr->as.func.args[0]->data_type == TYPE_UNIT) {
+            fputs("WRITE string@()\n",ctx->out);
+        }
+        else {
+            fputs("WRITE GF@tmp\n", ctx->out);
+        }
+        fputs("PUSHS nil@nil\n", ctx->out);
+    }
+
+    // readLine(): String
+    else if (strcmp(func_name, "readLine") == 0) {
+        fputs("READ GF@tmp string\n", ctx->out);
+        fputs("PUSH GF@tmp\n", ctx->out);
+
+    }
+
+    // readInt(): Int (pri chybe/EOF vraci nil, potrebujeme 0)
+    else if (strcmp(func_name, "readInt") == 0) {
+        unsigned idx = ++ctx->label_id;
+        fputs("READ GF@tmp int\n", ctx->out);
+        fprintf(ctx->out,"JUMPIFEQ &ri_ok_%u GF@tmp nil@nil\n", idx);
+        fputs("MOVE GF@tmp int@0\n", ctx->out);
+        fprintf(ctx->out,"LABEL &ri_ok_%u", idx);
+        fputs("PUSH GF@tmp\n", ctx->out);
+    }
+
+    // readDouble(): Double (chyba 0.0)
+    // toStr(value: Any): String
+    // toInt(value: Double): Int
+    // strLength(value: String): Int
+    // subStr(value: String, start: Int, end: Int): String
+    // ord(value: String, index: Int): Int
+    //chr(code: Int): String
+
 }
 
 static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block);
