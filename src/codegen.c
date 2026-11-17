@@ -68,10 +68,10 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) {      // NOLIN
             switch (expr->as.binary.op) {
                 case OPB_ADD:
                     if (expr->data_type == TYPE_STRING) {
-                        fputs("POPS GF@tmp\n", ctx->out);
-                        fputs("POPS GF@tmp\n", ctx->out);
-                        fputs("CONCAT GF@tmp GFtmp GF@tmp2\n", ctx->out);
-                        fputs("PUSHS GF@tmp\n",ctx->out);
+                        fputs("POPS LF@tmp1\n", ctx->out);
+                        fputs("POPS LF@tmp1\n", ctx->out);
+                        fputs("CONCAT LF@tmp1 GFtmp LF@tmp2\n", ctx->out);
+                        fputs("PUSHS LF@tmp1\n",ctx->out);
                     }
                     else {
                         fputs("ADDS\n", ctx->out);
@@ -163,41 +163,156 @@ static void gen_func_call (codegen_ctx_t *ctx, const ast_expr_t *expr) {
     // print(value: Any): Unit
     if (strcmp(func_name, "print") == 0) {
         gen_expr(ctx, expr->as.func.args[0]);
-        fputs("POPS GF@tmp\n", ctx->out);
+        fputs("POPS LF@tmp1\n", ctx->out);
         if (expr->as.func.args[0]->data_type == TYPE_UNIT) {
             fputs("WRITE string@()\n",ctx->out);
         }
         else {
-            fputs("WRITE GF@tmp\n", ctx->out);
+            fputs("WRITE LF@tmp1\n", ctx->out);
         }
         fputs("PUSHS nil@nil\n", ctx->out);
     }
 
     // readLine(): String
     else if (strcmp(func_name, "readLine") == 0) {
-        fputs("READ GF@tmp string\n", ctx->out);
-        fputs("PUSH GF@tmp\n", ctx->out);
+        fputs("READ LF@tmp1 string\n", ctx->out);
+        fputs("PUSH LF@tmp1\n", ctx->out);
 
     }
 
     // readInt(): Int (pri chybe/EOF vraci nil, potrebujeme 0)
     else if (strcmp(func_name, "readInt") == 0) {
         unsigned idx = ++ctx->label_id;
-        fputs("READ GF@tmp int\n", ctx->out);
-        fprintf(ctx->out,"JUMPIFEQ &ri_ok_%u GF@tmp nil@nil\n", idx);
-        fputs("MOVE GF@tmp int@0\n", ctx->out);
+        fputs("READ LF@tmp1 int\n", ctx->out);
+        fprintf(ctx->out,"JUMPIFEQ &ri_ok_%u LF@tmp1 nil@nil\n", idx);
+        fputs("MOVE LF@tmp1 int@0\n", ctx->out);
         fprintf(ctx->out,"LABEL &ri_ok_%u", idx);
-        fputs("PUSH GF@tmp\n", ctx->out);
+        fputs("PUSH LF@tmp1\n", ctx->out);
     }
 
     // readDouble(): Double (chyba 0.0)
+    else if (strcmp(func_name, "readDouble") == 0) {
+        unsigned idx = ++ctx->label_id;
+        fputs("READ LF@tmp1 float\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &rd_ok_%u LF@tmp1 nil@nil\n", idx);
+        fputs("MOVE LF@tmp1 float@0x0p+0\n", ctx->out);
+        fprintf(ctx->out, "LABEL &rd_ok_%u", idx);
+        fputs("PUSH LF@tmp1\n", ctx->out);
+    }
     // toStr(value: Any): String
-    // toInt(value: Double): Int
-    // strLength(value: String): Int
-    // subStr(value: String, start: Int, end: Int): String
-    // ord(value: String, index: Int): Int
-    //chr(code: Int): String
+    else if (strcmp(func_name, "toStr") == 0) {
+        gen_expr(ctx, expr->as.func.args[0]);
+        switch (expr->as.func.args[0]->data_type) {
+            case TYPE_INT:
+                fputs("INT2STRS\n", ctx->out);
+                break;
+            case TYPE_UNKNOWN: // chyba
+                break;
+            case TYPE_DOUBLE:
+                fputs("FLOAT2STRS",ctx->out);
+                break;
+            case TYPE_STRING:
+                break;
+            case TYPE_UNIT:
+                fputs("POPS LF@tmp1\n", ctx->out);
+                fputs("PUSHS string@()\n", ctx->out);
+                break;
+            case TYPE_BOOL:
+                unsigned idx = ++ctx->label_id;
+                fputs("POPS LF@tmp1\n", ctx->out);
+                fprintf(ctx->out, "JUMPIFEQ @bstr_t_%u LF@tmp1 bool@true\n", idx);
+                fputs("PUSHS string@false\n", ctx->out);
+                fprintf(ctx->out, "JUMP &bstr_end_%u\n", idx);
+                fprintf(ctx->out, "LABEL &bstr_t_%u\n", idx);
+                fputs("PUSHS string@true\n", ctx->out);
+                fprintf(ctx->out, "LABEL &bstr_end_%u\n", idx);
+                break;
+            case TYPE_ANY: // chyba
+                break;
+            }
+    }
 
+    // toInt(value: Double): Int
+    else if (strcmp(func_name, "toInt") == 0) {
+        gen_expr(ctx,expr->as.func.args[0]);
+        fputs("FLOAT2INTS\n", ctx->out);
+    }
+
+    // strLength(value: String): Int
+    else if (strcmp(func_name, "strLenght") == 0) {
+        gen_expr(ctx, expr->as.func.args[0]);
+        fputs("POPS LF@tmp1\n", ctx->out);
+        fputs("STRLEN LF@tmp1 LF@tmp1\n", ctx->out);
+        fputs("PUSHS LF@tmp1\n", ctx->out);
+    }
+
+    // subStr(value: String, start: Int, end: Int): String
+    else if (strcmp(func_name, "subStr") == 0) {
+        unsigned idx = ++ctx->label_id;
+        gen_expr(ctx, expr->as.func.args[0]);
+        gen_expr(ctx, expr->as.func.args[1]);
+        gen_expr(ctx, expr->as.func.args[2]);
+        fputs("POPS LF@tmp3\n", ctx->out);
+        fputs("POPS LF@tmp2\n", ctx->out);
+        fputs("POPS LF@tmp1\n", ctx->out);
+        fputs("STRLEN LF@tmp4 LF@tmp1\n", ctx->out);
+
+        fputs("LT LF@tmp5 LF@tmp2 int@0\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
+        fputs("LT LF@tmp5 LF@tmp3 int@0\n",ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
+        fputs("GF LF@tmp5 LF@tmp2 LF@tmp3\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
+        fputs("GT LF@tmp5 LF@tmp2 LF@tmp4\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
+
+        fputs("MOVE LF@tmp4 string@\n", ctx->out);
+        fprintf(ctx->out, "LABEL &sub_loop_%u\n", idx);
+        fprintf(ctx->out, "JUMPIFEQ &sub_done_%u LF@tmp2 LF@tmp3\n", idx);
+        fputs("GETCHAR LF@tmp5 LF@tmp1 LF@tmp2\n", ctx->out);
+        fputs("CONCAT LF@tmp4 LF@tmp4 LF@tmp5\n",ctx->out);
+        fputs("ADD LF@tmp2, LF@tmp2 int@1\n", ctx->out);
+        fprintf(ctx->out, "JUMP &sub_loop_%u\n", idx);
+
+        fprintf(ctx->out, "LABEL &sub_err_%u\n", idx);
+        fputs("EXIT int@40\n", ctx->out);
+
+        fprintf(ctx->out, "LABEL &sub_done_%u\n", idx);
+        fputs("PUSHS LF@tmp4\n", ctx->out);
+        
+    }
+
+    // ord(value: String, index: Int): Int
+    else if (strcmp(func_name, "ord") == 0) {
+        unsigned idx = ++ctx->label_id;
+        gen_expr(ctx, expr->as.func.args[0]);
+        gen_expr(ctx, expr->as.func.args[1]);
+        fputs("POPS LF@tmp2\n", ctx->out);
+        fputs("POPS LF@tmp1\n", ctx->out);
+
+        // index < 0
+        fputs("LT LF@tmp3 LF@tmp2 int@0\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &ord_err_%u GT@tmp3 bool@true\n", idx);
+
+        // idx >= strLenght
+        fputs("STRLEN LF@tmp3 LF@tmp1\n", ctx->out);
+        fputs("LT LF@tmp3 LF@tmp2 LF@tmp3\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &ord_err_%u LF@tmp3 bool@false\n", idx);
+
+        fputs("STRI2INT LF@tmp1 LF@tmp1 LF@tmp2\n", ctx->out);
+        fputs("PUSHS LF@tmp1\n", ctx->out);
+        fprintf(ctx->out,"JUMP &ord_end_%u", idx);
+
+        fprintf(ctx->out, "LABEL &ord_err_%u\n", idx);
+        fputs("PUSHS int@-1\n", ctx->out);
+        fprintf(ctx->out, "LABEL &ord_end_%u\n", idx);
+    }
+
+    //chr(code: Int): String
+    else if (strcmp(func_name, "chr") == 0) {
+        gen_expr(ctx, expr->as.func.args[0]);
+        fputs("INT2CHAR\n", ctx->out);
+    }
 }
 
 static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block);
@@ -210,13 +325,13 @@ static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
         break;
     case STMT_EXPR:
         gen_expr(ctx, stmt->as.expr);
-        fputs("POPS GF@tmp\n", ctx->out);
+        fputs("POPS LF@tmp1\n", ctx->out);
         break;
     case STMT_RET:
         if (stmt->as.ret_val != nullptr) {
             gen_expr(ctx, stmt->as.ret_val);
             if (ctx->current_func->ret_type == TYPE_UNIT) {
-                fputs("POPS GF@tmp\n", ctx->out);
+                fputs("POPS LF@tmp1\n", ctx->out);
                 fputs("PUSHS nil@nil\n", ctx->out);
             }
         }
@@ -234,8 +349,8 @@ static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
     case STMT_IF:{
         unsigned if_id = ++ctx->label_id;
         gen_expr(ctx, stmt->as.if_stmt.cond);
-        fputs("POPS GF@tmp\n", ctx->out);
-        fprintf(ctx->out, "JUMPIFEQ &if_else_%u GF@tmp bool@false\n", if_id);
+        fputs("POPS LF@tmp1\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &if_else_%u LF@tmp1 bool@false\n", if_id);
 
         gen_block(ctx, &stmt->as.if_stmt.then_blk);
         fprintf(ctx->out, "JUMP &if_end_%u\n", if_id);
@@ -252,9 +367,9 @@ static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
         fprintf(ctx->out, "LABEL &while_start_%u\n", while_id);
 
         gen_expr(ctx, stmt->as.while_stmt.cond);
-        fputs("POPS GF@tmp\n", ctx->out);
+        fputs("POPS LF@tmp1\n", ctx->out);
 
-        fprintf(ctx->out, "JUMPIFEQ &while_end_%u GF@tmp bool@false\n", while_id);
+        fprintf(ctx->out, "JUMPIFEQ &while_end_%u LF@tmp1 bool@false\n", while_id);
 
         gen_block(ctx, &stmt->as.while_stmt.block);
 
@@ -292,6 +407,12 @@ static void gen_func(codegen_ctx_t *ctx, const ast_func_t *func) {
     ctx->current_func = func;
     fprintf(ctx->out, "\nLABEL &fn_%s\n", dstr_cstr(func->name));
 
+    fputs("DEFVAR LF@tmp1\n", ctx->out);
+    fputs("DEFVAR LF@tmp2\n", ctx->out);
+    fputs("DEFVAR LF@tmp3\n", ctx->out);
+    fputs("DEFVAR LF@tmp4\n", ctx->out);
+    fputs("DEFVAR LF@tmp5\n", ctx->out);
+
     for (size_t i = 0; i < func->param_count; i++) {
         fprintf(ctx->out, "DEFVAR LF@v_%u\n", func->params[i].var_id);
     }
@@ -322,7 +443,6 @@ void codegen(const ast_prog_t *prog, FILE *out) {
     codegen_ctx_t ctx = {.out = out, .label_id = 0};
 
     fputs(".IFJcode26\n", out);
-    fputs("DEFVAR GF@tmp\n", out);
     fputs("CREATEFRAME\n", out);
     fputs("PUSHFRAME\n", out);
 
