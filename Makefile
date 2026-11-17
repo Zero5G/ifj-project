@@ -55,6 +55,7 @@ check: check-tidy check-format
 doc:
 	doxygen Doxyfile
 	sed -i 's/\\usepackage\[T2A\]{fontenc}/\\usepackage[T1]{fontenc}/' doc/gen/latex/refman.tex
+	cp -r doc/assets/. doc/gen/latex/assets/
 	make LATEX_CMD="pdflatex -interaction=nonstopmode" -C doc/gen/latex || true
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
