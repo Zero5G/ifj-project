@@ -229,7 +229,9 @@
 
 % End of preamble, now comes the document contents
 %===== C O N T E N T S =====
-
+%custom: Vlastní titul kapitol
+\renewcommand{\chaptername}{Kapitola}
+%endcustom
 \begin{document}
   \raggedbottom
 
@@ -246,16 +248,28 @@
                }
 %%END USE_PDFLATEX
 %%END PDF_HYPERLINKS
+%custom: Úpravy
   \pagenumbering{alph}
   \begin{titlepage}
-  \vspace*{7cm}
+  \vspace*{5cm}
   \begin{center}%
-  {\Large $title}\\
+  \includegraphics[width=0.65\textwidth]{assets/FIT_barevne_RGB_CZ.png}
+  \par{\LARGE $title}\\
 %%BEGIN PROJECT_NUMBER
   [1ex]\large $projectnumber \\
 %%END PROJECT_NUMBER
+  \vspace*{4cm}
+  \noindent
+  \begin{tabular}{@{} l l l r @{}}
+    17.\ listopadu 2026 & \textbf{Jakub Manoušek} & \textbf{(xmanouj00)} & 25 \% \\
+    & a a & ( ) & 25 \% \\
+    & a a & ( ) & 25 \% \\
+    & a a & ( ) & 25 \% \\
+  \end{tabular}
+  \\
   \vspace*{1cm}
-  {\normalsize dokumentace programu byla generovaná programem Doxygen \doxygenversion}\\
+  {\normalsize dokumentace programu byla generovaná programem Doxygen $doxygenversion} \\
+%endcustom
 %%BEGIN TIMESTAMP
     \vspace*{0.5cm}
     {\small $datetime}
