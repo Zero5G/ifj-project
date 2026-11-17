@@ -118,7 +118,6 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
         }
         break;
 
-        // DODELAT ostatni funkce
     case E_FUNC:
         if (expr->as.func.target == nullptr) {
             gen_func_call(ctx, expr);
