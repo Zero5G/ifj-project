@@ -43,7 +43,7 @@ typedef struct symbol {
     bool is_mut;
     unsigned var_id; /**< unikátní v rámci funkce, např: LF@x$3 */
 
-    data_type *param_types; /**< pole typů */
+    const data_type *param_types; /**< pole typů */
     size_t param_count;
     bool is_builtin;
     return_state ret_state;
