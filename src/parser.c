@@ -16,6 +16,8 @@ bool parser_init(parser_t *p, lexer *lx) {
     return true;
 }
 
+void parser_destroy(parser_t *p) { token_free(&p->current); }
+
 static void advance(parser_t *p) {
     token_free(&p->current);
     p->current = get_next_token(p->lx);
@@ -59,6 +61,9 @@ static bool expect_kw(parser_t *p, keyword kw) {
 
 // First(<statement>) = {KW_VAL, KW_VAR, TT_IDENTIFIER, KW_RETURN, KW_IF,
 // KW_WHILE}
+// expressions can start with {TT_IDENTIFIER, TT_INT_LITERAL, TT_DOUBLE_LITERAL,
+// TT_STRING_LITERAL, TT_BOOLEAN_LITERAL, TT_UNIT_LITERAL, TT_LPAREN}, so will
+// need an edit later
 static bool is_statement(parser_t *p) {
     if (token_is_kw(&p->current, KW_VAL)) {
         return true;
@@ -283,6 +288,8 @@ static bool parse_block(parser_t *p) {
         if (!expect(p, TT_DEDENT)) {
             return false;
         }
+
+        return true;
     }
 
     return parse_statement(p);
@@ -293,6 +300,8 @@ static bool parse_body(parser_t *p) {
     if (!parse_statement_list(p)) {
         return false;
     }
+
+    return true;
 }
 
 // <statement_list> -> <statement> <statement_list>
@@ -383,6 +392,8 @@ static bool parse_variable_type(parser_t *p) {
 }
 
 // <function_return> -> KW_RETURN
+// quite possibly wrong, probably needs KW_RETURN <expression> in the future,
+// will require an editing the grammar rules and LL table
 static bool parse_function_return(parser_t *p) {
     if (!expect_kw(p, KW_RETURN)) {
         return false;
@@ -449,6 +460,8 @@ static bool parse_if_statement(parser_t *p) {
     if (!expect(p, TT_DEDENT)) {
         return false;
     }
+
+    return true;
 }
 
 // <while_statement> -> KW_WHILE <expression> KW_DO TT_EOL TT_INDENT <body>
@@ -485,4 +498,114 @@ static bool parse_while_statement(parser_t *p) {
     if (!expect(p, TT_DEDENT)) {
         return false;
     }
+
+    return true;
 }
+
+// lookahead because of TT_IDENTIFIER
+// <statement> -> <assignment> // lookahead
+// <statement> -> <function_call> // lookahead
+// <statement> -> <expression> // lookahead
+static bool parse_identifier_statement(parser_t *p) {
+    const token *next = lexer_peek(p->lx, 1);
+
+    if (next == NULL) {
+        return false;
+    }
+
+    if (next->type == TT_ASSIGN) {
+        return parse_assignment(p);
+    }
+
+    if (next->type == TT_LPAREN) {
+        return parse_function_call(p);
+    }
+
+    else {
+        return parse_expression(p);
+    }
+}
+
+// <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
+static bool parse_assignment(parser_t *p) {
+    if (!expect(p, TT_IDENTIFIER)) {
+        return false;
+    }
+
+    if (!expect(p, TT_ASSIGN)) {
+        return false;
+    }
+
+    if (!parse_expression(p)) {
+        return false;
+    }
+
+    return true;
+}
+
+// <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
+static bool parse_function_call(parser_t *p) {
+    if (!expect(p, TT_IDENTIFIER)) {
+        return false;
+    }
+
+    if (!expect(p, TT_LPAREN)) {
+        return false;
+    }
+
+    if (!parse_argument_list(p)) {
+        return false;
+    }
+
+    if (!expect(p, TT_RPAREN)) {
+        return false;
+    }
+
+    return true;
+}
+
+// <argument_list> -> <argument> <argument_next>
+// <argument_list> -> ε
+static bool parse_argument_list(parser_t *p) {
+    if (p->current.type == TT_IDENTIFIER) {
+        if (!parse_argument(p)) {
+            return false;
+        }
+
+        if (!parse_argument_next(p)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// <argument> -> TT_IDENTIFIER
+// argument should allow terms IDENTIFIER, INT_LITERAL, DOUBLE_LITERAL,
+// STRING_LITERAL, BOOLEAN_LITERAL, UNIT_LITERAL, so this should be taken care
+// of
+static bool parse_argument(parser_t *p) {
+    if (!expect(p, TT_IDENTIFIER)) {
+        return false;
+    }
+
+    return true;
+}
+
+// <argument_next> TT_COMMA TT_IDENTIFIER <argument_next>
+// <argument_next> -> ε
+static bool parse_argument_next(parser_t *p) {
+    if (accept(p, TT_COMMA)) {
+        if (!expect(p, TT_IDENTIFIER)) {
+            return false;
+        }
+
+        if (!parse_argument_next(p)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// parse_expression() -> in expr.c
