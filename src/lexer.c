@@ -380,10 +380,10 @@ static token read_token_fsm(lexer *lx)
             }
             case S_COMMENT_L:
             {
-                if(znak == '\n')
+                if((znak == '\n')||(znak == EOF))
                 {
                     aktualni_stav = S_C_LE;
-                    ungetc(znak, lx->in);
+                    
                     
                     break;
                 }
@@ -394,8 +394,13 @@ static token read_token_fsm(lexer *lx)
             }
             case S_C_LE:
             {
-                ungetc(znak,lx->in);
+                if(znak != EOF)
+                {
+                    ungetc(znak,lx->in);
+                    
+                }
                 aktualni_stav = S_START;
+                break;
             }
             case S_C_MLS:
             {
@@ -404,8 +409,14 @@ static token read_token_fsm(lexer *lx)
                     aktualni_stav = S_C_MLE;
                     break;
                 }
+                else if (znak == EOF)
+                {
+                    dstr_delete(pole); 
+                    exit(1);
+                }
                 else
                 {
+                    aktualni_stav = S_C_MLS;
                     break;
                 }
             }
@@ -418,14 +429,15 @@ static token read_token_fsm(lexer *lx)
                 }
                 else 
                 {
-                    dstr_delete(pole);
-                    exit(1);
+                    aktualni_stav = S_C_MLS;
+                    break;
                 }
             }
             case S_C_MLE2:
             {
                 ungetc(znak,lx->in);
                 aktualni_stav = S_START;
+                break;
             }
             case S_NUMBER:
             {
@@ -474,7 +486,7 @@ static token read_token_fsm(lexer *lx)
             }
             case S_DOUBLE:
             {
-                if(isdigit(znak)||(znak = '.')||(znak = 'e')||(znak = 'E'))
+                if(isdigit(znak)||(znak == 'e')||(znak == 'E'))
                 {
                     aktualni_stav = S_DOUBLE;
                     dstr_push_char(pole,znak);
@@ -482,23 +494,194 @@ static token read_token_fsm(lexer *lx)
                 }
                 else
                 {
-                    aktualni_stav = S_START;
-                    if (pole->raw[0] == '0')
+                    char posledni = pole->raw[pole->len - 1];
+                    if((posledni=='.')||(posledni=='e')||(posledni=='E')||(posledni=='+')||(posledni=='-'))
                     {
                         dstr_delete(pole);
                         exit(1);
                     }
+                    aktualni_stav = S_START;
                     ungetc(znak, lx->in); //vraceni neznameho znaku
                     tok.type = TT_DOUBLE_LITERAL;
-                    tok.attr.as_double = strtod(pole->raw, NULL, 10);
+                    tok.attr.as_double = strtod(pole->raw, NULL);
                     dstr_delete(pole);
                     return tok;
                 }
             }
+            case S_STRING_S:
+            {
+                if(znak=='"')
+                {
+                    aktualni_stav = S_STRING_E;
+                    break;
+                }
+                else if (znak == '\n' || znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else if(znak=='\\')
+                {
+                    aktualni_stav = S_STRING_ES;
+                    break;
+                }
+                else
+                {
+                    aktualni_stav = S_STRING;
+                    dstr_push_char(pole,znak);
+                    break;
+                }
+            }
             case S_STRING:
             {
-
+                if(znak=='"')
+                {
+                    aktualni_stav = S_STRING_E;
+                    break;
+                }
+                else if(znak=='\\')
+                {
+                    aktualni_stav = S_STRING_ES;
+                    break;
+                }
+                else if (znak == '\n' || znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else
+                {
+                    dstr_push_char(pole,znak);
+                    break;
+                }
             }
+            case S_STRING_ES:
+            {
+                if(znak== 'n')
+                {
+                    dstr_push_char(pole,'\n');
+                    aktualni_stav = S_STRING;
+                    break;
+                }
+                else if (znak == 't')
+                {
+                    dstr_push_char(pole,'\t');
+                    aktualni_stav = S_STRING;
+                    break;
+                }
+                else if (znak == 'r')
+                {
+                    dstr_push_char(pole,'\r');
+                    aktualni_stav = S_STRING;
+                    break;
+                }
+                else if (znak == '"')
+                {
+                    dstr_push_char(pole,znak);
+                    aktualni_stav = S_STRING;
+                    break;
+                }
+                else if (znak == '\\')
+                {
+                    dstr_push_char(pole,znak);
+                    aktualni_stav = S_STRING;
+                    break;
+                }
+                else
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+            }
+            case S_STRING_E:
+            {
+                if((znak== '"')&&(pole->len == 0))
+                {
+                    
+                    aktualni_stav = S_S_ML;
+                    break;
+                }
+                else
+                {
+                    tok.type = TT_STRING_LITERAL;
+                    ungetc(znak, lx->in);
+                    tok.attr.as_str = pole;
+                    return  tok;
+                }
+            }
+            case S_S_ML:
+            {
+                if(znak== '"')
+                {
+                    
+                    aktualni_stav = S_S_ML_E;
+                    break;
+                }
+                else if(znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else
+                {
+                    dstr_push_char(pole,znak);
+                    aktualni_stav = S_S_ML;
+                    break;
+                }
+            }
+            case S_S_ML_E:
+            {
+                if(znak== '"')
+                {
+                    
+                    aktualni_stav = S_S_ML_E2;
+                    break;
+                }
+                else if(znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else
+                {
+                    dstr_push_char(pole,'"');
+                    dstr_push_char(pole,znak);
+                    aktualni_stav = S_S_ML;
+                    break;
+                }
+            }
+            case S_S_ML_E2:
+            {
+                if(znak== '"')
+                {
+                
+                    aktualni_stav = S_S_ML_E3;
+                    break;
+                }
+                else if(znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else
+                {
+                    dstr_push_char(pole,'"');
+                    dstr_push_char(pole,'"');
+                    dstr_push_char(pole,znak);
+                    
+                    aktualni_stav = S_S_ML;
+                    break;
+                }
+            }
+            case S_S_ML_E3:
+            {
+                ungetc(znak, lx->in); //vraceni neznameho znaku
+                tok.type = TT_STRING_LITERAL;
+                tok.attr.as_str = pole;
+                
+                return tok;
+            }
+
         }
         
     }
