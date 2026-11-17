@@ -341,3 +341,148 @@ static bool parse_statement(parser_t *p) {
 
     return false;
 }
+
+// <variable_definition> -> KW_VAL TT_IDENTIFIER <variable_type> TT_ASSIGN
+// <expression>
+// <variable_definition> -> KW_VAR TT_IDENTIFIER <variable_type> TT_ASSIGN
+// <expression>
+static bool parse_variable_definition(parser_t *p) {
+    if (!accept_kw(p, KW_VAL) && !accept_kw(p, KW_VAR)) {
+        return false;
+    }
+
+    if (!expect(p, TT_IDENTIFIER)) {
+        return false;
+    }
+
+    if (!parse_variable_type(p)) {
+        return false;
+    }
+
+    if (!expect(p, TT_ASSIGN)) {
+        return false;
+    }
+
+    if (!parse_expression(p)) {
+        return false;
+    }
+
+    return true;
+}
+
+// <variable_type> -> TT_COLON <type>
+// <variable_type> -> ε
+static bool parse_variable_type(parser_t *p) {
+    if (accept(p, TT_COLON)) {
+        if (!parse_type(p)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// <function_return> -> KW_RETURN
+static bool parse_function_return(parser_t *p) {
+    if (!expect_kw(p, KW_RETURN)) {
+        return false;
+    }
+
+    return true;
+}
+
+// <if_statement> -> KW_IF <expression> KW_THEN TT_EOL TT_INDENT <body> TT_EOL
+// TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
+static bool parse_if_statement(parser_t *p) {
+    if (!expect_kw(p, KW_IF)) {
+        return false;
+    }
+
+    if (!parse_expression(p)) {
+        return false;
+    }
+
+    if (!expect_kw(p, KW_THEN)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_INDENT)) {
+        return false;
+    }
+
+    if (!parse_body(p)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_DEDENT)) {
+        return false;
+    }
+
+    if (!expect_kw(p, KW_ELSE)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_INDENT)) {
+        return false;
+    }
+
+    if (!parse_body(p)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_DEDENT)) {
+        return false;
+    }
+}
+
+// <while_statement> -> KW_WHILE <expression> KW_DO TT_EOL TT_INDENT <body>
+// TT_EOL TT_OUTDENT
+static bool parse_while_statement(parser_t *p) {
+    if (!expect_kw(p, KW_WHILE)) {
+        return false;
+    }
+
+    if (!parse_expression(p)) {
+        return false;
+    }
+
+    if (!expect_kw(p, KW_DO)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_INDENT)) {
+        return false;
+    }
+
+    if (!parse_body(p)) {
+        return false;
+    }
+
+    if (!expect(p, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(p, TT_DEDENT)) {
+        return false;
+    }
+}
