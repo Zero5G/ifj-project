@@ -337,7 +337,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 for (size_t i = 0; i < expr->as.func.argc; i++) {
                     data_type wanted = callee->is_builtin ? callee->param_types[i] : callee->decl->params[i].type;
                     data_type gotten = expr->as.func.args[i]->data_type;
-                    if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN && gotten != wanted) {
+                    if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN && wanted != TYPE_ANY && gotten != wanted) {
                         error_fatal_cleanup(ERR_SEM_BADARGS);
                     }
                 }
