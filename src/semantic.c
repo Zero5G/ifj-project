@@ -15,6 +15,33 @@
 
 #include <stddef.h>
 
+typedef struct builtin_t {
+    const char *name;
+    data_type ret;
+    const data_type *params;
+    size_t param_count;
+} builtin_t;
+
+static const data_type one_any_p[] = {TYPE_ANY};
+static const data_type one_int_p[] = {TYPE_INT};
+static const data_type one_double_p[] = {TYPE_DOUBLE};
+static const data_type one_str_p[] = {TYPE_STRING};
+static const data_type substr_p[] = {TYPE_STRING, TYPE_INT, TYPE_INT};
+static const data_type ord_p[] = {TYPE_STRING, TYPE_INT};
+
+static const builtin_t builtins[] = {
+    {"print", TYPE_ANY, one_any_p, 1},
+    {"readLine", TYPE_UNIT, nullptr, 0},
+    {"readInt", TYPE_INT, nullptr, 0},
+    {"readDouble", TYPE_DOUBLE, nullptr, 0},
+    {"toStr", TYPE_STRING, one_any_p, 0},
+    {"toInt", TYPE_INT, one_double_p, 1},
+    {"strLength", TYPE_INT, one_str_p, 1},
+    {"subStr", TYPE_STRING, substr_p, 3},
+    {"ord", TYPE_INT, ord_p, 1},
+    {"chr", TYPE_STRING, one_int_p, 1},
+};
+
 typedef struct sematic_ctx {
     ast_prog_t *prog;
     symtable *stab;
