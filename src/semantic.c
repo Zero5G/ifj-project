@@ -50,6 +50,23 @@ typedef struct sematic_ctx {
     bool saw_return;
 } sematic_ctx;
 
+static void declare_builtins(sematic_ctx *ctx) {
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(builtins[0]); i++) {
+        const builtin_t *buildin = &builtins[i];
+        symbol *sym = nullptr;
+        if (symtable_add_func(ctx->stab, buildin->name, &sym) != SYM_OK) {
+            error_fatal_cleanup(ERR_OTHER);
+        }
+
+        sym->is_builtin = true;
+        sym->decl = nullptr;
+        sym->type = buildin->ret;
+        sym->ret_state = RET_EXPLICIT;
+        sym->param_types = buildin->params;
+        sym->param_count = buildin->param_count;
+    }
+}
+
 static bool declare_funcs(sematic_ctx *ctx) {
     for (ast_func_t *func = ctx->prog->first; func != nullptr; func = func->next) {
         symbol *sym = nullptr;
@@ -413,6 +430,8 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
         .prog = prog,
         .stab = stab,
     };
+
+    declare_builtins(&ctx);
 
     if (!declare_funcs(&ctx)) {
         return;
