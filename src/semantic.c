@@ -166,6 +166,16 @@ static inline bool is_num(data_type type) {
     return (bool)(type == TYPE_DOUBLE || type == TYPE_INT);
 }
 
+static bool promote_int_lit(ast_expr_t *expr) {
+    if (expr->kind != E_INT_LIT) {
+        return false;
+    }
+    expr->as.double_val = (double)expr->as.int_val;
+    expr->kind = E_DOUBLE_LIT;
+    expr->data_type = TYPE_DOUBLE;
+    return true;
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     if (expr == nullptr) {
@@ -205,6 +215,13 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
                 expr->data_type = TYPE_UNKNOWN;
                 if (left->data_type == TYPE_UNKNOWN || right->data_type == TYPE_UNKNOWN) {
                     break;
+                }
+
+                /* Int na Double pokud jeden je Double */
+                if (left->data_type == TYPE_DOUBLE && right->data_type == TYPE_INT && promote_int_lit(right)) {
+                    right->data_type = TYPE_DOUBLE;
+                } else if (left->data_type == TYPE_INT && right->data_type == TYPE_DOUBLE && promote_int_lit(left)) {
+                    left->data_type = TYPE_DOUBLE;
                 }
 
                 if (left->data_type != right->data_type) {
