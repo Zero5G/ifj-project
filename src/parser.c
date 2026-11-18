@@ -12,16 +12,18 @@
 #include "dstr.h"
 #include "expr.h"
 
+#include <stdlib.h>
+
 static bool parse_prog(parser_ctx *ctx);
 static bool parse_prolog(parser_ctx *ctx);
 static bool parse_function_list(parser_ctx *ctx);
-static bool parse_parameters(parser_ctx *ctx);
+static bool parse_parameters(parser_ctx *ctx, ast_func_t *func);
+static bool parse_parameter(parser_ctx *ctx, ast_func_t *func);
+static bool parse_parameter_next(parser_ctx *ctx, ast_func_t *func);
 static bool parse_function(parser_ctx *ctx);
-static bool parse_return_type(parser_ctx *ctx);
+static bool parse_return_type(parser_ctx *ctx, ast_func_t *func);
+static bool parse_type(parser_ctx *ctx, data_type *out);
 static bool parse_block(parser_ctx *ctx, ast_block_t *block);
-static bool parse_parameter(parser_ctx *ctx);
-static bool parse_parameter_next(parser_ctx *ctx);
-static bool parse_type(parser_ctx *ctx);
 static bool parse_body(parser_ctx *ctx);
 static bool parse_statement_list(parser_ctx *ctx);
 static bool parse_statement(parser_ctx *ctx);
@@ -137,6 +139,24 @@ static dstr take_function_name(parser_ctx *ctx) {
     }
 
     return name;
+}
+
+static bool add_parameter(ast_func_t *func, dstr name) {
+    ast_func_param_t *params =
+        realloc(func->params, (func->param_count + 1) * sizeof(*params));
+    if (params == nullptr) {
+        return false;
+    }
+
+    func->params = params;
+    func->params[func->param_count] = (ast_func_param_t){
+        .name = name,
+        .type = TYPE_UNKNOWN,
+        .var_id = 0,
+    };
+    func->param_count++;
+
+    return true;
 }
 
 // First(<statement>) = {KW_VAL, KW_VAR, TT_IDENTIFIER, KW_RETURN, KW_IF,
@@ -259,7 +279,7 @@ static bool parse_function(parser_ctx *ctx) {
         return false;
     }
 
-    if (!parse_parameters(ctx)) {
+    if (!parse_parameters(ctx, func)) {
         return false;
     }
 
@@ -267,7 +287,7 @@ static bool parse_function(parser_ctx *ctx) {
         return false;
     }
 
-    if (!parse_return_type(ctx)) {
+    if (!parse_return_type(ctx, func)) {
         return false;
     }
 
@@ -280,13 +300,13 @@ static bool parse_function(parser_ctx *ctx) {
 
 // <parameters> -> <parameter> <parameter_next>
 // <parameters> -> ε
-static bool parse_parameters(parser_ctx *ctx) {
+static bool parse_parameters(parser_ctx *ctx, ast_func_t *func) {
     if (ctx->current.type == TT_IDENTIFIER) {
-        if (!parse_parameter(ctx)) {
+        if (!parse_parameter(ctx, func)) {
             return false;
         }
 
-        if (!parse_parameter_next(ctx)) {
+        if (!parse_parameter_next(ctx, func)) {
             return false;
         }
     }
@@ -295,8 +315,14 @@ static bool parse_parameters(parser_ctx *ctx) {
 }
 
 // <parameter> -> TT_IDENTIFIER TT_COLON <type>
-static bool parse_parameter(parser_ctx *ctx) {
-    if (!expect(ctx, TT_IDENTIFIER)) {
+static bool parse_parameter(parser_ctx *ctx, ast_func_t *func) {
+    dstr name = take_identifier(ctx);
+    if (name == nullptr) {
+        return false;
+    }
+
+    if (!add_parameter(func, name)) {
+        dstr_delete(name);
         return false;
     }
 
@@ -304,30 +330,14 @@ static bool parse_parameter(parser_ctx *ctx) {
         return false;
     }
 
-    if (!parse_type(ctx)) {
-        return false;
-    }
-
-    return true;
+    return parse_type(ctx, &func->params[func->param_count - 1].type);
 }
 
 // <parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
 // <parameter_next> -> ε
-static bool parse_parameter_next(parser_ctx *ctx) {
-    if (accept(ctx, TT_COMMA)) {
-        if (!expect(ctx, TT_IDENTIFIER)) {
-            return false;
-        }
-
-        if (!expect(ctx, TT_COLON)) {
-            return false;
-        }
-
-        if (!parse_type(ctx)) {
-            return false;
-        }
-
-        if (!parse_parameter_next(ctx)) {
+static bool parse_parameter_next(parser_ctx *ctx, ast_func_t *func) {
+    while (accept(ctx, TT_COMMA)) {
+        if (!parse_parameter(ctx, func)) {
             return false;
         }
     }
@@ -337,14 +347,15 @@ static bool parse_parameter_next(parser_ctx *ctx) {
 
 // <return_type> -> TT_COLON <type>
 // <return_type> -> ε
-static bool parse_return_type(parser_ctx *ctx) {
-    if (accept(ctx, TT_COLON)) {
-        if (!parse_type(ctx)) {
-            return false;
-        }
+static bool parse_return_type(parser_ctx *ctx, ast_func_t *func) {
+    if (!accept(ctx, TT_COLON)) {
+        func->has_ret_type = false;
+        func->ret_type = TYPE_UNKNOWN;
+        return true;
     }
 
-    return true;
+    func->has_ret_type = true;
+    return parse_type(ctx, &func->ret_type);
 }
 
 // <type> -> KW_INT
@@ -353,7 +364,7 @@ static bool parse_return_type(parser_ctx *ctx) {
 // <type> -> KW_BOOLEAN
 // <type> -> KW_UNIT
 // <type> -> KW_LIST
-static bool parse_type(parser_ctx *ctx) {
+static bool parse_type(parser_ctx *ctx, data_type *out) {
     if (accept_kw(ctx, KW_INT)) {
         return true;
     }
