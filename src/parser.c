@@ -8,6 +8,7 @@
  */
 
 #include "parser.h"
+#include "ast.h"
 #include "expr.h"
 
 static bool parse_prog(parser_ctx *ctx);
@@ -37,9 +38,20 @@ static bool parse_argument_next(parser_ctx *ctx);
 
 bool parser_init(parser_ctx *ctx, lexer *lx) {
     ctx->lx = lx;
+    ctx->prog = ast_prog_create();
+    if (ctx->prog == nullptr) {
+        return false;
+    }
+
     ctx->current = get_next_token(lx);
 
     return true;
+}
+
+ast_prog_t *parser_take_prog(parser_ctx *ctx) {
+    ast_prog_t *prog = ctx->prog;
+    ctx->prog = nullptr;
+    return prog;
 }
 
 void parser_destroy(parser_ctx *ctx) { token_free(&ctx->current); }
