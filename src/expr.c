@@ -148,15 +148,15 @@ typedef struct {
 
 static void stack_init(expr_stack_t *s) { s->top = -1; }
 
-static bool stack_empty(expr_stack_t *s) { return s->top < 0; }
+// static bool stack_empty(expr_stack_t *s) { return s->top < 0; }
 
 static void stack_push(expr_stack_t *s, stack_item_t item) {
     s->items[++s->top] = item;
 }
 
-static stack_item_t stack_pop(expr_stack_t *s) { return s->items[s->top--]; }
+// static stack_item_t stack_pop(expr_stack_t *s) { return s->items[s->top--]; }
 
-static stack_item_t *stack_top(expr_stack_t *s) { return &s->items[s->top]; }
+// static stack_item_t *stack_top(expr_stack_t *s) { return &s->items[s->top]; }
 
 static prec_symbol_t top_terminal(expr_stack_t *s) {
     for (int i = s->top; i >= 0; i--) {
@@ -173,7 +173,7 @@ static ast_expr_t *make_binary(token_type op, ast_expr_t *left,
     return ast_expr_binary_create(left->line, token_to_binary(op), left, right);
 }
 
-static stack_item_t make_symbol(prec_symbol_t symbol) {
+/* static stack_item_t make_symbol(prec_symbol_t symbol) {
     stack_item_t item;
 
     item.kind = ITEM_SYMBOL;
@@ -181,7 +181,7 @@ static stack_item_t make_symbol(prec_symbol_t symbol) {
     item.expr = nullptr;
 
     return item;
-}
+} */
 
 static stack_item_t make_expr(ast_expr_t *expr) {
     stack_item_t item;
