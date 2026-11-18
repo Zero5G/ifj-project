@@ -54,7 +54,15 @@ ast_prog_t *parser_take_prog(parser_ctx *ctx) {
     return prog;
 }
 
-void parser_destroy(parser_ctx *ctx) { token_free(&ctx->current); }
+void parser_destroy(parser_ctx *ctx) {
+    token_free(&ctx->current);
+
+    if (ctx->prog != nullptr) {
+        ast_prog_free(ctx->prog);
+        free(ctx->prog);
+        ctx->prog = nullptr;
+    }
+}
 
 void advance(parser_ctx *ctx) {
     token_free(&ctx->current);
