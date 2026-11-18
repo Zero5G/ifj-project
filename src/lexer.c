@@ -1,3 +1,13 @@
+/**
+ * @file lexer.c
+ *
+ * @author Vojta Buchmaier
+ * @brief Lexikální analyzér
+ *
+ * @details
+ */
+
+
 #include "lexer.h"
 #include "dstr.h"
 #include <stdbool.h>
@@ -6,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 
+//definice stavu fsm
 typedef enum state {
     S_START,
     S_SLASH,
@@ -52,17 +63,22 @@ struct lexer
     int line;
     int col;
     token pole_peek[LEXER_MAX_PEEK];
-    int peek_count;
+    unsigned peek_count;
+    int indent_stack[256];
+    int indent_top;
+    int pending_dedents;
+    bool at_line_start;
+    int paren_depth;
   
 };
 
 //pomocna struktura pro hledani klice
 typedef struct {
-    const char *word;
+    char *word;
     keyword kw;
 } keys;
 
-
+//Vyhledavaci tabulka vsech rezervovanych klicovych slov a vestavenych datovych typu
 static const keys KEYWORD_TABLE[] = {
     { "def",       KW_DEF },
     { "if",        KW_IF },
@@ -92,6 +108,10 @@ static const keys KEYWORD_TABLE[] = {
     { "List",      KW_LIST },
 };
 
+/**
+ * Overi, zda nactene slovo v pole odpovida
+ * klicovemu slovu z KEYWORD_TABLE. Pokud ano, ulozi jeho typ do 'out_kw' a vrati true.
+ */
 static bool check_keyword(dstr pole, keyword *out_kw)
 {
     size_t count = sizeof(KEYWORD_TABLE) / sizeof(KEYWORD_TABLE[0]);
@@ -108,17 +128,155 @@ static bool check_keyword(dstr pole, keyword *out_kw)
 
 
 
-
+//Cte vstupni soubor znak po znaku, hlida odsazeni a vraci vzdy jeden kompletni token. Pri lexikalni chybe ukonci program s navratovym kodem 1.
+    
 static token read_token_fsm(lexer *lx)
 {
     token tok = {0};
     dstr pole = dstr_create("");
     enum state aktualni_stav = S_START;
-    dstr_clear(pole);
+    bool po_podtrzitku = false;
+    
     while(true)
     {
+        if (lx->pending_dedents > 0)
+        {
+            lx->pending_dedents -= 1;
+            tok.type = TT_DEDENT;
+            dstr_delete(pole);
+            return tok;
+        }
+
+        if (lx->at_line_start == true)
+        {
+            if (lx->paren_depth > 0)
+            {
+                lx->at_line_start = false;
+            }
+            else
+            {
+                int mezery = 0;
+                int c;
+
+                while (true)
+                {
+                    c = fgetc(lx->in);
+                    if (c == ' ')
+                    {
+                        mezery += 1;
+                    }
+                    else if (c == '\t')
+                    {
+                        dstr_delete(pole);
+                        exit(1); 
+                    }
+                    else if (c == '\n')
+                    {
+                        
+                        mezery = 0;
+                    }
+                    else if (c == '/')
+                    {
+                        int dalsi_znak = fgetc(lx->in);
+                        if (dalsi_znak == '/')
+                        {
+                            // radkovy komentar na jinak prazdnem radku preskocime az do konce radku
+                            int k = fgetc(lx->in);
+                            while (k != '\n' && k != EOF)
+                            {
+                                k = fgetc(lx->in);
+                            }
+                            if (k == '\n')
+                            {
+                                mezery = 0; 
+                            }
+                            else
+                            {
+                                c = EOF;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            // nebyl to komentar, ale deleni '/'
+                            if (dalsi_znak != EOF)
+                            {
+                                ungetc(dalsi_znak, lx->in);
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // prvni platny znak
+                        break;
+                    }
+                }
+
+            lx->at_line_start = false;
+
+                // Konec souboru musime uzavrit vsechny otevrene urovne odsazeni
+                if (c == EOF)
+                {
+                    if (lx->indent_top > 0)
+                    {
+                        lx->indent_top -= 1;
+                        tok.type = TT_DEDENT;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                    else
+                    {
+                        tok.type = TT_EOF;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                }
+
+                // Vratime prvni znak kodu zpet na vstup, aby si ho precetl stav S_START
+                ungetc(c, lx->in);
+
+                int vrchol = lx->indent_stack[lx->indent_top];
+
+                if (mezery > vrchol)
+                {
+                    // Zvetseni odsazeni -> novy blok (TT_INDENT)
+                    lx->indent_top += 1;
+                    lx->indent_stack[lx->indent_top] = mezery;
+                    tok.type = TT_INDENT;
+                    dstr_delete(pole);
+                    return tok;
+                }
+                else if (mezery < vrchol)
+                {
+                    // Zmenseni odsazeni -> ukonceni jednoho ci vice bloku (TT_DEDENT)
+                    int pocet_dedentu = 0;
+                    while (lx->indent_top > 0 && lx->indent_stack[lx->indent_top] > mezery)
+                    {
+                        lx->indent_top -= 1;
+                        pocet_dedentu += 1;
+                    }
+
+                    // Odsazeni musi presne odpovidat nektere predchozi urovni na zasobniku
+                    if (lx->indent_stack[lx->indent_top] != mezery)
+                    {
+                        dstr_delete(pole);
+                        exit(1);
+                    }
+
+                    lx->pending_dedents = pocet_dedentu - 1;
+                    tok.type = TT_DEDENT;
+                    dstr_delete(pole);
+                    return tok;
+                }
+                
+            }
+        }
+
         
         
+
+
         int znak = fgetc(lx->in);
      
         switch(aktualni_stav)
@@ -127,19 +285,40 @@ static token read_token_fsm(lexer *lx)
             {
                 if(znak == ' ' || znak == '\t')
                 {
-                    continue;
+                    break;
                 }
                 else if(znak == '\n')
                 {
-                    tok.type = TT_EOL;
-                    dstr_delete(pole);
-                    return tok;
+                    if(lx->paren_depth > 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        lx->at_line_start = true;
+
+                        tok.type = TT_EOL;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                    
                 }
                 else if(znak == EOF)
                 {
-                    tok.type = TT_EOF;
-                    dstr_delete(pole);
-                    return tok;
+                    if(lx->indent_top >0)
+                    {
+                        lx->indent_top -= 1;
+                        tok.type = TT_DEDENT;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                    else
+                    {
+                        tok.type = TT_EOF;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                    
                     
                 }
                 else if(isalpha(znak)||(znak == '_'))
@@ -187,12 +366,17 @@ static token read_token_fsm(lexer *lx)
                 }
                 else if(znak == '(')
                 {
+                    lx->paren_depth += 1;
                     tok.type = TT_LPAREN;
                     dstr_delete(pole);
                     return tok;
                 }
                 else if(znak == ')')
                 {
+                    if(lx->paren_depth > 0)
+                    {
+                        lx->paren_depth -= 1;
+                    }
                     tok.type = TT_RPAREN;
                     dstr_delete(pole);
                     return tok;
@@ -247,6 +431,7 @@ static token read_token_fsm(lexer *lx)
                 {
             
                     dstr_push_char(pole,znak);
+                    break;
                 }
                 else
                 {
@@ -341,7 +526,7 @@ static token read_token_fsm(lexer *lx)
                     return tok;
                 }
             }
-            case S_NEQ:
+            case S_NEQ: 
             {
                 if(znak == '=')
                 {
@@ -453,6 +638,13 @@ static token read_token_fsm(lexer *lx)
                     dstr_push_char(pole,znak);
                     break;
                 }
+                else if (znak == '_')
+                {
+                    
+                    po_podtrzitku = true;
+                    aktualni_stav = S_INTEGER;
+                    break;
+                }
                 else
                 {
                     ungetc(znak, lx->in);
@@ -467,12 +659,25 @@ static token read_token_fsm(lexer *lx)
                 if(isdigit(znak))
                 {
                     dstr_push_char(pole,znak);
+                    po_podtrzitku = false;
+                    break;
+                }
+                else if (znak == '_')
+                {
+                
+                    if (po_podtrzitku==true)
+                    {
+                        dstr_delete(pole);
+                        exit(1);
+                    }
+                    po_podtrzitku = true;
                     break;
                 }
                 else
                 {
+
                     aktualni_stav = S_START;
-                    if (pole->raw[0] == '0')
+                    if ((pole->raw[0] == '0')||(po_podtrzitku==true))
                     {
                         dstr_delete(pole);
                         exit(1);
@@ -486,16 +691,39 @@ static token read_token_fsm(lexer *lx)
             }
             case S_DOUBLE:
             {
-                if(isdigit(znak)||(znak == 'e')||(znak == 'E'))
+                if (isdigit(znak))
                 {
-                    aktualni_stav = S_DOUBLE;
-                    dstr_push_char(pole,znak);
+                    po_podtrzitku = false;
+                    dstr_push_char(pole, znak);
+                    break;
+                }
+                else if (znak == '_')
+                {
+                    
+                    char posledni = pole->raw[pole->len - 1];
+                    if ((po_podtrzitku == true) || !isdigit(posledni))
+                    {
+                        dstr_delete(pole);
+                        exit(1);
+                    }
+                    po_podtrzitku = true;
+                    break;
+                }
+                else if (znak == 'e' || znak == 'E')
+                {
+                    // pred exponentem nesmi byt _
+                    if (po_podtrzitku==true)
+                    {
+                        dstr_delete(pole);
+                        exit(1);
+                    }
+                    dstr_push_char(pole, znak);
                     break;
                 }
                 else
                 {
                     char posledni = pole->raw[pole->len - 1];
-                    if((posledni=='.')||(posledni=='e')||(posledni=='E')||(posledni=='+')||(posledni=='-'))
+                    if((posledni=='.')||(posledni=='e')||(posledni=='E')||(posledni=='+')||(posledni=='-')||(po_podtrzitku==true))
                     {
                         dstr_delete(pole);
                         exit(1);
@@ -681,6 +909,8 @@ static token read_token_fsm(lexer *lx)
                 
                 return tok;
             }
+            default:
+                break;
 
         }
         
@@ -723,7 +953,10 @@ void token_free(token *tok)
 
 }
 
-
+/**
+ * Prevede ciselny typ tokenu 
+ * na citelny textovy retezec pro vypis chyb a logovani.
+ */
 const char *token_type_name(token_type type)
 {
     switch(type)
@@ -781,11 +1014,17 @@ lexer *lexer_create(FILE *in)
     {
         return NULL;
     }
+
     lexer *lx =malloc(sizeof(struct lexer));
     if(lx==NULL)
     {
         return NULL;
     }
+    lx->indent_stack[0] =0;
+    lx->indent_top = 0;
+    lx->pending_dedents = 0;
+    lx->at_line_start = true;
+    lx->paren_depth = 0;
     lx->in = in;
     lx->line = 1;
     lx->col = 1;
@@ -800,7 +1039,7 @@ void lexer_destroy(lexer *lx)
     {
         return;
     }
-    for(int i=0;i<lx->peek_count ;i++)
+    for(unsigned i=0;i<lx->peek_count ;i++)
     {
         token_free(&lx->pole_peek[i]);
         
@@ -808,125 +1047,53 @@ void lexer_destroy(lexer *lx)
     free(lx);
 }
 
-
-
-/*
-int get_token( token *token)
+//zobrazeni tokenu do predu
+const token *lexer_peek(lexer *lx, unsigned n)
 {
-    dstr pole = dstr_create("");
-    enum state aktualni_stav = S_START;
-    dstr_clear(pole);
-    while(true)
+    if(((lx==NULL)||(n<1)||(n > LEXER_MAX_PEEK)))
+    {
+        return NULL;
+    }
+    while(lx->peek_count < n)
     {
         
-        
-        int znak = getchar();
-     
-        switch(aktualni_stav)
-        {
-            case S_START:
-            {
-                if(znak == ' ' || znak == '\t')
-                {
-                    continue;
-                }
-                if(znak == '\n')
-                {
-                    token->type = TT_EOL;
-                    return tok;
-                }
-                if(znak == EOF)
-                {
-                    token->type = TT_EOF;
-                    return tok;
-                    
-                }
-                if(isalpha(znak))
-                {
-                    aktualni_stav = S_K_I;
-                    dstr_push_char(pole,znak);
-                }
-                if(isdigit(znak))
-                {
-                    aktualni_stav = S_NUMBER;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak=='/')
-                {
-                    aktualni_stav = S_SLASH;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '"')
-                {
-                    aktualni_stav = S_STRING;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '=')
-                {
-                    aktualni_stav = S_ASSIGN;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == ',')
-                {
-                    aktualni_stav = S_COMMA;
-                    dstr_push_char(pole,znak);
-                }
-                
-                if(znak == '*')
-                {
-                    aktualni_stav = S_STAR;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '!')
-                {
-                    aktualni_stav = S_NEQ;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '(')
-                {
-                    aktualni_stav = S_LPAREN;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == ')')
-                {
-                    aktualni_stav = S_RPAREN;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '-')
-                {
-                    aktualni_stav = S_MINUS;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '<')
-                {
-                    aktualni_stav = S_LT;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '>')
-                {
-                    aktualni_stav = S_GT;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '+')
-                {
-                    aktualni_stav = S_PLUS;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == '.')
-                {
-                    aktualni_stav = S_DOT;
-                    dstr_push_char(pole,znak);
-                }
-                if(znak == ':')
-                {
-                    aktualni_stav = S_COLON;
-                    dstr_push_char(pole,znak);
-                }
-                break;
-            }
-        }
-        
+        lx->pole_peek[lx->peek_count] = read_token_fsm(lx);
+        lx->peek_count += 1;
     }
+    return &lx->pole_peek[n-1];
+}
+//hlavni verejna funkce pro parser. Vrati dalsi token na rade a posune cteni dal
+token get_next_token(lexer *lx)
+{
+    if (lx == NULL)
+    {
+        token err = { .type = TT_EOF };
+        return err;
+    }
+    token prvek_fronty;
+    if(lx->peek_count > 0)
+    {
+        
+        prvek_fronty = lx->pole_peek[0];
+
+        if(lx->peek_count == 2)
+        {
+            lx->pole_peek[0] = lx->pole_peek[1];
+        }
+        lx->peek_count -= 1;
+        return prvek_fronty;
+    }
+    //kdyz byla prazdna fronta
+    return read_token_fsm(lx);
 }
 
-*/
+
+
+
+
+
+
+
+
+
+
