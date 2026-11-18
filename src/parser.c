@@ -365,31 +365,39 @@ static bool parse_return_type(parser_ctx *ctx, ast_func_t *func) {
 // <type> -> KW_UNIT
 // <type> -> KW_LIST
 static bool parse_type(parser_ctx *ctx, data_type *out) {
-    if (accept_kw(ctx, KW_INT)) {
-        return true;
+    if (ctx->current.type != TT_KEYWORD) {
+        return false;
     }
 
-    if (accept_kw(ctx, KW_DOUBLE)) {
-        return true;
+    data_type type = TYPE_UNKNOWN;
+
+    switch (ctx->current.attr.as_keyword) {
+    case KW_INT:
+        type = TYPE_INT;
+        break;
+    case KW_DOUBLE:
+        type = TYPE_DOUBLE;
+        break;
+    case KW_STRING:
+        type = TYPE_STRING;
+        break;
+    case KW_BOOLEAN:
+        type = TYPE_BOOL;
+        break;
+    case KW_UNIT:
+        type = TYPE_UNIT;
+        break;
+    case KW_LIST:
+        type = TYPE_UNKNOWN; // no list type in types.h so idk what to put here
+        break;
+    default:
+        return false;
     }
 
-    if (accept_kw(ctx, KW_STRING)) {
-        return true;
-    }
+    advance(ctx);
+    *out = type;
 
-    if (accept_kw(ctx, KW_BOOLEAN)) {
-        return true;
-    }
-
-    if (accept_kw(ctx, KW_UNIT)) {
-        return true;
-    }
-
-    if (accept_kw(ctx, KW_LIST)) {
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 // <block> -> <statement>
