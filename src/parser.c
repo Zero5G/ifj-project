@@ -18,7 +18,7 @@ static bool parse_function_list(parser_ctx *ctx);
 static bool parse_parameters(parser_ctx *ctx);
 static bool parse_function(parser_ctx *ctx);
 static bool parse_return_type(parser_ctx *ctx);
-static bool parse_block(parser_ctx *ctx);
+static bool parse_block(parser_ctx *ctx, ast_block_t *block);
 static bool parse_parameter(parser_ctx *ctx);
 static bool parse_parameter_next(parser_ctx *ctx);
 static bool parse_type(parser_ctx *ctx);
@@ -104,6 +104,39 @@ static bool expect_kw(parser_ctx *ctx, keyword kw) {
 
     advance(ctx);
     return true;
+}
+
+static unsigned current_line(const parser_ctx *ctx) {
+    return (unsigned)ctx->current.line;
+}
+
+static dstr take_identifier(parser_ctx *ctx) {
+    if (ctx->current.type != TT_IDENTIFIER) {
+        return nullptr;
+    }
+
+    dstr name = ctx->current.attr.as_str;
+
+    return name;
+}
+
+static dstr take_function_name(parser_ctx *ctx) {
+    if (ctx->current.type == TT_IDENTIFIER) {
+        return take_identifier(ctx);
+    }
+
+    dstr name = nullptr;
+    if (token_is_kw(&ctx->current, KW_MAIN)) {
+        name = dstr_create("main");
+    } else {
+        return nullptr;
+    }
+
+    if (name != nullptr) {
+        advance(ctx);
+    }
+
+    return name;
 }
 
 // First(<statement>) = {KW_VAL, KW_VAR, TT_IDENTIFIER, KW_RETURN, KW_IF,
@@ -198,13 +231,29 @@ static bool parse_function_list(parser_ctx *ctx) {
 // <function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN
 // <return_type> TT_ASSIGN <block>
 static bool parse_function(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
     if (!expect_kw(ctx, KW_DEF)) {
         return false;
     }
 
-    if (!expect(ctx, TT_IDENTIFIER)) {
+    dstr name = take_function_name(ctx);
+    if (name == nullptr) {
         return false;
     }
+
+    ast_func_t *func = ast_func_create(line);
+    if (func == nullptr) {
+        dstr_delete(name);
+        return false;
+    }
+
+    func->name = name;
+    if (dstr_cmp_raw(name, "main") == 0) {
+        func->is_main = name;
+    }
+
+    ast_prog_append(ctx->prog, func);
 
     if (!expect(ctx, TT_LPAREN)) {
         return false;
@@ -226,11 +275,7 @@ static bool parse_function(parser_ctx *ctx) {
         return false;
     }
 
-    if (!parse_block(ctx)) {
-        return false;
-    }
-
-    return true;
+    return parse_block(ctx, &func->body);
 }
 
 // <parameters> -> <parameter> <parameter_next>
@@ -338,7 +383,7 @@ static bool parse_type(parser_ctx *ctx) {
 
 // <block> -> <statement>
 // <block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
-static bool parse_block(parser_ctx *ctx) {
+static bool parse_block(parser_ctx *ctx, ast_block_t *block) {
     if (accept(ctx, TT_EOL)) {
         if (!expect(ctx, TT_INDENT)) {
             return false;
