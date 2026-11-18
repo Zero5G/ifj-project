@@ -52,12 +52,15 @@ check-tidy:
 check: check-tidy check-format
 
 # POZOR pdflatex je nastaven aby chyby byly přeskočené, takže spadnou do exit kódu, který ignorujeme
-doc:
+doxygen:
 	doxygen Doxyfile
 	sed -i 's/\\usepackage\[T2A\]{fontenc}/\\usepackage[T1]{fontenc}/' doc/gen/latex/refman.tex
 	cp -r doc/assets/. doc/gen/latex/assets/
 	make LATEX_CMD="pdflatex -interaction=nonstopmode" -C doc/gen/latex || true
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
+
+doc:
+	pandoc doc/pages/doc.md -o dokumentace.pdf --resource-path=docs:doc/assets
 
 clean:
 	rm -rf test_runner interpreter doc/gen/* dokumentace.pdf
