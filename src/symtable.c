@@ -11,8 +11,8 @@
 #include <string.h>
 #define HTAB_BASE_SIZE 12
 
-#include "symtable.h"
 #include "htab.h"
+#include "symtable.h"
 #include <stdlib.h>
 
 typedef struct scope {
@@ -28,7 +28,8 @@ struct symtable {
     unsigned next_var_id;
 };
 
-static sym_result symtable_insert(hash_table *htab, const char *name, sym_kind kind, symbol **out) {
+static sym_result symtable_insert(hash_table *htab, const char *name,
+                                  sym_kind kind, symbol **out) {
     symbol *sym = calloc(1, sizeof(symbol));
     if (sym == nullptr) {
         return SYM_NOMEM;
