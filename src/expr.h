@@ -18,6 +18,6 @@
  * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
  * aktualni token predavany lexerem
  */
-ast_expr_t *parse_expression(parser_t *p);
+ast_expr_t *parse_expression(parser_ctx *p);
 
 #endif

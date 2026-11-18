@@ -193,24 +193,24 @@ static stack_item_t make_expr(ast_expr_t *expr) {
     return item;
 }
 
-static bool is_expr_end(parser_t *p) {
-    if (p->current.type == TT_EOL) {
+static bool is_expr_end(parser_ctx *ctx) {
+    if (ctx->current.type == TT_EOL) {
         return true;
     }
 
-    if (token_is_kw(&p->current, KW_THEN)) {
+    if (token_is_kw(&ctx->current, KW_THEN)) {
         return true;
     }
 
-    if (token_is_kw(&p->current, KW_DO)) {
+    if (token_is_kw(&ctx->current, KW_DO)) {
         return true;
     }
 
-    if (p->current.type == TT_COMMA) {
+    if (ctx->current.type == TT_COMMA) {
         return true;
     }
 
-    if (p->current.type == TT_RPAREN) {
+    if (ctx->current.type == TT_RPAREN) {
         return true;
     }
 
@@ -244,50 +244,50 @@ static void shift_symbol(expr_stack_t *stack, prec_symbol_t symbol) {
     stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL, .symbol = symbol});
 }
 
-static ast_expr_t *parse_operand(parser_t *p) {
+static ast_expr_t *parse_operand(parser_ctx *ctx) {
     ast_expr_t *expr = nullptr;
 
-    switch (p->current.type) {
+    switch (ctx->current.type) {
     case TT_INT_LITERAL:
-        expr = ast_expr_create(p->current.line, E_INT_LIT);
-        expr->as.int_val = p->current.attr.as_int;
+        expr = ast_expr_create(ctx->current.line, E_INT_LIT);
+        expr->as.int_val = ctx->current.attr.as_int;
         break;
 
     case TT_DOUBLE_LITERAL:
-        expr = ast_expr_create(p->current.line, E_DOUBLE_LIT);
-        expr->as.double_val = p->current.attr.as_double;
+        expr = ast_expr_create(ctx->current.line, E_DOUBLE_LIT);
+        expr->as.double_val = ctx->current.attr.as_double;
         break;
 
     case TT_STRING_LITERAL:
-        expr = ast_expr_create(p->current.line, E_STRING_LIT);
-        expr->as.str = p->current.attr.as_str;
+        expr = ast_expr_create(ctx->current.line, E_STRING_LIT);
+        expr->as.str = ctx->current.attr.as_str;
         break;
 
     case TT_BOOLEAN_LITERAL:
-        expr = ast_expr_create(p->current.line, E_BOOLEAN_LIT);
-        expr->as.bool_val = p->current.attr.as_bool;
+        expr = ast_expr_create(ctx->current.line, E_BOOLEAN_LIT);
+        expr->as.bool_val = ctx->current.attr.as_bool;
         break;
 
     case TT_IDENTIFIER:
-        expr = ast_expr_create(p->current.line, E_VAR);
-        expr->as.var.name = p->current.attr.as_str;
+        expr = ast_expr_create(ctx->current.line, E_VAR);
+        expr->as.var.name = ctx->current.attr.as_str;
         break;
 
     case TT_UNIT_LITERAL:
-        expr = ast_expr_create(p->current.line, E_UNIT_LIT);
+        expr = ast_expr_create(ctx->current.line, E_UNIT_LIT);
         break;
 
     default:
         return nullptr;
     }
 
-    advance(p);
+    advance(ctx);
 
     return expr;
 }
 
-static void shift_operand(expr_stack_t *stack, parser_t *p) {
-    ast_expr_t *expr = parse_operand(p);
+static void shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
+    ast_expr_t *expr = parse_operand(ctx);
 
     stack_push(stack, (stack_item_t){.kind = ITEM_EXPR, .expr = expr});
 }
@@ -390,7 +390,7 @@ static bool reduce(expr_stack_t *stack) {
     return false;
 }
 
-ast_expr_t *parse_expression(parser_t *p) {
+ast_expr_t *parse_expression(parser_ctx *ctx) {
     expr_stack_t stack;
 
     stack_init(&stack);
@@ -399,7 +399,7 @@ ast_expr_t *parse_expression(parser_t *p) {
 
     while (true) {
         prec_symbol_t input =
-            is_expr_end(p) ? PS_DOLLAR : token_to_symbol(p->current.type);
+            is_expr_end(ctx) ? PS_DOLLAR : token_to_symbol(ctx->current.type);
 
         prec_symbol_t top = top_terminal(&stack);
 
@@ -413,10 +413,10 @@ ast_expr_t *parse_expression(parser_t *p) {
             insert_handle(&stack);
 
             if (input == PS_OPERAND) {
-                shift_operand(&stack, p);
+                shift_operand(&stack, ctx);
             } else {
                 shift_symbol(&stack, input);
-                advance(p);
+                advance(ctx);
             }
 
             continue;
@@ -424,7 +424,7 @@ ast_expr_t *parse_expression(parser_t *p) {
 
         if (rel == '=') {
             shift_symbol(&stack, input);
-            advance(p);
+            advance(ctx);
 
             continue;
         }
