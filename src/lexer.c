@@ -505,7 +505,7 @@ static token read_token_fsm(lexer *lx) {
                 break;
             } else {
                 ungetc(znak, lx->in);
-                tok.attr.as_int = strtol(pole->raw, NULL, 10);
+                tok.attr.as_int = strtol(dstr_cstr(pole), nullptr, 10);
                 tok.type = TT_INT_LITERAL;
                 dstr_delete(pole);
                 return tok;
@@ -527,13 +527,13 @@ static token read_token_fsm(lexer *lx) {
             } else {
 
                 aktualni_stav = S_START;
-                if ((pole->raw[0] == '0') || (po_podtrzitku == true)) {
+                if ((dstr_cstr(pole)[0] == '0') || (po_podtrzitku == true)) {
                     dstr_delete(pole);
                     exit(1);
                 }
                 ungetc(znak, lx->in); // vraceni neznameho znaku
                 tok.type = TT_INT_LITERAL;
-                tok.attr.as_int = strtol(pole->raw, NULL, 10);
+                tok.attr.as_int = strtol(dstr_cstr(pole), nullptr, 10);
                 dstr_delete(pole);
                 return tok;
             }
@@ -545,7 +545,7 @@ static token read_token_fsm(lexer *lx) {
                 break;
             } else if (znak == '_') {
 
-                char posledni = pole->raw[pole->len - 1];
+                char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
                 if ((po_podtrzitku == true) || !isdigit(posledni)) {
                     dstr_delete(pole);
                     exit(1);
@@ -561,7 +561,7 @@ static token read_token_fsm(lexer *lx) {
                 dstr_push_char(pole, znak);
                 break;
             } else {
-                char posledni = pole->raw[pole->len - 1];
+                char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
                 if ((posledni == '.') || (posledni == 'e') ||
                     (posledni == 'E') || (posledni == '+') ||
                     (posledni == '-') || (po_podtrzitku == true)) {
@@ -571,7 +571,7 @@ static token read_token_fsm(lexer *lx) {
                 aktualni_stav = S_START;
                 ungetc(znak, lx->in); // vraceni neznameho znaku
                 tok.type = TT_DOUBLE_LITERAL;
-                tok.attr.as_double = strtod(pole->raw, NULL);
+                tok.attr.as_double = strtod(dstr_cstr(pole), nullptr);
                 dstr_delete(pole);
                 return tok;
             }
@@ -634,7 +634,7 @@ static token read_token_fsm(lexer *lx) {
             }
         }
         case S_STRING_E: {
-            if ((znak == '"') && (pole->len == 0)) {
+            if ((znak == '"') && (dstr_len(pole) == 0)) {
 
                 aktualni_stav = S_S_ML;
                 break;
@@ -705,7 +705,7 @@ static token read_token_fsm(lexer *lx) {
 }
 
 bool token_is_kw(const token *tok, keyword kw) {
-    if (tok == NULL) {
+    if (tok == nullptr) {
         return false;
     }
     if ((tok->type == TT_KEYWORD) && (tok->attr.as_keyword == kw)) {
@@ -715,14 +715,14 @@ bool token_is_kw(const token *tok, keyword kw) {
 }
 
 void token_free(token *tok) {
-    if (tok == NULL) {
+    if (tok == nullptr) {
         return;
     }
 
     if ((tok->type == TT_IDENTIFIER) || (tok->type == TT_STRING_LITERAL)) {
-        if (tok->attr.as_str != NULL) {
+        if (tok->attr.as_str != nullptr) {
             dstr_delete(tok->attr.as_str);
-            tok->attr.as_str = NULL;
+            tok->attr.as_str = nullptr;
         }
     }
 }
@@ -803,13 +803,13 @@ const char *token_type_name(token_type type) {
 }
 
 lexer *lexer_create(FILE *in) {
-    if (in == NULL) {
-        return NULL;
+    if (in == nullptr) {
+        return nullptr;
     }
 
     lexer *lx = malloc(sizeof(struct lexer));
-    if (lx == NULL) {
-        return NULL;
+    if (lx == nullptr) {
+        return nullptr;
     }
     lx->indent_stack[0] = 0;
     lx->indent_top = 0;
@@ -824,7 +824,7 @@ lexer *lexer_create(FILE *in) {
 }
 
 void lexer_destroy(lexer *lx) {
-    if (lx == NULL) {
+    if (lx == nullptr) {
         return;
     }
     for (unsigned i = 0; i < lx->peek_count; i++) {
@@ -835,8 +835,8 @@ void lexer_destroy(lexer *lx) {
 
 // zobrazeni tokenu do predu
 const token *lexer_peek(lexer *lx, unsigned n) {
-    if (((lx == NULL) || (n < 1) || (n > LEXER_MAX_PEEK))) {
-        return NULL;
+    if (((lx == nullptr) || (n < 1) || (n > LEXER_MAX_PEEK))) {
+        return nullptr;
     }
     while (lx->peek_count < n) {
 
@@ -848,7 +848,7 @@ const token *lexer_peek(lexer *lx, unsigned n) {
 // hlavni verejna funkce pro parser. Vrati dalsi token na rade a posune cteni
 // dal
 token get_next_token(lexer *lx) {
-    if (lx == NULL) {
+    if (lx == nullptr) {
         token err = {.type = TT_EOF};
         return err;
     }
