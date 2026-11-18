@@ -10,6 +10,31 @@
 #include "parser.h"
 #include "expr.h"
 
+static bool parse_prog(parser_t *p);
+static bool parse_prolog(parser_t *p);
+static bool parse_function_list(parser_t *p);
+static bool parse_parameters(parser_t *p);
+static bool parse_function(parser_t *p);
+static bool parse_return_type(parser_t *p);
+static bool parse_block(parser_t *p);
+static bool parse_parameter(parser_t *p);
+static bool parse_parameter_next(parser_t *p);
+static bool parse_type(parser_t *p);
+static bool parse_body(parser_t *p);
+static bool parse_statement_list(parser_t *p);
+static bool parse_statement(parser_t *p);
+static bool parse_variable_definition(parser_t *p);
+static bool parse_function_return(parser_t *p);
+static bool parse_if_statement(parser_t *p);
+static bool parse_while_statement(parser_t *p);
+static bool parse_identifier_statement(parser_t *p);
+static bool parse_variable_type(parser_t *p);
+static bool parse_assignment(parser_t *p);
+static bool parse_function_call(parser_t *p);
+static bool parse_argument_list(parser_t *p);
+static bool parse_argument(parser_t *p);
+static bool parse_argument_next(parser_t *p);
+
 bool parser_init(parser_t *p, lexer *lx) {
     p->lx = lx;
     p->current = get_next_token(lx);
