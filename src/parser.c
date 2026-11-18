@@ -9,6 +9,7 @@
 
 #include "parser.h"
 #include "ast.h"
+#include "dstr.h"
 #include "expr.h"
 
 static bool parse_prog(parser_ctx *ctx);
@@ -138,11 +139,25 @@ static bool is_statement(parser_ctx *ctx) {
     return false;
 }
 
-bool parser_run(parser_ctx *ctx) { return parse_prog(ctx); }
+bool parser_run(parser_ctx *ctx) {
+    if (ctx->prog == nullptr) {
+        return false;
+    }
+
+    return parse_prog(ctx);
+}
 
 // <prog> -> <prolog> <function_list>
 static bool parse_prog(parser_ctx *ctx) {
-    return parse_prolog(ctx) && parse_function_list(ctx) && expect(ctx, TT_EOF);
+    if (!parse_prolog(ctx)) {
+        return false;
+    }
+
+    if (!parse_function_list(ctx)) {
+        return false;
+    }
+
+    return expect(ctx, TT_EOF);
 }
 
 // <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
@@ -151,9 +166,11 @@ static bool parse_prolog(parser_ctx *ctx) {
         return false;
     }
 
-    if (!expect(ctx, TT_IDENTIFIER)) {
+    if (ctx->current.type != TT_IDENTIFIER ||
+        dstr_cmp_raw(ctx->current.attr.as_str, "ifj26") != 0) {
         return false;
     }
+    advance(ctx);
 
     if (!expect(ctx, TT_DOT)) {
         return false;
@@ -163,7 +180,7 @@ static bool parse_prolog(parser_ctx *ctx) {
         return false;
     }
 
-    return true;
+    return accept(ctx, TT_EOL) || ctx->current.type == TT_EOF;
 }
 
 // <function_list> -> <function> <function_list>
