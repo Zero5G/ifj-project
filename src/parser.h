@@ -40,4 +40,28 @@ bool parser_run(parser_t *p);
  */
 void parser_destroy(parser_t *p);
 
+/**
+ * @brief Funkce, ktera uvolni aktualni token a zavola lexer pro dalsi
+ * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
+ * aktualni token predavany lexerem
+ */
+void advance(parser_t *p);
+
+/**
+ * @brief Funkce, ktera kontroluje, zda je pozadovany typ mozne prijmout pro
+ * parsovani
+ * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
+ * aktualni token predavany lexerem
+ * @param type Typ tokenu
+ */
+bool accept(parser_t *p, token_type type);
+
+/**
+ * @brief Funkce, ktera kontroluje, zda je pozadovany typ tim ocekavanym
+ * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
+ * aktualni token predavany lexerem
+ * @param type Typ tokenu
+ */
+bool expect(parser_t *p, token_type type);
+
 #endif
