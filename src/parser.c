@@ -24,8 +24,9 @@ static bool parse_function(parser_ctx *ctx);
 static bool parse_return_type(parser_ctx *ctx, ast_func_t *func);
 static bool parse_type(parser_ctx *ctx, data_type *out);
 static bool parse_block(parser_ctx *ctx, ast_block_t *block);
-static bool parse_body(parser_ctx *ctx);
-static bool parse_statement_list(parser_ctx *ctx);
+static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block);
+static bool parse_body(parser_ctx *ctx, ast_block_t *block);
+static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block);
 static bool parse_statement(parser_ctx *ctx);
 static bool parse_variable_definition(parser_ctx *ctx);
 static bool parse_function_return(parser_ctx *ctx);
@@ -139,6 +140,14 @@ static dstr take_function_name(parser_ctx *ctx) {
     }
 
     return name;
+}
+
+static bool expect_stmt_end(parser_ctx *ctx) {
+    if (accept(ctx, TT_EOL)) {
+        return true;
+    }
+
+    return ctx->current.type == TT_DEDENT || ctx->current.type == TT_EOF;
 }
 
 static bool add_parameter(ast_func_t *func, dstr name) {
@@ -403,44 +412,63 @@ static bool parse_type(parser_ctx *ctx, data_type *out) {
 // <block> -> <statement>
 // <block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
 static bool parse_block(parser_ctx *ctx, ast_block_t *block) {
-    if (accept(ctx, TT_EOL)) {
-        if (!expect(ctx, TT_INDENT)) {
-            return false;
-        }
-
-        if (!parse_body(ctx)) {
-            return false;
-        }
-
-        if (!expect(ctx, TT_DEDENT)) {
-            return false;
-        }
-
-        return true;
+    if (ctx->current.type == TT_EOL) {
+        return parse_indented_block(ctx, block);
     }
 
-    return parse_statement(ctx);
+    return parse_block_statement(ctx, block);
 }
 
-// <body> -> <statement_list>
-static bool parse_body(parser_ctx *ctx) {
-    if (!parse_statement_list(ctx)) {
+static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block) {
+    if (!expext(ctx, TT_EOL)) {
+        return false;
+    }
+
+    if (!expect(ctx, TT_INDENT)) {
+        return false;
+    }
+
+    if (!parse_body(ctx, block)) {
+        return false;
+    }
+
+    if (!expect(ctx, TT_DEDENT)) {
         return false;
     }
 
     return true;
 }
 
+// <body> -> <statement_list>
+static bool parse_body(parser_ctx *ctx, ast_block_t *block) {
+    return parse_statement_list(ctx, block);
+}
+
 // <statement_list> -> <statement> <statement_list>
 // <statement_list> -> ε
-static bool parse_statement_list(parser_ctx *ctx) {
+static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block) {
     while (is_statement(ctx)) {
-        if (!parse_statement(ctx)) {
+        if (!parse_block_statement(ctx, block)) {
             return false;
         }
     }
 
     return true;
+}
+
+static bool parse_block_statement(parser_ctx *ctx, ast_block_t *block) {
+    ast_stmt_t *stmt = parse_statement(ctx);
+    if (stmt == nullptr) {
+        return false;
+    }
+
+    ast_block_append(block, stmt);
+
+    if (stmt->kind == STMT_IF || stmt->kind == STMT_WHILE) {
+        return true;
+    }
+
+    return expect_stmt_end(ctx);
 }
 
 // <statement> -> <variable_definition>
