@@ -35,7 +35,8 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx);
 static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx);
 static bool parse_variable_type(parser_ctx *ctx, data_type *out);
 static ast_stmt_t *parse_assignment(parser_ctx *ctx);
-static bool parse_function_call(parser_ctx *ctx);
+static ast_stmt_t *parse_expression_statement(parser_ctx *ctx);
+ast_expr_t *parse_function_call(parser_ctx *ctx);
 static bool parse_argument_list(parser_ctx *ctx);
 static bool parse_argument(parser_ctx *ctx);
 static bool parse_argument_next(parser_ctx *ctx);
@@ -171,6 +172,16 @@ static bool add_parameter(ast_func_t *func, dstr name) {
     func->param_count++;
 
     return true;
+}
+
+static ast_stmt_t *make_expr_stmt(unsigned line, ast_expr_t *expr) {
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_EXPR);
+    if (stmt == nullptr) {
+        return nullptr;
+    }
+
+    stmt->as.expr = expr;
+    return stmt;
 }
 
 // First(<statement>) = {KW_VAL, KW_VAR, TT_IDENTIFIER, KW_RETURN, KW_IF,
@@ -508,7 +519,7 @@ static ast_stmt_t *parse_statement(parser_ctx *ctx) {
         return parse_identifier_statement(ctx);
     }
 
-    return false;
+    return parse_expression_statement(ctx);
 }
 
 // <variable_definition> -> KW_VAL TT_IDENTIFIER <variable_type> TT_ASSIGN
@@ -687,13 +698,7 @@ static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx) {
         return parse_assignment(ctx);
     }
 
-    if (next->type == TT_LPAREN) {
-        return parse_function_call(ctx);
-    }
-
-    else {
-        return parse_expression(ctx) != nullptr;
-    }
+    return parse_expression_statement(ctx);
 }
 
 // <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
@@ -729,25 +734,51 @@ static ast_stmt_t *parse_assignment(parser_ctx *ctx) {
     return stmt;
 }
 
-// <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
-static bool parse_function_call(parser_ctx *ctx) {
-    if (!expect(ctx, TT_IDENTIFIER)) {
-        return false;
+static ast_stmt_t *parse_expression_statement(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
+    ast_expr_t *expr = is_name_kw(&ctx->current) ? parse_function_call(ctx)
+                                                 : parse_expression(ctx);
+    if (expr == nullptr) {
+        return nullptr;
     }
 
+    return make_expr_stmt(line, expr);
+}
+
+// <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
+ast_expr_t *parse_function_call(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
+    dstr name = take_func_name(ctx);
+    if (name == nullptr) {
+        return nullptr;
+    }
+
+    ast_expr_t *call = ast_expr_create(line, E_FUNC);
+    if (call == nullptr) {
+        dstr_delete(name);
+        return nullptr;
+    }
+
+    call->as.func.name = name;
+    call->as.func.args = nullptr;
+    call->as.func.argc = 0;
+    call->as.func.target = nullptr;
+
     if (!expect(ctx, TT_LPAREN)) {
-        return false;
+        return nullptr;
     }
 
     if (!parse_argument_list(ctx)) {
-        return false;
+        return nullptr;
     }
 
     if (!expect(ctx, TT_RPAREN)) {
-        return false;
+        return nullptr;
     }
 
-    return true;
+    return call;
 }
 
 // <argument_list> -> <argument> <argument_next>
