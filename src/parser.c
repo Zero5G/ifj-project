@@ -27,13 +27,13 @@ static bool parse_block(parser_ctx *ctx, ast_block_t *block);
 static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block);
 static bool parse_body(parser_ctx *ctx, ast_block_t *block);
 static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block);
-static bool parse_statement(parser_ctx *ctx);
-static bool parse_variable_definition(parser_ctx *ctx);
+static ast_stmt_t *parse_statement(parser_ctx *ctx);
+static ast_stmt_t *parse_variable_definition(parser_ctx *ctx);
 static bool parse_function_return(parser_ctx *ctx);
 static bool parse_if_statement(parser_ctx *ctx);
 static bool parse_while_statement(parser_ctx *ctx);
 static bool parse_identifier_statement(parser_ctx *ctx);
-static bool parse_variable_type(parser_ctx *ctx);
+static bool parse_variable_type(parser_ctx *ctx, data_type *out);
 static bool parse_assignment(parser_ctx *ctx);
 static bool parse_function_call(parser_ctx *ctx);
 static bool parse_argument_list(parser_ctx *ctx);
@@ -478,7 +478,7 @@ static bool parse_block_statement(parser_ctx *ctx, ast_block_t *block) {
 // <statement> -> <if_statement>
 // <statement> -> <while_statement>
 // <statement> -> <expression> // lookahead
-static bool parse_statement(parser_ctx *ctx) {
+static ast_stmt_t *parse_statement(parser_ctx *ctx) {
     if (token_is_kw(&ctx->current, KW_VAL)) {
         return parse_variable_definition(ctx);
     }
@@ -510,40 +510,62 @@ static bool parse_statement(parser_ctx *ctx) {
 // <expression>
 // <variable_definition> -> KW_VAR TT_IDENTIFIER <variable_type> TT_ASSIGN
 // <expression>
-static bool parse_variable_definition(parser_ctx *ctx) {
-    if (!accept_kw(ctx, KW_VAL) && !accept_kw(ctx, KW_VAR)) {
-        return false;
+static ast_stmt_t *parse_variable_definition(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+    bool is_mut = false;
+
+    if (accept_kw(ctx, KW_VAR)) {
+        is_mut = true;
+    } else if (!accept_kw(ctx, KW_VAL)) {
+        return nullptr;
     }
 
-    if (!expect(ctx, TT_IDENTIFIER)) {
-        return false;
+    dstr name = take_identifier(ctx);
+    if (name == nullptr) {
+        return nullptr;
     }
 
-    if (!parse_variable_type(ctx)) {
-        return false;
+    data_type type = TYPE_UNKNOWN;
+    if (!parse_variable_type(ctx, &type)) {
+        dstr_delete(name);
+        return nullptr;
     }
 
     if (!expect(ctx, TT_ASSIGN)) {
-        return false;
+        dstr_delete(name);
+        return nullptr;
     }
 
-    if (parse_expression(ctx) == nullptr) {
-        return false;
+    ast_expr_t *init = parse_expression(ctx);
+    if (init == nullptr) {
+        dstr_delete(name);
+        return nullptr;
     }
 
-    return true;
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_VAR_DEF);
+    if (stmt == nullptr) {
+        dstr_delete(name);
+        return nullptr;
+    }
+
+    stmt->as.var_def.name = name;
+    stmt->as.var_def.var_id = 0;
+    stmt->as.var_def.is_mut = is_mut;
+    stmt->as.var_def.type = type;
+    stmt->as.var_def.init = init;
+
+    return stmt;
 }
 
 // <variable_type> -> TT_COLON <type>
 // <variable_type> -> ε
-static bool parse_variable_type(parser_ctx *ctx) {
-    if (accept(ctx, TT_COLON)) {
-        if (!parse_type(ctx)) {
-            return false;
-        }
+static bool parse_variable_type(parser_ctx *ctx, data_type *out) {
+    if (!accept(ctx, TT_COLON)) {
+        *out = TYPE_UNKNOWN;
+        return true;
     }
 
-    return true;
+    return parse_type(ctx, out);
 }
 
 // <function_return> -> KW_RETURN
