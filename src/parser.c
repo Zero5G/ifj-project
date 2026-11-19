@@ -43,6 +43,7 @@ static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
 
 bool parser_init(parser_ctx *ctx, lexer *lx) {
     ctx->lx = lx;
+    ctx->current = (token){.type = TT_EOF};
     ctx->prog = ast_prog_create();
     if (ctx->prog == nullptr) {
         return false;
@@ -114,12 +115,18 @@ static unsigned current_line(const parser_ctx *ctx) {
     return (unsigned)ctx->current.line;
 }
 
+static bool is_name_kw(const token *tok) {
+    return token_is_kw(tok, KW_MAIN) || token_is_kw(tok, KW_PRINT);
+}
+
 static dstr take_identifier(parser_ctx *ctx) {
     if (ctx->current.type != TT_IDENTIFIER) {
         return nullptr;
     }
 
     dstr name = ctx->current.attr.as_str;
+    ctx->current.attr.as_str = nullptr;
+    advance(ctx);
 
     return name;
 }
@@ -201,34 +208,28 @@ static ast_stmt_t *make_expr_stmt(unsigned line, ast_expr_t *expr) {
 // First(<statement>) = {KW_VAL, KW_VAR, TT_IDENTIFIER, KW_RETURN, KW_IF,
 // KW_WHILE}
 // expressions can start with {TT_IDENTIFIER, TT_INT_LITERAL, TT_DOUBLE_LITERAL,
-// TT_STRING_LITERAL, TT_BOOLEAN_LITERAL, TT_UNIT_LITERAL, TT_LPAREN}, so will
-// need an edit later
+// TT_STRING_LITERAL, TT_BOOLEAN_LITERAL, TT_UNIT_LITERAL, TT_LPAREN}
 static bool is_statement(parser_ctx *ctx) {
-    if (token_is_kw(&ctx->current, KW_VAL)) {
+    switch (ctx->current.type) {
+    case TT_IDENTIFIER:
+    case TT_INT_LITERAL:
+    case TT_DOUBLE_LITERAL:
+    case TT_STRING_LITERAL:
+    case TT_BOOLEAN_LITERAL:
+    case TT_UNIT_LITERAL:
+    case TT_LPAREN:
         return true;
+    case TT_KEYWORD:
+        break;
+    default:
+        return false;
     }
 
-    if (token_is_kw(&ctx->current, KW_VAR)) {
-        return true;
-    }
-
-    if (ctx->current.type == TT_IDENTIFIER) {
-        return true;
-    }
-
-    if (token_is_kw(&ctx->current, KW_RETURN)) {
-        return true;
-    }
-
-    if (token_is_kw(&ctx->current, KW_IF)) {
-        return true;
-    }
-
-    if (token_is_kw(&ctx->current, KW_WHILE)) {
-        return true;
-    }
-
-    return false;
+    return token_is_kw(&ctx->current, KW_VAL) ||
+           token_is_kw(&ctx->current, KW_VAR) ||
+           token_is_kw(&ctx->current, KW_RETURN) ||
+           token_is_kw(&ctx->current, KW_IF) ||
+           token_is_kw(&ctx->current, KW_WHILE) || is_name_kw(&ctx->current);
 }
 
 bool parser_run(parser_ctx *ctx) {
