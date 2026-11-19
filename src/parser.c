@@ -37,9 +37,9 @@ static bool parse_variable_type(parser_ctx *ctx, data_type *out);
 static ast_stmt_t *parse_assignment(parser_ctx *ctx);
 static ast_stmt_t *parse_expression_statement(parser_ctx *ctx);
 ast_expr_t *parse_function_call(parser_ctx *ctx);
-static bool parse_argument_list(parser_ctx *ctx);
-static bool parse_argument(parser_ctx *ctx);
-static bool parse_argument_next(parser_ctx *ctx);
+static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call);
+static bool parse_argument(parser_ctx *ctx, ast_expr_t *call);
+static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
 
 bool parser_init(parser_ctx *ctx, lexer *lx) {
     ctx->lx = lx;
@@ -170,6 +170,20 @@ static bool add_parameter(ast_func_t *func, dstr name) {
         .var_id = 0,
     };
     func->param_count++;
+
+    return true;
+}
+
+static bool add_argument(ast_expr_t *call, ast_expr_t *arg) {
+    ast_expr_t **args = realloc((void *)call->as.func.args,
+                                (call->as.func.argc + 1) * sizeof(*args));
+    if (args == nullptr) {
+        return false;
+    }
+
+    call->as.func.args = args;
+    call->as.func.args[call->as.func.argc] = arg;
+    call->as.func.argc++;
 
     return true;
 }
@@ -770,7 +784,7 @@ ast_expr_t *parse_function_call(parser_ctx *ctx) {
         return nullptr;
     }
 
-    if (!parse_argument_list(ctx)) {
+    if (!parse_argument_list(ctx, call)) {
         return nullptr;
     }
 
@@ -783,41 +797,36 @@ ast_expr_t *parse_function_call(parser_ctx *ctx) {
 
 // <argument_list> -> <argument> <argument_next>
 // <argument_list> -> ε
-static bool parse_argument_list(parser_ctx *ctx) {
-    if (ctx->current.type == TT_IDENTIFIER) {
-        if (!parse_argument(ctx)) {
-            return false;
-        }
-
-        if (!parse_argument_next(ctx)) {
-            return false;
-        }
+static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call) {
+    if (ctx->current.type == TT_RPAREN) {
+        return true;
     }
 
-    return true;
+    if (!parse_argument(ctx, call)) {
+        return false;
+    }
+
+    return parse_argument_next(ctx, call);
 }
 
 // <argument> -> TT_IDENTIFIER
 // argument should allow terms IDENTIFIER, INT_LITERAL, DOUBLE_LITERAL,
 // STRING_LITERAL, BOOLEAN_LITERAL, UNIT_LITERAL, so this should be taken care
 // of
-static bool parse_argument(parser_ctx *ctx) {
-    if (!expect(ctx, TT_IDENTIFIER)) {
+static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
+    ast_expr_t *arg = parse_term(ctx);
+    if (arg == nullptr) {
         return false;
     }
 
-    return true;
+    return add_argument(call, arg);
 }
 
 // <argument_next> TT_COMMA TT_IDENTIFIER <argument_next>
 // <argument_next> -> ε
-static bool parse_argument_next(parser_ctx *ctx) {
-    if (accept(ctx, TT_COMMA)) {
-        if (!expect(ctx, TT_IDENTIFIER)) {
-            return false;
-        }
-
-        if (!parse_argument_next(ctx)) {
+static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call) {
+    while (accept(ctx, TT_COMMA)) {
+        if (!parse_argument(ctx, call)) {
             return false;
         }
     }
@@ -825,4 +834,4 @@ static bool parse_argument_next(parser_ctx *ctx) {
     return true;
 }
 
-// parse_expression() -> in expr.c
+// parse_expression(), parse_term() -> in expr.c
