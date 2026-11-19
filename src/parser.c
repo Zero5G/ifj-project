@@ -765,7 +765,7 @@ static ast_stmt_t *parse_expression_statement(parser_ctx *ctx) {
 ast_expr_t *parse_function_call(parser_ctx *ctx) {
     unsigned line = current_line(ctx);
 
-    dstr name = take_func_name(ctx);
+    dstr name = take_function_name(ctx);
     if (name == nullptr) {
         return nullptr;
     }
