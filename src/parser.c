@@ -32,9 +32,9 @@ static ast_stmt_t *parse_variable_definition(parser_ctx *ctx);
 static ast_stmt_t *parse_function_return(parser_ctx *ctx);
 static ast_stmt_t *parse_if_statement(parser_ctx *ctx);
 static ast_stmt_t *parse_while_statement(parser_ctx *ctx);
-static bool parse_identifier_statement(parser_ctx *ctx);
+static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx);
 static bool parse_variable_type(parser_ctx *ctx, data_type *out);
-static bool parse_assignment(parser_ctx *ctx);
+static ast_stmt_t *parse_assignment(parser_ctx *ctx);
 static bool parse_function_call(parser_ctx *ctx);
 static bool parse_argument_list(parser_ctx *ctx);
 static bool parse_argument(parser_ctx *ctx);
@@ -676,11 +676,11 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
 // <statement> -> <assignment> // lookahead
 // <statement> -> <function_call> // lookahead
 // <statement> -> <expression> // lookahead
-static bool parse_identifier_statement(parser_ctx *ctx) {
+static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx) {
     const token *next = lexer_peek(ctx->lx, 1);
 
     if (next == nullptr) {
-        return false;
+        return nullptr;
     }
 
     if (next->type == TT_ASSIGN) {
@@ -697,20 +697,36 @@ static bool parse_identifier_statement(parser_ctx *ctx) {
 }
 
 // <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
-static bool parse_assignment(parser_ctx *ctx) {
-    if (!expect(ctx, TT_IDENTIFIER)) {
-        return false;
+static ast_stmt_t *parse_assignment(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
+    dstr name = take_identifier(ctx);
+    if (name == nullptr) {
+        return nullptr;
     }
 
     if (!expect(ctx, TT_ASSIGN)) {
-        return false;
+        dstr_delete(name);
+        return nullptr;
     }
 
-    if (parse_expression(ctx) == nullptr) {
-        return false;
+    ast_expr_t *val = parse_expression(ctx);
+    if (val == nullptr) {
+        dstr_delete(name);
+        return nullptr;
     }
 
-    return true;
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_ASSIGN);
+    if (stmt == nullptr) {
+        dstr_delete(name);
+        return nullptr;
+    }
+
+    stmt->as.assign.name = name;
+    stmt->as.assign.var_id = 0;
+    stmt->as.assign.val = val;
+
+    return stmt;
 }
 
 // <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
