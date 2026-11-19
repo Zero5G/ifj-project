@@ -297,10 +297,14 @@ static ast_expr_t *parse_operand(parser_ctx *ctx) {
     return parse_term(ctx);
 }
 
-static void shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
+static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
     ast_expr_t *expr = parse_operand(ctx);
+    if (expr == nullptr) {
+        return false;
+    }
 
-    stack_push(stack, (stack_item_t){.kind = ITEM_EXPR, .expr = expr});
+    stack_push(stack, make_expr(expr));
+    return true;
 }
 
 static bool reduce(expr_stack_t *stack) {
@@ -424,7 +428,9 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
             insert_marker(&stack);
 
             if (input == PS_OPERAND) {
-                shift_operand(&stack, ctx);
+                if (!shift_operand(&stack, ctx)) {
+                    return nullptr;
+                }
             } else {
                 shift_symbol(&stack, input);
                 advance(ctx);
