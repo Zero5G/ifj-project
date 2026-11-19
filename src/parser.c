@@ -29,7 +29,7 @@ static bool parse_body(parser_ctx *ctx, ast_block_t *block);
 static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block);
 static ast_stmt_t *parse_statement(parser_ctx *ctx);
 static ast_stmt_t *parse_variable_definition(parser_ctx *ctx);
-static bool parse_function_return(parser_ctx *ctx);
+static ast_stmt_t *parse_function_return(parser_ctx *ctx);
 static bool parse_if_statement(parser_ctx *ctx);
 static bool parse_while_statement(parser_ctx *ctx);
 static bool parse_identifier_statement(parser_ctx *ctx);
@@ -140,6 +140,11 @@ static dstr take_function_name(parser_ctx *ctx) {
     }
 
     return name;
+}
+
+static bool is_stmt_end(const parser_ctx *ctx) {
+    return ctx->current.type == TT_EOL || ctx->current.type == TT_DEDENT ||
+           ctx->current.type == TT_EOF;
 }
 
 static bool expect_stmt_end(parser_ctx *ctx) {
@@ -568,15 +573,30 @@ static bool parse_variable_type(parser_ctx *ctx, data_type *out) {
     return parse_type(ctx, out);
 }
 
-// <function_return> -> KW_RETURN
-// quite possibly wrong, probably needs KW_RETURN <expression> in the future,
-// will require an editing the grammar rules and LL table
-static bool parse_function_return(parser_ctx *ctx) {
+// <function_return> -> KW_RETURN <expression>
+static ast_stmt_t *parse_function_return(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
     if (!expect_kw(ctx, KW_RETURN)) {
-        return false;
+        return nullptr;
     }
 
-    return true;
+    ast_expr_t *val = nullptr;
+    if (!is_stmt_end(ctx)) {
+        val = parse_expression(ctx);
+        if (val == nullptr) {
+            return nullptr;
+        }
+    }
+
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_RET);
+    if (stmt == nullptr) {
+        return nullptr;
+    }
+
+    stmt->as.ret_val = val;
+
+    return stmt;
 }
 
 // <if_statement> -> KW_IF <expression> KW_THEN TT_EOL TT_INDENT <body> TT_EOL
