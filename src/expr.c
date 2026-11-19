@@ -133,7 +133,7 @@ static op_binary token_to_binary(token_type type) {
     }
 }
 
-typedef enum { ITEM_SYMBOL, ITEM_EXPR, ITEM_HANDLE } item_kind_t;
+typedef enum { ITEM_SYMBOL, ITEM_EXPR, ITEM_MARKER } item_kind_t;
 
 typedef struct {
     item_kind_t kind;
@@ -148,15 +148,9 @@ typedef struct {
 
 static void stack_init(expr_stack_t *s) { s->top = -1; }
 
-// static bool stack_empty(expr_stack_t *s) { return s->top < 0; }
-
 static void stack_push(expr_stack_t *s, stack_item_t item) {
     s->items[++s->top] = item;
 }
-
-// static stack_item_t stack_pop(expr_stack_t *s) { return s->items[s->top--]; }
-
-// static stack_item_t *stack_top(expr_stack_t *s) { return &s->items[s->top]; }
 
 static prec_symbol_t top_terminal(expr_stack_t *s) {
     for (int i = s->top; i >= 0; i--) {
@@ -172,16 +166,6 @@ static ast_expr_t *make_binary(token_type op, ast_expr_t *left,
                                ast_expr_t *right) {
     return ast_expr_binary_create(left->line, token_to_binary(op), left, right);
 }
-
-/* static stack_item_t make_symbol(prec_symbol_t symbol) {
-    stack_item_t item;
-
-    item.kind = ITEM_SYMBOL;
-    item.symbol = symbol;
-    item.expr = nullptr;
-
-    return item;
-} */
 
 static stack_item_t make_expr(ast_expr_t *expr) {
     stack_item_t item;
@@ -217,22 +201,22 @@ static bool is_expr_end(parser_ctx *ctx) {
     return false;
 }
 
-static stack_item_t make_handle(void) {
+static stack_item_t make_marker(void) {
     stack_item_t item;
 
-    item.kind = ITEM_HANDLE;
+    item.kind = ITEM_MARKER;
     item.expr = nullptr;
 
     return item;
 }
 
-static void insert_handle(expr_stack_t *stack) {
-    stack_push(stack, make_handle());
+static void insert_marker(expr_stack_t *stack) {
+    stack_push(stack, make_marker());
 }
 
-static int find_handle(expr_stack_t *stack) {
+static int find_marker(expr_stack_t *stack) {
     for (int i = stack->top; i >= 0; i--) {
-        if (stack->items[i].kind == ITEM_HANDLE) {
+        if (stack->items[i].kind == ITEM_MARKER) {
             return i;
         }
     }
@@ -244,41 +228,57 @@ static void shift_symbol(expr_stack_t *stack, prec_symbol_t symbol) {
     stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL, .symbol = symbol});
 }
 
-static ast_expr_t *parse_operand(parser_ctx *ctx) {
-    ast_expr_t *expr = nullptr;
+ast_expr_t *parse_term(parser_ctx *ctx) {
+    expr_kind kind;
 
     switch (ctx->current.type) {
     case TT_INT_LITERAL:
-        expr = ast_expr_create(ctx->current.line, E_INT_LIT);
-        expr->as.int_val = ctx->current.attr.as_int;
+        kind = E_INT_LIT;
         break;
-
     case TT_DOUBLE_LITERAL:
-        expr = ast_expr_create(ctx->current.line, E_DOUBLE_LIT);
-        expr->as.double_val = ctx->current.attr.as_double;
+        kind = E_DOUBLE_LIT;
         break;
-
     case TT_STRING_LITERAL:
-        expr = ast_expr_create(ctx->current.line, E_STRING_LIT);
-        expr->as.str = ctx->current.attr.as_str;
+        kind = E_STRING_LIT;
         break;
-
     case TT_BOOLEAN_LITERAL:
-        expr = ast_expr_create(ctx->current.line, E_BOOLEAN_LIT);
-        expr->as.bool_val = ctx->current.attr.as_bool;
+        kind = E_BOOLEAN_LIT;
         break;
-
     case TT_IDENTIFIER:
-        expr = ast_expr_create(ctx->current.line, E_VAR);
-        expr->as.var.name = ctx->current.attr.as_str;
+        kind = E_VAR;
         break;
-
     case TT_UNIT_LITERAL:
-        expr = ast_expr_create(ctx->current.line, E_UNIT_LIT);
+        kind = E_UNIT_LIT;
         break;
-
     default:
         return nullptr;
+    }
+
+    ast_expr_t *expr = ast_expr_create((unsigned)ctx->current.line, kind);
+    if (expr == nullptr) {
+        return nullptr;
+    }
+
+    switch (kind) {
+    case E_INT_LIT:
+        expr->as.int_val = ctx->current.attr.as_int;
+        break;
+    case E_DOUBLE_LIT:
+        expr->as.double_val = ctx->current.attr.as_double;
+        break;
+    case E_STRING_LIT:
+        expr->as.str = ctx->current.attr.as_str;
+        ctx->current.attr.as_str = nullptr;
+        break;
+    case E_BOOLEAN_LIT:
+        expr->as.bool_val = ctx->current.attr.as_bool;
+        break;
+    case E_VAR:
+        expr->as.var.name = ctx->current.attr.as_str;
+        ctx->current.attr.as_str = nullptr;
+        break;
+    default:
+        break;
     }
 
     advance(ctx);
@@ -286,28 +286,43 @@ static ast_expr_t *parse_operand(parser_ctx *ctx) {
     return expr;
 }
 
-static void shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
-    ast_expr_t *expr = parse_operand(ctx);
+static ast_expr_t *parse_operand(parser_ctx *ctx) {
+    if (ctx->current.type == TT_IDENTIFIER) {
+        const token *next = lexer_peek(ctx->lx, 1);
+        if (next != nullptr && next->type == TT_LPAREN) {
+            return parse_function_call(ctx);
+        }
+    }
 
-    stack_push(stack, (stack_item_t){.kind = ITEM_EXPR, .expr = expr});
+    return parse_term(ctx);
 }
 
-static bool reduce(expr_stack_t *stack) {
-    int handle = find_handle(stack);
-    if (handle < 0) {
+static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
+    ast_expr_t *expr = parse_operand(ctx);
+    if (expr == nullptr) {
         return false;
     }
 
-    int count = stack->top - handle;
+    stack_push(stack, make_expr(expr));
+    return true;
+}
+
+static bool reduce(expr_stack_t *stack) {
+    int marker = find_marker(stack);
+    if (marker < 0) {
+        return false;
+    }
+
+    int count = stack->top - marker;
 
     if (count == 1) {
-        stack_item_t expr = stack->items[handle + 1];
+        stack_item_t expr = stack->items[marker + 1];
 
         if (expr.kind != ITEM_EXPR) {
             return false;
         }
 
-        stack->top = handle - 1;
+        stack->top = marker - 1;
 
         stack_push(stack, expr);
 
@@ -315,15 +330,15 @@ static bool reduce(expr_stack_t *stack) {
     }
 
     if (count == 3) {
-        stack_item_t left = stack->items[handle + 1];
-        stack_item_t op = stack->items[handle + 2];
-        stack_item_t right = stack->items[handle + 3];
+        stack_item_t left = stack->items[marker + 1];
+        stack_item_t op = stack->items[marker + 2];
+        stack_item_t right = stack->items[marker + 3];
 
         // (E) - needs testing, may be wrong
         if (left.kind == ITEM_SYMBOL && left.symbol == PS_LPAREN &&
             op.kind == ITEM_EXPR && right.kind == ITEM_SYMBOL &&
             right.symbol == PS_RPAREN) {
-            stack->top = handle - 1;
+            stack->top = marker - 1;
 
             stack_push(stack, op);
 
@@ -380,7 +395,7 @@ static bool reduce(expr_stack_t *stack) {
 
         ast_expr_t *expr = make_binary(tok, left.expr, right.expr);
 
-        stack->top = handle - 1;
+        stack->top = marker - 1;
 
         stack_push(stack, make_expr(expr));
 
@@ -410,10 +425,12 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
         char rel = precedence(top, input);
 
         if (rel == '<') {
-            insert_handle(&stack);
+            insert_marker(&stack);
 
             if (input == PS_OPERAND) {
-                shift_operand(&stack, ctx);
+                if (!shift_operand(&stack, ctx)) {
+                    return nullptr;
+                }
             } else {
                 shift_symbol(&stack, input);
                 advance(ctx);

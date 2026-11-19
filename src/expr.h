@@ -15,9 +15,15 @@
 
 /**
  * @brief Funkce, ktera zacne parsovat expression
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param p Ukazatel na kontext parseru
  */
 ast_expr_t *parse_expression(parser_ctx *p);
+
+/**
+ * @brief Funkce, ktera zparsuje jeden term (identifikator nebo literal) a vrati
+ * jeho uzel
+ * @param p Ukazatel na kontext parseru
+ */
+ast_expr_t *parse_term(parser_ctx *p);
 
 #endif
