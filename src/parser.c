@@ -30,8 +30,8 @@ static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block);
 static ast_stmt_t *parse_statement(parser_ctx *ctx);
 static ast_stmt_t *parse_variable_definition(parser_ctx *ctx);
 static ast_stmt_t *parse_function_return(parser_ctx *ctx);
-static bool parse_if_statement(parser_ctx *ctx);
-static bool parse_while_statement(parser_ctx *ctx);
+static ast_stmt_t *parse_if_statement(parser_ctx *ctx);
+static ast_stmt_t *parse_while_statement(parser_ctx *ctx);
 static bool parse_identifier_statement(parser_ctx *ctx);
 static bool parse_variable_type(parser_ctx *ctx, data_type *out);
 static bool parse_assignment(parser_ctx *ctx);
@@ -601,102 +601,75 @@ static ast_stmt_t *parse_function_return(parser_ctx *ctx) {
 
 // <if_statement> -> KW_IF <expression> KW_THEN TT_EOL TT_INDENT <body> TT_EOL
 // TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
-static bool parse_if_statement(parser_ctx *ctx) {
+static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
     if (!expect_kw(ctx, KW_IF)) {
-        return false;
+        return nullptr;
     }
 
-    if (parse_expression(ctx) == nullptr) {
-        return false;
+    ast_expr_t *cond = parse_expression(ctx);
+    if (cond == nullptr) {
+        return nullptr;
     }
 
     if (!expect_kw(ctx, KW_THEN)) {
-        return false;
+        return nullptr;
     }
 
-    if (!expect(ctx, TT_EOL)) {
-        return false;
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_IF);
+    if (stmt == nullptr) {
+        return nullptr;
     }
 
-    if (!expect(ctx, TT_INDENT)) {
-        return false;
+    stmt->as.if_stmt.cond = cond;
+    stmt->as.if_stmt.has_else = false;
+
+    if (!parse_indented_block(ctx, &stmt->as.if_stmt.then_blk)) {
+        return nullptr;
     }
 
-    if (!parse_body(ctx)) {
-        return false;
+    if (accept(ctx, KW_ELSE)) {
+        stmt->as.if_stmt.has_else = true;
+
+        if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
+            return nullptr;
+        }
     }
 
-    if (!expect(ctx, TT_EOL)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_DEDENT)) {
-        return false;
-    }
-
-    if (!expect_kw(ctx, KW_ELSE)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_EOL)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_INDENT)) {
-        return false;
-    }
-
-    if (!parse_body(ctx)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_EOL)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_DEDENT)) {
-        return false;
-    }
-
-    return true;
+    return stmt;
 }
 
 // <while_statement> -> KW_WHILE <expression> KW_DO TT_EOL TT_INDENT <body>
 // TT_EOL TT_OUTDENT
-static bool parse_while_statement(parser_ctx *ctx) {
+static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
+    unsigned line = current_line(ctx);
+
     if (!expect_kw(ctx, KW_WHILE)) {
-        return false;
+        return nullptr;
     }
 
-    if (parse_expression(ctx) == nullptr) {
-        return false;
+    ast_expr_t *cond = parse_expression(ctx);
+    if (cond == nullptr) {
+        return nullptr;
     }
 
     if (!expect_kw(ctx, KW_DO)) {
         return false;
     }
 
-    if (!expect(ctx, TT_EOL)) {
-        return false;
+    ast_stmt_t *stmt = ast_stmt_create(line, STMT_WHILE);
+    if (stmt == nullptr) {
+        return nullptr;
     }
 
-    if (!expect(ctx, TT_INDENT)) {
-        return false;
+    stmt->as.while_stmt.cond = cond;
+
+    if (!parse_indented_block(ctx, &stmt->as.while_stmt.block)) {
+        return nullptr;
     }
 
-    if (!parse_body(ctx)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_EOL)) {
-        return false;
-    }
-
-    if (!expect(ctx, TT_DEDENT)) {
-        return false;
-    }
-
-    return true;
+    return stmt;
 }
 
 // lookahead because of TT_IDENTIFIER
