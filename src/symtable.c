@@ -30,7 +30,7 @@ struct symtable {
 
 static sym_result symtable_insert(hash_table *htab, const char *name,
                                   sym_kind kind, symbol **out) {
-    symbol *sym = calloc(1, sizeof(symbol));
+    symbol *sym = calloc(1, sizeof(struct symbol));
     if (sym == nullptr) {
         return SYM_NOMEM;
     }
