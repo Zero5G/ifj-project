@@ -67,4 +67,10 @@ bool accept(parser_ctx *ctx, token_type type);
  */
 bool expect(parser_ctx *ctx, token_type type);
 
+/**
+ * @brief Funkce, ktera zparsuje volani funkce, a zapise ho do ast
+ * @param ctx Ukazatel na kontext parseru
+ */
+ast_expr_t *parse_function_call(parser_ctx *ctx);
+
 #endif

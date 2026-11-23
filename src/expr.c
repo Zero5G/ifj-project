@@ -9,6 +9,7 @@
  */
 
 #include "expr.h"
+#include "parser.h"
 
 #define STACK_SIZE 256
 
@@ -148,18 +149,26 @@ typedef struct {
 
 static void stack_init(expr_stack_t *s) { s->top = -1; }
 
-static void stack_push(expr_stack_t *s, stack_item_t item) {
+static bool stack_push(expr_stack_t *s, stack_item_t item) {
+    if (s->top + 1 >= STACK_SIZE) {
+        return false;
+    }
     s->items[++s->top] = item;
+    return true;
 }
 
-static prec_symbol_t top_terminal(expr_stack_t *s) {
+static int top_terminal_index(expr_stack_t *s) {
     for (int i = s->top; i >= 0; i--) {
         if (s->items[i].kind == ITEM_SYMBOL) {
-            return s->items[i].symbol;
+            return i;
         }
     }
 
-    return PS_DOLLAR;
+    return 0;
+}
+
+static prec_symbol_t top_terminal(expr_stack_t *s) {
+    return s->items[top_terminal_index(s)].symbol;
 }
 
 static ast_expr_t *make_binary(token_type op, ast_expr_t *left,
@@ -210,8 +219,19 @@ static stack_item_t make_marker(void) {
     return item;
 }
 
-static void insert_marker(expr_stack_t *stack) {
-    stack_push(stack, make_marker());
+static bool insert_marker(expr_stack_t *stack) {
+    if (stack->top + 1 >= STACK_SIZE) {
+        return false;
+    }
+
+    int pos = top_terminal_index(stack) + 1;
+    for (int i = stack->top; i >= pos; i--) {
+        stack->items[i + 1] = stack->items[i];
+    }
+    stack->items[pos] = make_marker();
+    stack->top++;
+
+    return true;
 }
 
 static int find_marker(expr_stack_t *stack) {
@@ -224,12 +244,33 @@ static int find_marker(expr_stack_t *stack) {
     return -1;
 }
 
-static void shift_symbol(expr_stack_t *stack, prec_symbol_t symbol) {
-    stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL, .symbol = symbol});
+static bool shift_symbol(expr_stack_t *stack, prec_symbol_t symbol) {
+    return stack_push(
+        stack,
+        (stack_item_t){.kind = ITEM_SYMBOL, .symbol = symbol, .expr = nullptr});
+}
+
+static bool at_unit_literal(parser_ctx *ctx) {
+    if (ctx->current.type != TT_LPAREN) {
+        return false;
+    }
+    const token *next = lexer_peek(ctx->lx, 1);
+    return next != nullptr && next->type == TT_RPAREN;
 }
 
 ast_expr_t *parse_term(parser_ctx *ctx) {
     expr_kind kind;
+
+    if (at_unit_literal(ctx)) {
+        ast_expr_t *expr =
+            ast_expr_create((unsigned)ctx->current.line, E_UNIT_LIT);
+        if (expr == nullptr) {
+            return nullptr;
+        }
+        advance(ctx);
+        advance(ctx);
+        return expr;
+    }
 
     switch (ctx->current.type) {
     case TT_INT_LITERAL:
@@ -303,8 +344,9 @@ static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
         return false;
     }
 
-    stack_push(stack, make_expr(expr));
-    return true;
+    return stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL,
+                                            .symbol = PS_OPERAND,
+                                            .expr = expr});
 }
 
 static bool reduce(expr_stack_t *stack) {
@@ -316,17 +358,15 @@ static bool reduce(expr_stack_t *stack) {
     int count = stack->top - marker;
 
     if (count == 1) {
-        stack_item_t expr = stack->items[marker + 1];
+        stack_item_t item = stack->items[marker + 1];
 
-        if (expr.kind != ITEM_EXPR) {
+        if (item.kind != ITEM_SYMBOL || item.symbol != PS_OPERAND) {
             return false;
         }
 
         stack->top = marker - 1;
 
-        stack_push(stack, expr);
-
-        return true;
+        return stack_push(stack, make_expr(item.expr));
     }
 
     if (count == 3) {
@@ -334,15 +374,12 @@ static bool reduce(expr_stack_t *stack) {
         stack_item_t op = stack->items[marker + 2];
         stack_item_t right = stack->items[marker + 3];
 
-        // (E) - needs testing, may be wrong
         if (left.kind == ITEM_SYMBOL && left.symbol == PS_LPAREN &&
             op.kind == ITEM_EXPR && right.kind == ITEM_SYMBOL &&
             right.symbol == PS_RPAREN) {
             stack->top = marker - 1;
 
-            stack_push(stack, op);
-
-            return true;
+            return stack_push(stack, op);
         }
 
         if (left.kind != ITEM_EXPR) {
@@ -394,12 +431,13 @@ static bool reduce(expr_stack_t *stack) {
         }
 
         ast_expr_t *expr = make_binary(tok, left.expr, right.expr);
+        if (expr == nullptr) {
+            return false;
+        }
 
         stack->top = marker - 1;
 
-        stack_push(stack, make_expr(expr));
-
-        return true;
+        return stack_push(stack, make_expr(expr));
     }
 
     return false;
@@ -412,9 +450,20 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
     shift_symbol(&stack, PS_DOLLAR);
 
+    int paren_depth = 0;
+
     while (true) {
+        bool end = is_expr_end(ctx);
+
+        if (ctx->current.type == TT_RPAREN && paren_depth > 0) {
+            end = false;
+        }
+
         prec_symbol_t input =
-            is_expr_end(ctx) ? PS_DOLLAR : token_to_symbol(ctx->current.type);
+            end ? PS_DOLLAR : token_to_symbol(ctx->current.type);
+        if (input == PS_LPAREN && at_unit_literal(ctx)) {
+            input = PS_OPERAND;
+        }
 
         prec_symbol_t top = top_terminal(&stack);
 
@@ -425,14 +474,23 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
         char rel = precedence(top, input);
 
         if (rel == '<') {
-            insert_marker(&stack);
+            if (!insert_marker(&stack)) {
+                return nullptr;
+            }
 
             if (input == PS_OPERAND) {
                 if (!shift_operand(&stack, ctx)) {
                     return nullptr;
                 }
             } else {
-                shift_symbol(&stack, input);
+                if (!shift_symbol(&stack, input)) {
+                    return nullptr;
+                }
+
+                if (input == PS_LPAREN) {
+                    paren_depth++;
+                }
+
                 advance(ctx);
             }
 
@@ -440,7 +498,11 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
         }
 
         if (rel == '=') {
-            shift_symbol(&stack, input);
+            if (!shift_symbol(&stack, input)) {
+                return nullptr;
+            }
+
+            paren_depth--;
             advance(ctx);
 
             continue;
