@@ -38,7 +38,6 @@ static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx);
 static bool parse_variable_type(parser_ctx *ctx, data_type *out);
 static ast_stmt_t *parse_assignment(parser_ctx *ctx);
 static ast_stmt_t *parse_expression_statement(parser_ctx *ctx);
-ast_expr_t *parse_function_call(parser_ctx *ctx);
 static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
