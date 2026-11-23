@@ -473,7 +473,7 @@ static bool parse_block(parser_ctx *ctx, ast_block_t *block) {
 }
 
 static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block) {
-    if (!expext(ctx, TT_EOL)) {
+    if (!expect(ctx, TT_EOL)) {
         return false;
     }
 
@@ -677,7 +677,7 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
         return nullptr;
     }
 
-    if (accept(ctx, KW_ELSE)) {
+    if (accept_kw(ctx, KW_ELSE)) {
         stmt->as.if_stmt.has_else = true;
 
         if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
@@ -703,7 +703,7 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
     }
 
     if (!expect_kw(ctx, KW_DO)) {
-        return false;
+        return nullptr;
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_WHILE);
