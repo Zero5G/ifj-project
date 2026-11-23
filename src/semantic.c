@@ -30,15 +30,15 @@ static const data_type substr_p[] = {TYPE_STRING, TYPE_INT, TYPE_INT};
 static const data_type ord_p[] = {TYPE_STRING, TYPE_INT};
 
 static const builtin_t builtins[] = {
-    {"print", TYPE_ANY, one_any_p, 1},
-    {"readLine", TYPE_UNIT, nullptr, 0},
+    {"print", TYPE_UNIT, one_any_p, 1},
+    {"readLine", TYPE_STRING, nullptr, 0},
     {"readInt", TYPE_INT, nullptr, 0},
     {"readDouble", TYPE_DOUBLE, nullptr, 0},
-    {"toStr", TYPE_STRING, one_any_p, 0},
+    {"toStr", TYPE_STRING, one_any_p, 1},
     {"toInt", TYPE_INT, one_double_p, 1},
     {"strLength", TYPE_INT, one_str_p, 1},
     {"subStr", TYPE_STRING, substr_p, 3},
-    {"ord", TYPE_INT, ord_p, 1},
+    {"ord", TYPE_INT, ord_p, 2},
     {"chr", TYPE_STRING, one_int_p, 1},
 };
 
@@ -217,14 +217,24 @@ static inline bool is_num(data_type type) {
     return (bool)(type == TYPE_DOUBLE || type == TYPE_INT);
 }
 
-static bool promote_int_lit(ast_expr_t *expr) {
-    if (expr->kind != E_INT_LIT) {
-        return false;
+/**
+ * Převede Int výraz na Double. Literál se přepíše přímo, jiný výraz
+ * (proměnná, volání, ...) se obalí uzlem OPU_INT2FLOAT.
+ * Vrací výraz, který má nahradit původní (nebo nullptr při nedostatku paměti).
+ */
+static ast_expr_t *promote_int(ast_expr_t *expr) {
+    if (expr->kind == E_INT_LIT) {
+        expr->as.double_val = (double)expr->as.int_val;
+        expr->kind = E_DOUBLE_LIT;
+        expr->data_type = TYPE_DOUBLE;
+        return expr;
     }
-    expr->as.double_val = (double)expr->as.int_val;
-    expr->kind = E_DOUBLE_LIT;
-    expr->data_type = TYPE_DOUBLE;
-    return true;
+    ast_expr_t *conv = ast_expr_unary_create(expr->line, OPU_INT2FLOAT, expr);
+    if (conv == nullptr) {
+        return nullptr;
+    }
+    conv->data_type = TYPE_DOUBLE;
+    return conv;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -255,6 +265,9 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
             }
             expr->data_type = TYPE_BOOL;
             break;
+        case OPU_INT2FLOAT:
+            expr->data_type = TYPE_DOUBLE;
+            break;
         }
         break;
     case E_BINARY: {
@@ -269,13 +282,21 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
             break;
         }
 
-        /* Int na Double pokud jeden je Double */
-        if (left->data_type == TYPE_DOUBLE && right->data_type == TYPE_INT &&
-            promote_int_lit(right)) {
-            right->data_type = TYPE_DOUBLE;
-        } else if (left->data_type == TYPE_INT &&
-                   right->data_type == TYPE_DOUBLE && promote_int_lit(left)) {
-            left->data_type = TYPE_DOUBLE;
+        bool numeric_op = (bool)(expr->as.binary.op != OPB_AND && expr->as.binary.op != OPB_OR); /**< Int na Double pokud jeden je Double */
+        if (numeric_op && left->data_type == TYPE_DOUBLE &&
+            right->data_type == TYPE_INT) {
+            right = promote_int(right);
+            if (right == nullptr) {
+                error_fatal_cleanup(ERR_OTHER);
+            }
+            expr->as.binary.right = right;
+        } else if (numeric_op && left->data_type == TYPE_INT &&
+                   right->data_type == TYPE_DOUBLE) {
+            left = promote_int(left);
+            if (left == nullptr) {
+                error_fatal_cleanup(ERR_OTHER);
+            }
+            expr->as.binary.left = left;
         }
 
         if (left->data_type != right->data_type) {
@@ -286,6 +307,12 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         data_type type = left->data_type;
         switch (expr->as.binary.op) {
         case OPB_ADD:
+            /**< + je i konkatenace retezcu */
+            if (!is_num(type) && type != TYPE_STRING) {
+                error_fatal_cleanup(ERR_SEM_TYPE);
+            }
+            expr->data_type = type;
+            break;
         case OPB_SUB:
         case OPB_MUL:
         case OPB_DIV:
@@ -413,6 +440,7 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
             param->kind = SYM_VAR;
             param->is_mut = false;
             param->type = func->params[i].type;
+            func->params[i].var_id = param->var_id;
             break;
         case SYM_EXISTS:
             error_fatal_cleanup(ERR_SEM_REDEF);
