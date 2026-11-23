@@ -17,14 +17,16 @@
 static bool parse_prog(parser_ctx *ctx);
 static bool parse_prolog(parser_ctx *ctx);
 static bool parse_function_list(parser_ctx *ctx);
+static bool parse_annotation(parser_ctx *ctx, bool *is_main);
 static bool parse_parameters(parser_ctx *ctx, ast_func_t *func);
 static bool parse_parameter(parser_ctx *ctx, ast_func_t *func);
 static bool parse_parameter_next(parser_ctx *ctx, ast_func_t *func);
-static bool parse_function(parser_ctx *ctx);
+static bool parse_function(parser_ctx *ctx, bool is_main);
 static bool parse_return_type(parser_ctx *ctx, ast_func_t *func);
 static bool parse_type(parser_ctx *ctx, data_type *out);
 static bool parse_block(parser_ctx *ctx, ast_block_t *block);
 static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block);
+static bool parse_block_statement(parser_ctx *ctx, ast_block_t *block);
 static bool parse_body(parser_ctx *ctx, ast_block_t *block);
 static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block);
 static ast_stmt_t *parse_statement(parser_ctx *ctx);
@@ -139,6 +141,8 @@ static dstr take_function_name(parser_ctx *ctx) {
     dstr name = nullptr;
     if (token_is_kw(&ctx->current, KW_MAIN)) {
         name = dstr_create("main");
+    } else if (token_is_kw(&ctx->current, KW_PRINT)) {
+        name = dstr_create("print");
     } else {
         return nullptr;
     }
@@ -279,8 +283,14 @@ static bool parse_prolog(parser_ctx *ctx) {
 // <function_list> -> <function> <function_list>
 // <function_list> -> ε
 static bool parse_function_list(parser_ctx *ctx) {
-    while (token_is_kw(&ctx->current, KW_DEF)) {
-        if (!parse_function(ctx)) {
+    while (token_is_kw(&ctx->current, KW_MAIN) ||
+           token_is_kw(&ctx->current, KW_DEF)) {
+        bool is_main = false;
+        if (!parse_annotation(ctx, &is_main)) {
+            return false;
+        }
+
+        if (!parse_function(ctx, is_main)) {
             return false;
         }
     }
@@ -288,9 +298,23 @@ static bool parse_function_list(parser_ctx *ctx) {
     return true;
 }
 
+static bool parse_annotation(parser_ctx *ctx, bool *is_main) {
+    *is_main = false;
+
+    if (token_is_kw(&ctx->current, KW_MAIN)) {
+        advance(ctx);
+    }
+
+    *is_main = true;
+
+    accept(ctx, TT_EOL);
+
+    return token_is_kw(&ctx->current, KW_DEF);
+}
+
 // <function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN
 // <return_type> TT_ASSIGN <block>
-static bool parse_function(parser_ctx *ctx) {
+static bool parse_function(parser_ctx *ctx, bool is_main) {
     unsigned line = current_line(ctx);
 
     if (!expect_kw(ctx, KW_DEF)) {
@@ -309,9 +333,7 @@ static bool parse_function(parser_ctx *ctx) {
     }
 
     func->name = name;
-    if (dstr_cmp_raw(name, "main") == 0) {
-        func->is_main = name;
-    }
+    func->is_main = is_main;
 
     ast_prog_append(ctx->prog, func);
 
