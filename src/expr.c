@@ -371,6 +371,30 @@ static bool reduce(expr_stack_t *stack) {
         return stack_push(stack, make_expr(item.expr));
     }
 
+    if (count == 2) {
+        stack_item_t op = stack->items[marker + 1];
+        stack_item_t operand = stack->items[marker + 2];
+
+        if (op.kind != ITEM_SYMBOL || op.symbol != PS_UMINUS) {
+            return false;
+        }
+
+        if (operand.kind != ITEM_EXPR) {
+            return false;
+        }
+
+        ast_expr_t *expr =
+            ast_expr_unary_create(operand.expr->line, OPU_NEG, operand.expr);
+
+        if (expr == nullptr) {
+            return false;
+        }
+
+        stack->top = marker - 1;
+
+        return stack_push(stack, make_expr(expr));
+    }
+
     if (count == 3) {
         stack_item_t left = stack->items[marker + 1];
         stack_item_t op = stack->items[marker + 2];
@@ -466,12 +490,16 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
         prec_symbol_t top = top_terminal(&stack);
 
+        bool after_expr =
+            stack.top >= 0 && stack.items[stack.top].kind == ITEM_EXPR;
+
         if (input == PS_MINUS) {
-            if (top == PS_DOLLAR || top == PS_LPAREN || top == PS_PLUS ||
-                top == PS_MINUS || top == PS_STAR || top == PS_SLASH ||
-                top == PS_LT || top == PS_GT || top == PS_LTE ||
-                top == PS_GTE || top == PS_EQ || top == PS_NEQ ||
-                top == PS_UMINUS) {
+            if (!after_expr &&
+                (top == PS_DOLLAR || top == PS_LPAREN || top == PS_PLUS ||
+                 top == PS_MINUS || top == PS_STAR || top == PS_SLASH ||
+                 top == PS_LT || top == PS_GT || top == PS_LTE ||
+                 top == PS_GTE || top == PS_EQ || top == PS_NEQ ||
+                 top == PS_UMINUS)) {
                 input = PS_UMINUS;
             }
         }
@@ -479,8 +507,6 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
         if (input == PS_LPAREN && at_unit_literal(ctx)) {
             input = PS_OPERAND;
         }
-
-        // prec_symbol_t top = top_terminal(&stack);
 
         if (top == PS_DOLLAR && input == PS_DOLLAR) {
             break;
