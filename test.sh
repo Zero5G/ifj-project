@@ -1,5 +1,7 @@
 #!/bin/bash
 
+make || exit 1
+
 tmp_file=$(mktemp) || exit 1
 trap 'rm -f "$tmp_file"' EXIT
 
