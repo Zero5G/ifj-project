@@ -52,6 +52,9 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
         case OPU_NOT:
             fputs("NOTS\n", ctx->out);
             break;
+        case OPU_INT2FLOAT:
+            fputs("INT2FLOATS\n", ctx->out);
+            break;
         case OPU_NEG:
             if (expr->data_type == TYPE_INT) {
                 fputs("PUSHS int@-1\n", ctx->out);

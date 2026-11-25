@@ -154,6 +154,9 @@ static void expr_free(ast_expr_t *expr);
 static void block_free(ast_block_t *block);
 
 static void expr_free(ast_expr_t *expr) {
+    if (expr == nullptr) {
+        return;
+    }
     switch (expr->kind) {
     case E_UNARY:
         expr_free(expr->as.unary.operand);
@@ -232,6 +235,9 @@ static void stmt_free(ast_stmt_t *stmt) {
 }
 
 void ast_prog_free(ast_prog_t *program) {
+    if (program == nullptr) {
+        return;
+    }
     ast_func_t *func = program->first;
     while (func != nullptr) {
         ast_func_t *next = func->next;
@@ -262,6 +268,7 @@ static const char *const unary_names[] = {
     [OPU_NEG] = "neg",
     [OPU_PLUS] = "plus",
     [OPU_NOT] = "not",
+    [OPU_INT2FLOAT] = "int2float",
 };
 
 static const char *const binary_names[] = {

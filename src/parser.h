@@ -10,58 +10,67 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "ast.h"
 #include "lexer.h"
 #include <stdbool.h>
 
-typedef struct {
+typedef struct parser_ctx {
     lexer *lx;
     token current;
-} parser_t;
+    ast_prog_t *prog;
+} parser_ctx;
 
 /**
  * @brief Inicializuje parser, aby mohl zacit parsovat
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  * @param lx Ukazatel na lexer
  */
-bool parser_init(parser_t *p, lexer *lx);
+bool parser_init(parser_ctx *ctx, lexer *lx);
 
 /**
  * @brief Funkce, ktera zacina parsovani
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  */
-bool parser_run(parser_t *p);
+bool parser_run(parser_ctx *ctx);
+
+/**
+ * @brief Funkce, ktera prevezme AST z parseru
+ * @param ctx Ukazatel na kontext parseru
+ * @return AST programu
+ */
+ast_prog_t *parser_take_prog(parser_ctx *ctx);
 
 /**
  * @brief Funkce, ktera znici parser, tj. uvolni pamet aktualniho tokenu
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  */
-void parser_destroy(parser_t *p);
+void parser_destroy(parser_ctx *ctx);
 
 /**
  * @brief Funkce, ktera uvolni aktualni token a zavola lexer pro dalsi
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  */
-void advance(parser_t *p);
+void advance(parser_ctx *ctx);
 
 /**
  * @brief Funkce, ktera kontroluje, zda je pozadovany typ mozne prijmout pro
  * parsovani
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  * @param type Typ tokenu
  */
-bool accept(parser_t *p, token_type type);
+bool accept(parser_ctx *ctx, token_type type);
 
 /**
  * @brief Funkce, ktera kontroluje, zda je pozadovany typ tim ocekavanym
- * @param p Ukazatel na struct, kde je ukazatel na vnitrni stav lexeru a
- * aktualni token predavany lexerem
+ * @param ctx Ukazatel na kontext parseru
  * @param type Typ tokenu
  */
-bool expect(parser_t *p, token_type type);
+bool expect(parser_ctx *ctx, token_type type);
+
+/**
+ * @brief Funkce, ktera zparsuje volani funkce, a zapise ho do ast
+ * @param ctx Ukazatel na kontext parseru
+ */
+ast_expr_t *parse_function_call(parser_ctx *ctx);
 
 #endif

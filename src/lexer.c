@@ -302,6 +302,8 @@ lx->col -= 1;
 
 }
 
+// Cte vstupni soubor znak po znaku, hlida odsazeni a vraci vzdy jeden kompletni
+// token. Pri lexikalni chybe ukonci program s navratovym kodem 1.
 
 
 //Cte vstupni soubor znak po znaku, hlida odsazeni a vraci vzdy jeden kompletni token. Pri lexikalni chybe ukonci program s navratovym kodem 1.
