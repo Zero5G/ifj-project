@@ -84,7 +84,8 @@ typedef enum token_type {
     // Separátory
     TT_COLON,
     TT_COMMA,
-    TT_DOT, // TT_SEMICOLON, // TT_AT,
+    TT_DOT, 
+    TT_SEMICOLON,
     TT_LPAREN,
     TT_RPAREN,
     TT_AND,
