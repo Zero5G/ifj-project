@@ -845,7 +845,7 @@ static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call) {
 // STRING_LITERAL, BOOLEAN_LITERAL, UNIT_LITERAL, so this should be taken care
 // of
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
-    ast_expr_t *arg = parse_term(ctx);
+    ast_expr_t *arg = parse_expression(ctx);
     if (arg == nullptr) {
         error_fatal_cleanup(ERR_OTHER);
     }
@@ -865,4 +865,4 @@ static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call) {
     return true;
 }
 
-// parse_expression(), parse_term() -> in expr.c
+// parse_expression() -> in expr.c
