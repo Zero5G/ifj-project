@@ -774,7 +774,7 @@ static token read_token_fsm(lexer *lx)
             }
             case S_C_ML_SLASH:
             {
-                if(znak = '*')
+                if(znak == '*')
                 {
                     hloubka_komentare +=1;
                     aktualni_stav = S_C_MLS;
@@ -956,7 +956,7 @@ static token read_token_fsm(lexer *lx)
                 else if (znak == 'e' || znak == 'E')
                 {
                     char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
-                    if ((po_podtrzitku == true) || !isdigit(posledni))
+                    if ((po_podtrzitku == true) || !isdigit(posledni)||(strpbrk(dstr_cstr(pole), "eE")!=NULL))
                     {
                         dstr_delete(pole);
                         exit(1); // chyba: 1.e5 nebo 1.5_e2
@@ -980,7 +980,7 @@ static token read_token_fsm(lexer *lx)
                             aktualni_stav = S_START;
                             back_char(lx, znak);
                             tok.type = TT_DOUBLE_LITERAL;
-                            tok.attr.as_double = strtod(dstr_cstr(pole), NULL);
+                            tok.attr.as_double = prevod_double(pole);
                             dstr_delete(pole);
                             return tok;
                         }
@@ -1023,7 +1023,7 @@ static token read_token_fsm(lexer *lx)
                     aktualni_stav = S_START;
                     back_char(lx, znak); //vraceni neznameho znaku
                     tok.type = TT_DOUBLE_LITERAL;
-                    tok.attr.as_double = strtod(dstr_cstr(pole), NULL);
+                    tok.attr.as_double = prevod_double(pole);
                     dstr_delete(pole);
                     return tok;
                 }
@@ -1190,6 +1190,11 @@ static token read_token_fsm(lexer *lx)
             }
             case S_S_ML_E3:
             {
+                if(znak == '"')
+                {
+                    dstr_push_char(pole, '"');
+                    break;
+                }
                 back_char(lx, znak); //vraceni neznameho znaku
                 tok.type = TT_STRING_LITERAL;
                 tok.attr.as_str = pole;
@@ -1296,6 +1301,9 @@ const char *token_type_name(token_type type)
             return "TT_COMMA";
         case TT_DOT:
             return "TT_DOT";
+        case TT_SEMICOLON:
+            return "TT_SEMICOLON";
+            
         case TT_LPAREN:
             return "TT_LPAREN";
         case TT_RPAREN:
