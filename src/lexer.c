@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <err.h>
+#include <errno.h>
 #include <math.h>
 
 //definice stavu fsm
@@ -133,7 +133,21 @@ static bool check_keyword(dstr pole, keyword *out_kw)
     }
     return false;
 }
+//prevod desetinneho literalu, literal mimo rozsah binary64 je lexikalni chyba
 
+static double prevod_double(dstr pole)
+{
+    errno = 0;
+
+    double hodnota = strtod(dstr_cstr(pole), NULL);
+
+    if (isinf(hodnota) || (hodnota == 0.0 && errno == ERANGE))
+    {
+        dstr_delete(pole);
+        exit(1);
+    }
+    return hodnota;
+}
 static int next_char(lexer *lx)
 {
     int c;
@@ -786,7 +800,19 @@ static token read_token_fsm(lexer *lx)
             {
                 if (znak == '/')
                 {
-                    aktualni_stav = S_C_MLE2;
+                    hloubka_komentare -=1;
+                    if(hloubka_komentare == 0)
+                    {
+                        aktualni_stav = S_C_MLE2;
+                    }
+                    else
+                    {
+                        aktualni_stav = S_C_MLS;
+                    }
+                    break;
+                }
+                else if(znak == '*')
+                {
                     break;
                 }
                 else
@@ -819,6 +845,12 @@ static token read_token_fsm(lexer *lx)
                 {
                     po_podtrzitku = true;
                     aktualni_stav = S_INTEGER;
+                    break;
+                }
+                else if(znak == 'e' || znak == 'E')
+                {
+                    aktualni_stav = S_DOUBLE;
+                    dstr_push_char(pole, znak);
                     break;
                 }
                 else
@@ -938,7 +970,7 @@ static token read_token_fsm(lexer *lx)
                     if (posledni != 'e' && posledni != 'E')
                     {
                         // + nebo - neni soucasti exponentu -> cislo konci, vratime znak jako operator + nebo -
-                        if ((posledni == '.') || (po_podtrzitku == true))
+                        if ((posledni == '.') || (po_podtrzitku == true)||(posledni== '-')||(posledni=='+'))
                         {
                             dstr_delete(pole);
                             exit(1);
@@ -958,6 +990,26 @@ static token read_token_fsm(lexer *lx)
                         dstr_push_char(pole, znak);
                         break;
                     }
+                }
+                else if (znak == 'd' || znak == 'D') // nepovinna pripona
+                {
+                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
+                    int za_priponou = next_char(lx);
+                    back_char(lx, za_priponou);
+
+                    if (!isdigit(posledni) || (po_podtrzitku == true) ||
+
+                    isalnum(za_priponou) || za_priponou == '_')
+                    {
+                        dstr_delete(pole);
+                        exit(1);
+
+                    }
+                    tok.type = TT_DOUBLE_LITERAL;
+                    tok.attr.as_double = prevod_double(pole);
+                    dstr_delete(pole);
+                    return tok;
+
                 }
                 else
                 {
