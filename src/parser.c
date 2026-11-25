@@ -45,7 +45,6 @@ static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
 bool parser_init(parser_ctx *ctx, lexer *lx) {
     ctx->lx = lx;
     ctx->current = (token){.type = TT_EOF};
-    ctx->prog = ast_prog_create();
     if (ctx->prog == nullptr) {
         return false;
     }
@@ -63,12 +62,6 @@ ast_prog_t *parser_take_prog(parser_ctx *ctx) {
 
 void parser_destroy(parser_ctx *ctx) {
     token_free(&ctx->current);
-
-    if (ctx->prog != nullptr) {
-        ast_prog_free(ctx->prog);
-        free(ctx->prog);
-        ctx->prog = nullptr;
-    }
 }
 
 void advance(parser_ctx *ctx) {
@@ -279,11 +272,10 @@ static bool parse_prolog(parser_ctx *ctx) {
     return accept(ctx, TT_EOL) || ctx->current.type == TT_EOF;
 }
 
-// <function_list> -> <function> <function_list>
+// <function_list> -> <annotation> <function> <function_list>
 // <function_list> -> ε
 static bool parse_function_list(parser_ctx *ctx) {
-    while (token_is_kw(&ctx->current, KW_MAIN) ||
-           token_is_kw(&ctx->current, KW_DEF)) {
+    while (ctx->current.type == TT_AT || token_is_kw(&ctx->current, KW_DEF)) {
         bool is_main = false;
         if (!parse_annotation(ctx, &is_main)) {
             return false;
@@ -297,15 +289,30 @@ static bool parse_function_list(parser_ctx *ctx) {
     return true;
 }
 
+// <annotation> -> TT_AT KW_MAIN <annotation_end>
+// <annotation> -> ε
+// <annotation_end> -> TT_EOL
+// <annotation_end> -> ε
 static bool parse_annotation(parser_ctx *ctx, bool *is_main) {
     *is_main = false;
 
+    if (!accept(ctx, TT_AT)) {
+        return true;
+    }
+
+    // "main" je klicove slovo, ale pro jistotu prijmeme i identifikator
     if (token_is_kw(&ctx->current, KW_MAIN)) {
         advance(ctx);
+    } else if (ctx->current.type == TT_IDENTIFIER &&
+               dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0) {
+        advance(ctx);
+    } else {
+        return false; // neznama anotace
     }
 
     *is_main = true;
 
+    // @main muze byt na vlastnim radku nad def
     accept(ctx, TT_EOL);
 
     return token_is_kw(&ctx->current, KW_DEF);
