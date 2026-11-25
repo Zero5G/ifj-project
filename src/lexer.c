@@ -251,6 +251,7 @@ static token read_token_fsm(lexer *lx)
                         else if (dalsi_znak == '*')
                         {
                             // blokovy komentar na zacatku radku preskocime az po '*/'
+                            int hloubka = 1;     //pro vnorene komentare
                             int k = next_char(lx);
                             while (k != EOF)
                             {
@@ -263,12 +264,29 @@ static token read_token_fsm(lexer *lx)
                                     int po_hvezde = next_char(lx);
                                     if (po_hvezde == '/')
                                     {
-                                        break;
+                                        hloubka -= 1;
+                                        if(hloubka == 0)
+                                        {
+                                            break;
+                                        }
                                     }
                                     back_char(lx, po_hvezde);
                                 }
+                                else if(k == '/')
+                                {
+                                    int po_lomitku = next_char(lx);
+                                    if(po_lomitku == '*')
+                                    {
+                                        hloubka += 1;
+                                    }
+                                    else
+                                    {
+                                        back_char(lx, po_lomitku);
+                                    }
+                                }
                                 k = next_char(lx);
                             }
+                            po_komentari = true;
                             if (k == EOF)
                             {
                                 dstr_delete(pole);
