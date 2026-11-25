@@ -9,6 +9,7 @@
 
 #include "lexer.h"
 #include "dstr.h"
+#include "error.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -65,7 +66,7 @@ struct lexer
     FILE *in;
     int line;
     int col;
-    token pole_peek[LEXER_MAX_PEEK];
+    token peek_arr[LEXER_MAX_PEEK];
     unsigned peek_count;
     int indent_stack[256];
     int indent_top;
@@ -132,14 +133,11 @@ static bool check_keyword(dstr pole, keyword *out_kw)
     }
     return false;
 }
-//prevod desetinneho literalu, literal mimo rozsah binary64 je lexikalni chyba
 
 static double prevod_double(dstr pole)
 {
     errno = 0;
-
     double hodnota = strtod(dstr_cstr(pole), NULL);
-
     if (isinf(hodnota) || (hodnota == 0.0 && errno == ERANGE))
     {
         dstr_delete(pole);
@@ -195,17 +193,17 @@ static void back_char(lexer *lx, int c)
 static token read_token_fsm(lexer *lx)
 {
     token tok = {0};
-    dstr pole = dstr_create("");
-    enum state aktualni_stav = S_START;
-    bool po_podtrzitku = false;
-    int hloubka_komentare = 0;
+    dstr str = dstr_create("");
+    enum state current_state = S_START;
+    bool after_underscore = false;
+    int comment_depth = 0;
     while (true)
     {
         if (lx->pending_dedents > 0)
         {
             lx->pending_dedents -= 1;
-            tok.type = TT_DEDENT;
-            dstr_delete(pole);
+            tok.type = TT_OUTDENT;
+            dstr_delete(str);
             return tok;
         }
 
@@ -217,36 +215,35 @@ static token read_token_fsm(lexer *lx)
             }
             else
             {
-                int mezery = 0;
+                int space_count = 0;
                 int c;
-                bool tabulator = false;
-                bool po_komentari = false;
+                bool tab = false;
+                bool after_comment = false;
 
                 while (true)
                 {
                     c = next_char(lx);
                     if (c == ' ')
                     {
-                        if(po_komentari == false)
+                        if (after_comment == false)
                         {
-                            mezery += 1;
+                            space_count += 1;
                         }
                     }
                     else if (c == '\t')
                     {
-                        tabulator = true;
-                        
+                        tab = true; // chyba jen pokud radek neni prazdny
                     }
                     else if (c == '\n')
                     {
-                        mezery = 0;
-                        tabulator = false;
-                        po_komentari = false;
+                        space_count = 0;
+                        tab = false;
+                        after_comment = false;
                     }
                     else if (c == '/')
                     {
-                        int dalsi_znak = next_char(lx);
-                        if (dalsi_znak == '/')
+                        int next_chr = next_char(lx);
+                        if (next_chr == '/')
                         {
                             // radkovy komentar na jinak prazdnem radku preskocime az do konce radku
                             int k = next_char(lx);
@@ -256,9 +253,9 @@ static token read_token_fsm(lexer *lx)
                             }
                             if (k == '\n')
                             {
-                                mezery = 0;
-                                tabulator = false;
-                                po_komentari = false;
+                                space_count = 0;
+                                tab = false;
+                                after_comment = false;
                             }
                             else
                             {
@@ -266,57 +263,61 @@ static token read_token_fsm(lexer *lx)
                                 break;
                             }
                         }
-                        else if (dalsi_znak == '*')
+                        else if (next_chr == '*')
                         {
                             // blokovy komentar na zacatku radku preskocime az po '*/'
-                            int hloubka = 1;     //pro vnorene komentare
+                            int depth = 1; // komentare mohou byt vnorene
                             int k = next_char(lx);
                             while (k != EOF)
                             {
                                 if (k == '\n')
                                 {
-                                    mezery = 0; //novy radek uvnitr komentare
+                                    space_count = 0; //novy radek uvnitr komentare
+                                    tab = false;
                                 }
                                 else if (k == '*')
                                 {
-                                    int po_hvezde = next_char(lx);
-                                    if (po_hvezde == '/')
+                                    int after_star = next_char(lx);
+                                    if (after_star == '/')
                                     {
-                                        hloubka -= 1;
-                                        if(hloubka == 0)
+                                        depth -= 1;
+                                        if (depth == 0)
                                         {
                                             break;
                                         }
                                     }
-                                    back_char(lx, po_hvezde);
-                                }
-                                else if(k == '/')
-                                {
-                                    int po_lomitku = next_char(lx);
-                                    if(po_lomitku == '*')
+                                    else
                                     {
-                                        hloubka += 1;
+                                        back_char(lx, after_star);
+                                    }
+                                }
+                                else if (k == '/')
+                                {
+                                    int after_slash = next_char(lx);
+                                    if (after_slash == '*')
+                                    {
+                                        depth += 1;
                                     }
                                     else
                                     {
-                                        back_char(lx, po_lomitku);
+                                        back_char(lx, after_slash);
                                     }
                                 }
                                 k = next_char(lx);
                             }
-                            po_komentari = true;
+                            after_comment = true; // mezery za komentarem se do odsazeni nepocitaji
                             if (k == EOF)
                             {
-                                dstr_delete(pole);
+                                dstr_delete(str);
                                 exit(1); // neukonceny komentar
                             }
                         }
                         else
                         {
                             // nebyl to komentar, ale deleni '/'
-                            if (dalsi_znak != EOF)
+                            if (next_chr != EOF)
                             {
-                                back_char(lx, dalsi_znak);
+                                back_char(lx, next_chr);
                             }
                             break;
                         }
@@ -330,26 +331,27 @@ static token read_token_fsm(lexer *lx)
 
                 lx->at_line_start = false;
 
-                //tabulator na zacatku neprazdneho radku
-                // Konec souboru musime uzavrit vsechny otevrene urovne odsazeni
-                if(tabulator == true && c!= EOF)
+                // tabulator na zacatku neprazdneho radku
+                if (tab == true && c != EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
+
+                // Konec souboru musime uzavrit vsechny otevrene urovne odsazeni
                 if (c == EOF)
                 {
                     if (lx->indent_top > 0)
                     {
                         lx->indent_top -= 1;
-                        tok.type = TT_DEDENT;
-                        dstr_delete(pole);
+                        tok.type = TT_OUTDENT;
+                        dstr_delete(str);
                         return tok;
                     }
                     else
                     {
                         tok.type = TT_EOF;
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         return tok;
                     }
                 }
@@ -357,72 +359,72 @@ static token read_token_fsm(lexer *lx)
                 // Vratime prvni znak kodu zpet na vstup, aby si ho precetl stav S_START
                 back_char(lx, c);
 
-                int vrchol = lx->indent_stack[lx->indent_top];
+                int top = lx->indent_stack[lx->indent_top];
 
-                if (mezery > vrchol)
+                if (space_count > top)
                 {
                     // Zvetseni odsazeni -> novy blok (TT_INDENT)
                     lx->indent_top += 1;
-                    lx->indent_stack[lx->indent_top] = mezery;
+                    lx->indent_stack[lx->indent_top] = space_count;
                     tok.line = lx->line;
                     tok.col = lx->col;
                     tok.type = TT_INDENT;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (mezery < vrchol)
+                else if (space_count < top)
                 {
                     // Zmenseni odsazeni -> ukonceni jednoho ci vice bloku (TT_DEDENT)
-                    int pocet_dedentu = 0;
-                    while (lx->indent_top > 0 && lx->indent_stack[lx->indent_top] > mezery)
+                    int after_outdent = 0;
+                    while (lx->indent_top > 0 && lx->indent_stack[lx->indent_top] > space_count)
                     {
                         lx->indent_top -= 1;
-                        pocet_dedentu += 1;
+                        after_outdent += 1;
                     }
 
                     // Odsazeni musi presne odpovidat nektere predchozi urovni na zasobniku
-                    if (lx->indent_stack[lx->indent_top] != mezery)
+                    if (lx->indent_stack[lx->indent_top] != space_count)
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
 
-                    lx->pending_dedents = pocet_dedentu - 1;
+                    lx->pending_dedents = after_outdent - 1;
                     tok.line = lx->line;
                     tok.col = lx->col;
-                    tok.type = TT_DEDENT;
-                    dstr_delete(pole);
+                    tok.type = TT_OUTDENT;
+                    dstr_delete(str);
                     return tok;
                 }
             }
         }
 
-        int znak = next_char(lx);
-        switch (aktualni_stav)
+        int chr = next_char(lx);
+        switch (current_state)
         {
             case S_START:
             {
                 tok.line = lx->line;
                 tok.col = lx->col - 1;
-                if (znak == ' ' || znak == '\t')
+                if (chr == ' ' || chr == '\t')
                 {
                     break;
                 }
-                else if (znak == '@')
+                else if (chr == '@')
                 {
                     tok.type = TT_AT;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '&')
+                else if (chr == '&')
                 {
-                    aktualni_stav = S_AND;
+                    current_state = S_AND;
                 }
-                else if (znak == '|')
+                else if (chr == '|')
                 {
-                    aktualni_stav = S_OR;
+                    current_state = S_OR;
                 }
-                else if (znak == '\n')
+                else if (chr == '\n')
                 {
                     if (lx->paren_depth > 0)
                     {
@@ -433,310 +435,309 @@ static token read_token_fsm(lexer *lx)
                         lx->at_line_start = true;
 
                         tok.type = TT_EOL;
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         return tok;
                     }
                 }
-                else if (znak == EOF)
+                else if (chr == EOF)
                 {
                     if (lx->indent_top > 0)
                     {
                         lx->indent_top -= 1;
-                        tok.type = TT_DEDENT;
-                        dstr_delete(pole);
+                        tok.type = TT_OUTDENT;
+                        dstr_delete(str);
                         return tok;
                     }
                     else
                     {
                         tok.type = TT_EOF;
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         return tok;
                     }
                 }
-                else if (isalpha(znak) || (znak == '_'))
+                else if (isalpha(chr) || (chr == '_'))
                 {
-                    aktualni_stav = S_K_I;
-                    dstr_push_char(pole, znak);
+                    current_state = S_K_I;
+                    dstr_push_char(str, chr);
                 }
-                else if (isdigit(znak))
+                else if (isdigit(chr))
                 {
-                    aktualni_stav = S_NUMBER;
-                    dstr_push_char(pole, znak);
+                    current_state = S_NUMBER;
+                    dstr_push_char(str, chr);
                 }
-                else if (znak == '/')
+                else if (chr == '/')
                 {
-                    aktualni_stav = S_SLASH;
-                    
+                    current_state = S_SLASH;
                 }
-                else if (znak == '"')
+                else if (chr == '"')
                 {
-                    aktualni_stav = S_STRING_S;
+                    current_state = S_STRING_S;
                     //dstr_push_char(pole,znak);
                 }
-                else if (znak == '=')
+                else if (chr == '=')
                 {
-                    aktualni_stav = S_ASSIGN;
-                    dstr_push_char(pole, znak);
+                    current_state = S_ASSIGN;
+                    dstr_push_char(str, chr);
                 }
-                else if (znak == ',')
+                else if (chr == ',')
                 {
                     tok.type = TT_COMMA;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '*')
+                else if (chr == '*')
                 {
                     tok.type = TT_STAR;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '!')
+                else if (chr == '!')
                 {
-                    aktualni_stav = S_NEQ;
-                    dstr_push_char(pole, znak);
+                    current_state = S_NEQ;
+                    dstr_push_char(str, chr);
                 }
-                else if (znak == '(')
+                else if (chr == '(')
                 {
                     lx->paren_depth += 1;
                     tok.type = TT_LPAREN;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == ')')
+                else if (chr == ')')
                 {
                     if (lx->paren_depth > 0)
                     {
                         lx->paren_depth -= 1;
                     }
                     tok.type = TT_RPAREN;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '-')
+                else if (chr == '-')
                 {
                     tok.type = TT_MINUS;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '<')
+                else if (chr == '<')
                 {
-                    aktualni_stav = S_LT;
-                    dstr_push_char(pole, znak);
+                    current_state = S_LT;
+                    dstr_push_char(str, chr);
                 }
-                else if (znak == '>')
+                else if (chr == '>')
                 {
-                    aktualni_stav = S_GT;
-                    dstr_push_char(pole, znak);
+                    current_state = S_GT;
+                    dstr_push_char(str, chr);
                 }
-                else if (znak == '+')
+                else if (chr == '+')
                 {
                     tok.type = TT_PLUS;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == '.')
+                else if (chr == '.')
                 {
                     int dalsi = next_char(lx);
                     back_char(lx, dalsi);
-                    if(isdigit(dalsi))
+                    if (isdigit(dalsi)) // desetinny literal bez cele casti, napr. .5
                     {
-                        aktualni_stav = S_DOUBLE;
-                        dstr_push_char(pole, znak);
+                        current_state = S_DOUBLE;
+                        dstr_push_char(str, chr);
                     }
                     else
                     {
                         tok.type = TT_DOT;
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         return tok;
                     }
-                    
                 }
-                else if(znak == ';')
+                else if (chr == ';')
                 {
-                    tok.type= TT_SEMICOLON;
-                    dstr_delete(pole);
+                    tok.type = TT_SEMICOLON;
+                    dstr_delete(str);
                     return tok;
                 }
-                else if (znak == ':')
+                else if (chr == ':')
                 {
                     tok.type = TT_COLON;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
                 else
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 break;
             }
             case S_K_I:
             {
-                if (isalpha(znak) || (znak == '_') || (isdigit(znak)))
+                if (isalpha(chr) || (chr == '_') || (isdigit(chr)))
                 {
-                    dstr_push_char(pole, znak);
+                    dstr_push_char(str, chr);
                     break;
                 }
                 else
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     //je to bool
-                    if (dstr_cmp_raw(pole, "true") == 0)
+                    if (dstr_cmp_raw(str, "true") == 0)
                     {
                         tok.type = TT_BOOLEAN_LITERAL;
                         tok.attr.as_bool = true;
-                        dstr_delete(pole); //boolen nepotrebuje text
+                        dstr_delete(str); //boolen nepotrebuje text
                         return tok;
                     }
                     //je to bool
-                    else if (dstr_cmp_raw(pole, "false") == 0)
+                    else if (dstr_cmp_raw(str, "false") == 0)
                     {
                         tok.type = TT_BOOLEAN_LITERAL;
                         tok.attr.as_bool = false;
-                        dstr_delete(pole); //boolen nepotrebuje text
+                        dstr_delete(str); //boolen nepotrebuje text
                         return tok;
                     }
                     //porovnani se vsema slovama key jako def,if int ....
-                    else if (check_keyword(pole, &tok.attr.as_keyword) == true)
+                    else if (check_keyword(str, &tok.attr.as_keyword) == true)
                     {
                         tok.type = TT_KEYWORD;
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         return tok;
                     }
                     //lexikalni chyba
-                    else if (dstr_cmp_raw(pole, "_") == 0)
+                    else if (dstr_cmp_raw(str, "_") == 0)
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
                     //je to identifikator promenna ......
                     else
                     {
                         tok.type = TT_IDENTIFIER;
-                        tok.attr.as_str = pole;
+                        tok.attr.as_str = str;
                         return tok;
                     }
                 }
             }
             case S_ASSIGN:
             {
-                if (znak == '=')
+                if (chr == '=')
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     tok.type = TT_EQ;
                     return tok;
                 }
                 else
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     tok.type = TT_ASSIGN;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_LT:
             {
-                if (znak == '=')
+                if (chr == '=')
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     tok.type = TT_LTE;
                     return tok;
                 }
                 else
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     tok.type = TT_LT;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_GT:
             {
-                if (znak == '=')
+                if (chr == '=')
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     tok.type = TT_GTE;
                     return tok;
                 }
                 else
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     tok.type = TT_GT;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_NEQ:
             {
-                if (znak == '=')
+                if (chr == '=')
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     tok.type = TT_NEQ;
                     return tok;
                 }
                 //unarni negace
                 else
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     tok.type = TT_NOT;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_AND:
             {
-                if (znak == '&')
+                if (chr == '&')
                 {
                     tok.type = TT_AND;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
                 else
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
             }
             case S_OR:
             {
-                if (znak == '|')
+                if (chr == '|')
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     tok.type = TT_OR;
                     return tok;
                 }
                 else
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
             }
             case S_SLASH:
             {
-                if (znak == '/')
+                if (chr == '/')
                 {
-                    aktualni_stav = S_COMMENT_L;
+                    current_state = S_COMMENT_L;
                     break;
                 }
-                if (znak == '*')
+                if (chr == '*')
                 {
-                    hloubka_komentare = 1;
-                    aktualni_stav = S_C_MLS;
+                    comment_depth = 1;
+                    current_state = S_C_MLS;
                     break;
                 }
                 else //neni to komentar
                 {
-                    back_char(lx, znak);
+                    back_char(lx, chr);
                     tok.type = TT_SLASH;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_COMMENT_L:
             {
-                if ((znak == '\n') || (znak == EOF))
+                if ((chr == '\n') || (chr == EOF))
                 {
-                    aktualni_stav = S_START;
+                    back_char(lx, chr);
+                    current_state = S_START;
                     break;
                 }
                 else
@@ -746,453 +747,442 @@ static token read_token_fsm(lexer *lx)
             }
             case S_C_MLS:
             {
-                if (znak == '*')
+                if (chr == '*')
                 {
-                    aktualni_stav = S_C_MLE;
+                    current_state = S_C_MLE;
                     break;
                 }
-                else if (znak == '/')
+                else if (chr == '/')
                 {
-                    aktualni_stav = S_C_ML_SLASH;
+                    current_state = S_C_ML_SLASH;
                     break;
                 }
-                else if (znak == EOF)
+                else if (chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 else
                 {
-                    aktualni_stav = S_C_MLS;
+                    current_state = S_C_MLS;
                     break;
                 }
             }
-            case S_C_ML_SLASH:
+            case S_C_ML_SLASH: // '/' uvnitr komentare, muze zacinat vnoreny komentar
             {
-                if(znak == '*')
+                if (chr == '*')
                 {
-                    hloubka_komentare +=1;
-                    aktualni_stav = S_C_MLS;
+                    comment_depth += 1;
+                    current_state = S_C_MLS;
                     break;
                 }
-                else if(znak == '/')
+                else if (chr == '/')
                 {
                     break;
                 }
-                else if(znak == EOF)
+                else if (chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 else
                 {
-                    aktualni_stav = S_C_MLS;
+                    current_state = S_C_MLS;
                     break;
                 }
-
             }
             case S_C_MLE:
             {
-                if (znak == '/')
+                if (chr == '/')
                 {
-                    hloubka_komentare -=1;
-                    if(hloubka_komentare == 0)
-                    {
-                        aktualni_stav = S_C_MLE2;
-                    }
-                    else
-                    {
-                        aktualni_stav = S_C_MLS;
-                    }
+                    comment_depth -= 1;
+                    current_state = (comment_depth == 0) ? S_C_MLE2 : S_C_MLS;
                     break;
                 }
-                else if(znak == '*')
+                else if (chr == '*')
                 {
                     break;
                 }
                 else
                 {
-                    aktualni_stav = S_C_MLS;
+                    current_state = S_C_MLS;
                     break;
                 }
             }
             case S_C_MLE2:
             {
-                back_char(lx, znak);
-                aktualni_stav = S_START;
+                back_char(lx, chr);
+                current_state = S_START;
                 break;
             }
             case S_NUMBER:
             {
-                if (znak == '.')
+                if (chr == '.')
                 {
-                    aktualni_stav = S_DOUBLE;
-                    dstr_push_char(pole, znak);
+                    current_state = S_DOUBLE;
+                    dstr_push_char(str, chr);
                     break;
                 }
-                else if (isdigit(znak))
+                else if (isdigit(chr))
                 {
-                    aktualni_stav = S_INTEGER;
-                    dstr_push_char(pole, znak);
+                    current_state = S_INTEGER;
+                    dstr_push_char(str, chr);
                     break;
                 }
-                else if (znak == '_')
+                else if (chr == '_')
                 {
-                    po_podtrzitku = true;
-                    aktualni_stav = S_INTEGER;
+                    after_underscore = true;
+                    current_state = S_INTEGER;
                     break;
                 }
-                else if(znak == 'e' || znak == 'E')
+                else if (chr == 'e' || chr == 'E')
                 {
-                    aktualni_stav = S_DOUBLE;
-                    dstr_push_char(pole, znak);
+                    current_state = S_DOUBLE;
+                    dstr_push_char(str, chr);
                     break;
                 }
                 else
                 {
-                    if (isalpha(znak) || znak == '_')
+                    if (isalpha(chr) || chr == '_')
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1); //nemuze byt 7adfdsfds
                     }
-                    back_char(lx, znak);
-                    tok.attr.as_int = strtol(dstr_cstr(pole), NULL, 10);
+                    back_char(lx, chr);
+                    tok.attr.as_int = strtol(dstr_cstr(str), NULL, 10);
                     tok.type = TT_INT_LITERAL;
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_INTEGER:
             {
-                if (isdigit(znak))
+                if (isdigit(chr))
                 {
-                    dstr_push_char(pole, znak);
-                    po_podtrzitku = false;
+                    dstr_push_char(str, chr);
+                    after_underscore = false;
                     break;
                 }
-                else if (znak == '_')
+                else if (chr == '_')
                 {
-                    if (po_podtrzitku == true)
+                    if (after_underscore == true)
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
-                    po_podtrzitku = true;
+                    after_underscore = true;
                     break;
                 }
-                else if (znak == '.')
+                else if (chr == '.')
                 {
-                    if (po_podtrzitku == true)
+                    if (after_underscore == true)
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1); //chyba pro 152_.44
                     }
                     else
                     {
-                        aktualni_stav = S_DOUBLE;
-                        dstr_push_char(pole, znak);
+                        current_state = S_DOUBLE;
+                        dstr_push_char(str, chr);
                         break;
                     }
                 }
-                else if (znak == 'e' || znak == 'E')
+                else if (chr == 'e' || chr == 'E')
                 {
-                    if (po_podtrzitku == true)
+                    if (after_underscore == true)
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1); //chyba pro 152_.44
                     }
                     else
                     {
-                        aktualni_stav = S_DOUBLE;
-                        dstr_push_char(pole, znak);
+                        current_state = S_DOUBLE;
+                        dstr_push_char(str, chr);
                         break;
                     }
                 }
                 else
                 {
-                    if (isalpha(znak) || znak == '_')
+                    if (isalpha(chr) || chr == '_')
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1); //nemuze byt 7adfdsfds
                     }
 
-                    aktualni_stav = S_START;
-                    if ((dstr_cstr(pole)[0] == '0') || (po_podtrzitku == true))
+                    current_state = S_START;
+                    if ((dstr_cstr(str)[0] == '0') || (after_underscore == true))
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
-                    back_char(lx, znak); //vraceni neznameho znaku
+                    back_char(lx, chr); //vraceni neznameho znaku
                     tok.type = TT_INT_LITERAL;
-                    tok.attr.as_int = strtol(dstr_cstr(pole), NULL, 10);
-                    dstr_delete(pole);
+                    tok.attr.as_int = (int)strtol(dstr_cstr(str), NULL, 10);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_DOUBLE:
             {
-                if (isdigit(znak))
+                if (isdigit(chr))
                 {
-                    po_podtrzitku = false;
-                    dstr_push_char(pole, znak);
+                    after_underscore = false;
+                    dstr_push_char(str, chr);
                     break;
                 }
-                else if (znak == '_')
+                else if (chr == '_')
                 {
-                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
-                    if ((po_podtrzitku == true) || !isdigit(posledni))
+                    char posledni = dstr_cstr(str)[dstr_len(str) - 1];
+                    if ((after_underscore == true) || !isdigit(posledni))
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
-                    po_podtrzitku = true;
+                    after_underscore = true;
                     break;
                 }
-                else if (znak == 'e' || znak == 'E')
+                else if (chr == 'e' || chr == 'E')
                 {
-                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
-                    if ((po_podtrzitku == true) || !isdigit(posledni)||(strpbrk(dstr_cstr(pole), "eE")!=NULL))
+                    char last_chr = dstr_cstr(str)[dstr_len(str) - 1];
+                    if ((after_underscore == true) || !isdigit(last_chr) ||
+                        (strpbrk(dstr_cstr(str), "eE") != NULL))
                     {
-                        dstr_delete(pole);
-                        exit(1); // chyba: 1.e5 nebo 1.5_e2
+                        dstr_delete(str);
+                        exit(1); // chyba: 1.e5 nebo 1.5_e2 nebo 1e2e3
                     }
-                    dstr_push_char(pole, znak);
+                    dstr_push_char(str, chr);
                     break;
                 }
-                else if (znak == '+' || znak == '-')
+                else if (chr == '+' || chr == '-')
                 {
-                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
-                    if (posledni != 'e' && posledni != 'E')
+                    char last_chr = dstr_cstr(str)[dstr_len(str) - 1];
+                    if (last_chr != 'e' && last_chr != 'E')
                     {
                         // + nebo - neni soucasti exponentu -> cislo konci, vratime znak jako operator + nebo -
-                        if ((posledni == '.') || (po_podtrzitku == true)||(posledni== '-')||(posledni=='+'))
+                        if ((last_chr == '.') || (last_chr == '+') || (last_chr == '-') || (after_underscore == true))
                         {
-                            dstr_delete(pole);
+                            dstr_delete(str);
                             exit(1);
                         }
                         else
                         {
-                            aktualni_stav = S_START;
-                            back_char(lx, znak);
+                            current_state = S_START;
+                            back_char(lx, chr);
                             tok.type = TT_DOUBLE_LITERAL;
-                            tok.attr.as_double = prevod_double(pole);
-                            dstr_delete(pole);
+                            tok.attr.as_double = prevod_double(str);
+                            dstr_delete(str);
                             return tok;
                         }
                     }
                     else
                     {
-                        dstr_push_char(pole, znak);
+                        dstr_push_char(str, chr);
                         break;
                     }
                 }
-                else if (znak == 'd' || znak == 'D') // nepovinna pripona
+                else if (chr == 'd' || chr == 'D') // nepovinna pripona
                 {
-                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
-                    int za_priponou = next_char(lx);
-                    back_char(lx, za_priponou);
-
-                    if (!isdigit(posledni) || (po_podtrzitku == true) ||
-
-                    isalnum(za_priponou) || za_priponou == '_')
+                    char last_chr = dstr_cstr(str)[dstr_len(str) - 1];
+                    int after_suffix = next_char(lx);
+                    back_char(lx, after_suffix);
+                    if (!isdigit(last_chr) || (after_underscore == true) ||
+                        isalnum(after_suffix) || after_suffix == '_')
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
-
                     }
                     tok.type = TT_DOUBLE_LITERAL;
-                    tok.attr.as_double = prevod_double(pole);
-                    dstr_delete(pole);
+                    tok.attr.as_double = prevod_double(str);
+                    dstr_delete(str);
                     return tok;
-
                 }
                 else
                 {
-                    char posledni = dstr_cstr(pole)[dstr_len(pole) - 1];
+                    char posledni = dstr_cstr(str)[dstr_len(str) - 1];
                     if ((posledni == '.') || (posledni == 'e') || (posledni == 'E') ||
-                        (posledni == '+') || (posledni == '-') || (po_podtrzitku == true))
+                        (posledni == '+') || (posledni == '-') || (after_underscore == true))
                     {
-                        dstr_delete(pole);
+                        dstr_delete(str);
                         exit(1);
                     }
-                    aktualni_stav = S_START;
-                    back_char(lx, znak); //vraceni neznameho znaku
+                    current_state = S_START;
+                    back_char(lx, chr); //vraceni neznameho znaku
                     tok.type = TT_DOUBLE_LITERAL;
-                    tok.attr.as_double = prevod_double(pole);
-                    dstr_delete(pole);
+                    tok.attr.as_double = prevod_double(str);
+                    dstr_delete(str);
                     return tok;
                 }
             }
             case S_STRING_S:
             {
-                if (znak == '"')
+                if (chr == '"')
                 {
-                    aktualni_stav = S_STRING_E;
+                    current_state = S_STRING_E;
                     break;
                 }
-                else if (znak == '\n' || znak == EOF)
+                else if (chr == '\n' || chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
-                else if (znak == '\\')
+                else if (chr == '\\')
                 {
-                    aktualni_stav = S_STRING_ES;
+                    current_state = S_STRING_ES;
                     break;
                 }
                 else
                 {
-                    aktualni_stav = S_STRING;
-                    dstr_push_char(pole, znak);
+                    current_state = S_STRING;
+                    dstr_push_char(str, chr);
                     break;
                 }
             }
             case S_STRING:
             {
-                if (znak == '"')
+                if (chr == '"')
                 {
-                    aktualni_stav = S_STRING_E;
+                    current_state = S_STRING_E;
                     break;
                 }
-                else if (znak == '\\')
+                else if (chr == '\\')
                 {
-                    aktualni_stav = S_STRING_ES;
+                    current_state = S_STRING_ES;
                     break;
                 }
-                else if (znak == '\n' || znak == EOF)
+                else if (chr == '\n' || chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 else
                 {
-                    dstr_push_char(pole, znak);
+                    dstr_push_char(str, chr);
                     break;
                 }
             }
             case S_STRING_ES:
             {
-                if (znak == 'n')
+                if (chr == 'n')
                 {
-                    dstr_push_char(pole, '\n');
-                    aktualni_stav = S_STRING;
+                    dstr_push_char(str, '\n');
+                    current_state = S_STRING;
                     break;
                 }
-                else if (znak == 't')
+                else if (chr == 't')
                 {
-                    dstr_push_char(pole, '\t');
-                    aktualni_stav = S_STRING;
+                    dstr_push_char(str, '\t');
+                    current_state = S_STRING;
                     break;
                 }
-                else if (znak == 'r')
+                else if (chr == 'r')
                 {
-                    dstr_push_char(pole, '\r');
-                    aktualni_stav = S_STRING;
+                    dstr_push_char(str, '\r');
+                    current_state = S_STRING;
                     break;
                 }
-                else if (znak == '"')
+                else if (chr == '"')
                 {
-                    dstr_push_char(pole, znak);
-                    aktualni_stav = S_STRING;
+                    dstr_push_char(str, chr);
+                    current_state = S_STRING;
                     break;
                 }
-                else if (znak == '\\')
+                else if (chr == '\\')
                 {
-                    dstr_push_char(pole, znak);
-                    aktualni_stav = S_STRING;
+                    dstr_push_char(str, chr);
+                    current_state = S_STRING;
                     break;
                 }
                 else
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
             }
             case S_STRING_E:
             {
-                if ((znak == '"') && (dstr_len(pole) == 0))
+                if ((chr == '"') && (dstr_len(str) == 0))
                 {
-                    aktualni_stav = S_S_ML;
+                    current_state = S_S_ML;
                     break;
                 }
                 else
                 {
                     tok.type = TT_STRING_LITERAL;
-                    back_char(lx, znak);
-                    tok.attr.as_str = pole;
+                    back_char(lx, chr);
+                    tok.attr.as_str = str;
                     return tok;
                 }
             }
             case S_S_ML:
             {
-                if (znak == '"')
+                if (chr == '"')
                 {
-                    aktualni_stav = S_S_ML_E;
+                    current_state = S_S_ML_E;
                     break;
                 }
-                else if (znak == EOF)
+                else if (chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 else
                 {
-                    dstr_push_char(pole, znak);
-                    aktualni_stav = S_S_ML;
+                    dstr_push_char(str, chr);
+                    current_state = S_S_ML;
                     break;
                 }
             }
             case S_S_ML_E:
             {
-                if (znak == '"')
+                if (chr == '"')
                 {
-                    aktualni_stav = S_S_ML_E2;
+                    current_state = S_S_ML_E2;
                     break;
                 }
-                else if (znak == EOF)
+                else if (chr == EOF)
                 {
-                    dstr_delete(pole);
+                    dstr_delete(str);
                     exit(1);
                 }
                 else
                 {
-                    dstr_push_char(pole, '"');
-                    dstr_push_char(pole, znak);
-                    aktualni_stav = S_S_ML;
+                    dstr_push_char(str, '"');
+                    dstr_push_char(str, chr);
+                    current_state = S_S_ML;
                     break;
                 }
             }
             case S_S_ML_E2:
             {
-                if (znak == '"')
+                if (chr == '"')
                 {
-                    aktualni_stav = S_S_ML_E3;
+                    current_state = S_S_ML_E3;
                     break;
                 }
-                else if (znak == EOF)
+                else if (chr == EOF)
                 {
-                    dstr_delete(pole);
-                    exit(1);
+                    dstr_delete(str);
+                    error_fatal_cleanup(ERR_LEX);
                 }
                 else
                 {
-                    dstr_push_char(pole, '"');
-                    dstr_push_char(pole, '"');
-                    dstr_push_char(pole, znak);
-                    aktualni_stav = S_S_ML;
+                    dstr_push_char(str, '"');
+                    dstr_push_char(str, '"');
+                    dstr_push_char(str, chr);
+                    current_state = S_S_ML;
                     break;
                 }
             }
             case S_S_ML_E3:
             {
-                if(znak == '"')
+                if (chr == '"') // vic uvozovek na konci: posledni tri ukoncuji, zbytek patri do obsahu
                 {
-                    dstr_push_char(pole, '"');
+                    dstr_push_char(str, '"');
                     break;
                 }
-                back_char(lx, znak); //vraceni neznameho znaku
+                back_char(lx, chr); //vraceni neznameho znaku
                 tok.type = TT_STRING_LITERAL;
-                tok.attr.as_str = pole;
+                tok.attr.as_str = str;
                 return tok;
             }
             default:
@@ -1298,7 +1288,6 @@ const char *token_type_name(token_type type)
             return "TT_DOT";
         case TT_SEMICOLON:
             return "TT_SEMICOLON";
-            
         case TT_LPAREN:
             return "TT_LPAREN";
         case TT_RPAREN:
@@ -1307,7 +1296,7 @@ const char *token_type_name(token_type type)
         // Rizeni bloku a radku
         case TT_INDENT:
             return "TT_INDENT";
-        case TT_DEDENT:
+        case TT_OUTDENT:
             return "TT_DEDENT";
         case TT_EOF:
             return "TT_EOF";
@@ -1353,7 +1342,7 @@ void lexer_destroy(lexer *lx)
     }
     for (unsigned i = 0; i < lx->peek_count; i++)
     {
-        token_free(&lx->pole_peek[i]);
+        token_free(&lx->peek_arr[i]);
     }
     free(lx);
 }
@@ -1367,10 +1356,10 @@ const token *lexer_peek(lexer *lx, unsigned n)
     }
     while (lx->peek_count < n)
     {
-        lx->pole_peek[lx->peek_count] = read_token_fsm(lx);
+        lx->peek_arr[lx->peek_count] = read_token_fsm(lx);
         lx->peek_count += 1;
     }
-    return &lx->pole_peek[n - 1];
+    return &lx->peek_arr[n - 1];
 }
 //hlavni verejna funkce pro parser. Vrati dalsi token na rade a posune cteni dal
 token get_next_token(lexer *lx)
@@ -1383,11 +1372,11 @@ token get_next_token(lexer *lx)
     token prvek_fronty;
     if (lx->peek_count > 0)
     {
-        prvek_fronty = lx->pole_peek[0];
+        prvek_fronty = lx->peek_arr[0];
 
         if (lx->peek_count == 2)
         {
-            lx->pole_peek[0] = lx->pole_peek[1];
+            lx->peek_arr[0] = lx->peek_arr[1];
         }
         lx->peek_count -= 1;
         return prvek_fronty;

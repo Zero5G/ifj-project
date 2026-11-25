@@ -147,7 +147,7 @@ static dstr take_function_name(parser_ctx *ctx) {
 }
 
 static bool is_stmt_end(const parser_ctx *ctx) {
-    return ctx->current.type == TT_EOL || ctx->current.type == TT_DEDENT ||
+    return ctx->current.type == TT_EOL || ctx->current.type == TT_OUTDENT ||
            ctx->current.type == TT_EOF;
 }
 
@@ -156,7 +156,7 @@ static bool expect_stmt_end(parser_ctx *ctx) {
         return true;
     }
 
-    return ctx->current.type == TT_DEDENT || ctx->current.type == TT_EOF;
+    return ctx->current.type == TT_OUTDENT || ctx->current.type == TT_EOF;
 }
 
 static bool add_parameter(ast_func_t *func, dstr name) {
@@ -491,7 +491,7 @@ static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block) {
         return false;
     }
 
-    if (!expect(ctx, TT_DEDENT)) {
+    if (!expect(ctx, TT_OUTDENT)) {
         return false;
     }
 
