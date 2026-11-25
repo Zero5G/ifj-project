@@ -448,7 +448,7 @@ static token read_token_fsm(lexer *lx)
                 else if (znak == '/')
                 {
                     aktualni_stav = S_SLASH;
-                    dstr_push_char(pole, znak);
+                    
                 }
                 else if (znak == '"')
                 {
@@ -518,9 +518,20 @@ static token read_token_fsm(lexer *lx)
                 }
                 else if (znak == '.')
                 {
-                    tok.type = TT_DOT;
-                    dstr_delete(pole);
-                    return tok;
+                    int dalsi = next_char(lx);
+                    back_char(lx, dalsi);
+                    if(isdigit(dalsi))
+                    {
+                        aktualni_stav = S_DOUBLE;
+                        dstr_push_char(pole, znak);
+                    }
+                    else
+                    {
+                        tok.type = TT_DOT;
+                        dstr_delete(pole);
+                        return tok;
+                    }
+                    
                 }
                 else if (znak == ':')
                 {
