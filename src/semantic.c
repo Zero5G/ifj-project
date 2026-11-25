@@ -282,7 +282,10 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
             break;
         }
 
-        bool numeric_op = (bool)(expr->as.binary.op != OPB_AND && expr->as.binary.op != OPB_OR); /**< Int na Double pokud jeden je Double */
+        bool numeric_op =
+            (bool)(expr->as.binary.op != OPB_AND &&
+                   expr->as.binary.op !=
+                       OPB_OR); /**< Int na Double pokud jeden je Double */
         if (numeric_op && left->data_type == TYPE_DOUBLE &&
             right->data_type == TYPE_INT) {
             right = promote_int(right);

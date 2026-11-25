@@ -37,7 +37,8 @@ typedef enum op_unary {
     OPU_NEG,
     OPU_PLUS,
     OPU_NOT,
-    OPU_INT2FLOAT, /**< konverze Int na Double (sémantika, nemá token v lexeru) */
+    OPU_INT2FLOAT, /**< konverze Int na Double (sémantika, nemá token v lexeru)
+                    */
 } op_unary;
 
 typedef enum op_binary {
