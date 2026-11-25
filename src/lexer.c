@@ -533,6 +533,12 @@ static token read_token_fsm(lexer *lx)
                     }
                     
                 }
+                else if(znak == ';')
+                {
+                    tok.type= TT_SEMICOLON;
+                    dstr_delete(pole);
+                    return tok;
+                }
                 else if (znak == ':')
                 {
                     tok.type = TT_COLON;
