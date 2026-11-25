@@ -185,6 +185,7 @@ static token read_token_fsm(lexer *lx)
     dstr pole = dstr_create("");
     enum state aktualni_stav = S_START;
     bool po_podtrzitku = false;
+    int hloubka_komentare = 0;
     while (true)
     {
         if (lx->pending_dedents > 0)
@@ -205,6 +206,8 @@ static token read_token_fsm(lexer *lx)
             {
                 int mezery = 0;
                 int c;
+                bool tabulator = false;
+                bool po_komentari = false;
 
                 while (true)
                 {
@@ -215,12 +218,14 @@ static token read_token_fsm(lexer *lx)
                     }
                     else if (c == '\t')
                     {
-                        dstr_delete(pole);
-                        exit(1);
+                        tabulator = true;
+                        
                     }
                     else if (c == '\n')
                     {
                         mezery = 0;
+                        tabulator = false;
+                        po_komentari = false;
                     }
                     else if (c == '/')
                     {
@@ -289,7 +294,13 @@ static token read_token_fsm(lexer *lx)
 
                 lx->at_line_start = false;
 
+                //tabulator na zacatku neprazdneho radku
                 // Konec souboru musime uzavrit vsechny otevrene urovne odsazeni
+                if(tabulator == true && c!= EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
                 if (c == EOF)
                 {
                     if (lx->indent_top > 0)
