@@ -47,7 +47,9 @@ int main(void) {
         error_fatal_cleanup(ERR_OTHER);
     }
     fprintf(stderr, "parser run\n"); // NOLINT
-    parser_run(&parser);
+    if (!parser_run(&parser)) {
+        error_fatal_cleanup(ERR_OTHER);
+    }
     fprintf(stderr, "parser done\n"); // NOLINT
 
     lexer_destroy(lex);
