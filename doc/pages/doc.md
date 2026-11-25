@@ -48,8 +48,35 @@ Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v sou
 # Návrh a implementace
 Cílem projektu je implementovat překladač jazuka `IFJ26`, který je podmnožinou jazyku `Scala`.
 Překladač má být implementován v jazyce `C`.
-## Lexikální analýza
-## Parser
-### AST
-## Semantická analýza
-## Generátor kódu
+## Lexikální analýza (`lexer`)
+LL(1)
+
+## Syntaktická analýza (`parser`)
+rekuzivní sestup,
+precedenci syntak. analyza
+1 look ahead
+
+### AST (`ast`)
+Syntaktická analýza vyplňuje abstaktní syntaktický strom, který se skládá z funkcí `ast_func_t`,
+příkazů (`ast_stmt_t`) a výrazů (`ast_expr_t`).
+Funkce jsou uloženy jako jednoduchý jednosměrný spojový seznam, kde kořen je program (`ast_prog_t`),
+stejným způsobem jsou na sebe navázány příkazy, které jsou uloženy v blocku (`ast_block_t`).
+Struktury se skládají z unií a struktů, aktuální část unie rozhodují enumy.
+
+## Semantická analýza (`semantic`)
+Semantická analýza probíhá po syntatické analýze, tento modul obsahuje jen jednu funkci, která
+Prochází AST a kontroluje typy proměnných, ukládá funkce a proměnné do takulky symbolů (`symtable`).
+Při procházení se kontrolůjí typy funkcí (typy parametrů a náratný typ) a proměnných.
+Pro funkce se zde doplňuje náratný typ, pokud nebyl zadán ve zdrojovém kódu.
+Také se zde generuje výraz pro povýšení typu `integer` na typ `double`.
+
+### Tabulka symbolů (`symtable`)
+Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním zřetězením položek.
+
+## Generátor kódu (`codegen`)
+
+# Gramatika
+
+# Tabulka výrazů (`expr`)
+
+# FSM
