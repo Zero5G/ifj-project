@@ -39,15 +39,17 @@ Projekt byl dělán v jazuku C, standardu `C23`, požívaly jsme kompilátor `cl
 
 Pro programovaní nebyl nucený editor, ale byl poskytnut soubor `.editorconfig`.
 
-Styl programovaní jsme zvoli `LLVM` s malou úpravou.
+Styl programovaní jsme zvolili `LLVM` s malou úpravou.
 
 Projekt dokáže generovat referenční manuál pomocí programu `Doxygen`.
 
 Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v souboru `README.md` v kořenovém adresáři.
 
 # Návrh a implementace
+Cílem projektu je implementovat překladač jazuka `IFJ26`, který je podmnožinou jazyku `Scala`.
+Překladač má být implementován v jazyce `C`.
 ## Lexikální analýza
-## AST
 ## Parser
+### AST
 ## Semantická analýza
-##
+## Generátor kódu
