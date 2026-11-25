@@ -647,7 +647,17 @@ static token read_token_fsm(lexer *lx)
                 }
                 else
                 {
+<<<<<<< Updated upstream
                     ungetc(znak, lx->in);
+=======
+                    if(isalpha(znak) || znak == '_')
+                    {
+                        dstr_delete(pole);
+                        exit(1); //nemuze byt 7adfdsfds
+                    }
+                    
+                    back_char(lx,znak);
+>>>>>>> Stashed changes
                     tok.attr.as_int = strtol(pole->raw, NULL, 10);
                     tok.type = TT_INT_LITERAL;
                     dstr_delete(pole);
@@ -673,8 +683,45 @@ static token read_token_fsm(lexer *lx)
                     po_podtrzitku = true;
                     break;
                 }
+                else if(znak == '.')
+                {
+                    if(po_podtrzitku == true)
+                    {
+                        
+                        dstr_delete(pole);
+                        exit(1); //chyba pro 152_.44
+                        
+                    }
+                    else
+                    {
+                        aktualni_stav = S_DOUBLE;
+                        dstr_push_char(pole, znak);
+                        break;
+                    }
+                }
+                else if(znak == 'e' || znak == 'E')
+                {
+                    if(po_podtrzitku == true)
+                    {
+                        
+                        dstr_delete(pole);
+                        exit(1); //chyba pro 152_.44
+                        
+                    }
+                    else
+                    {
+                        aktualni_stav = S_DOUBLE;
+                        dstr_push_char(pole, znak);
+                        break;
+                    }
+                }
                 else
                 {
+                    if(isalpha(znak) || znak == '_')
+                    {
+                        dstr_delete(pole);
+                        exit(1); //nemuze byt 7adfdsfds
+                    }
 
                     aktualni_stav = S_START;
                     if ((pole->raw[0] == '0')||(po_podtrzitku==true))
@@ -711,14 +758,43 @@ static token read_token_fsm(lexer *lx)
                 }
                 else if (znak == 'e' || znak == 'E')
                 {
-                    // pred exponentem nesmi byt _
-                    if (po_podtrzitku==true)
+                    char posledni = pole->raw[pole->len - 1];
+                    if ((po_podtrzitku == true) || !isdigit(posledni))
                     {
                         dstr_delete(pole);
-                        exit(1);
+                        exit(1); // chyba: 1.e5 nebo 1.5_e2
                     }
                     dstr_push_char(pole, znak);
                     break;
+                }
+                else if (znak == '+' || znak == '-')
+                {
+                    char posledni = pole->raw[pole->len - 1];
+                    if (posledni != 'e' && posledni != 'E')
+                    {
+                        // + nebo - neni soucasti exponentu -> cislo konci, vratime znak jako operator + nebo -
+                        if ((posledni == '.') || (po_podtrzitku == true))
+                        {
+                            dstr_delete(pole);
+                            exit(1);
+                        }
+                        else
+                        {
+                            aktualni_stav = S_START;
+                            back_char(lx, znak);
+                            tok.type = TT_DOUBLE_LITERAL;
+                            tok.attr.as_double = strtod(pole->raw, NULL);
+                            dstr_delete(pole);
+                            return tok;
+                        }
+                        
+                    }
+                    else
+                    {
+                        dstr_push_char(pole, znak);
+                        break;
+                    }
+                    
                 }
                 else
                 {
@@ -984,6 +1060,10 @@ const char *token_type_name(token_type type)
         case TT_GTE:             return "TT_GTE";
 
         case TT_ASSIGN:          return "TT_ASSIGN";
+        case TT_AND:             return "TT_AND";
+        case TT_OR:              return "TT_OR";
+        case TT_NOT:             return "TT_NOT";
+        case TT_AT:              return "TT_AT";
 
         // Separatory
         case TT_COLON:           return "TT_COLON";
