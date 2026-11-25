@@ -27,39 +27,41 @@ typedef enum {
     PS_LPAREN,
     PS_RPAREN,
     PS_OPERAND,
+    PS_UMINUS,
     PS_DOLLAR
 } prec_symbol_t;
 
-// no unary minus
-static const char precedence_table[14][14] = {
+static const char precedence_table[15][15] = {
     // +
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'},
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // -
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'},
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // *
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // /
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // <
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
     // >
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
     // <=
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
     // >=
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
     // ==
-    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '>'},
     // !=
-    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '>'},
+    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '>'},
     // (
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', ' '},
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', ' '},
     // )
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', '>'},
     // i
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>', '>'},
+    // unary -
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // $
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', ' '},
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', ' '},
 };
 
 static char precedence(prec_symbol_t stack, prec_symbol_t input) {
@@ -369,6 +371,26 @@ static bool reduce(expr_stack_t *stack) {
         return stack_push(stack, make_expr(item.expr));
     }
 
+    if (count == 2) {
+        stack_item_t op = stack->items[marker + 1];
+        stack_item_t operand = stack->items[marker + 2];
+
+        if (op.kind != ITEM_SYMBOL || op.symbol != PS_UMINUS ||
+            operand.kind != ITEM_EXPR) {
+            return false;
+        }
+
+        ast_expr_t *expr =
+            ast_expr_unary_create(operand.expr->line, OPU_NEG, operand.expr);
+        if (expr == nullptr) {
+            return false;
+        }
+
+        stack->top = marker - 1;
+
+        return stack_push(stack, make_expr(expr));
+    }
+
     if (count == 3) {
         stack_item_t left = stack->items[marker + 1];
         stack_item_t op = stack->items[marker + 2];
@@ -461,11 +483,23 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
         prec_symbol_t input =
             end ? PS_DOLLAR : token_to_symbol(ctx->current.type);
+
+        prec_symbol_t top = top_terminal(&stack);
+
+        if (input == PS_MINUS) {
+            stack_item_t *last = &stack.items[stack.top];
+            bool after_operand =
+                last->kind == ITEM_EXPR ||
+                (last->kind == ITEM_SYMBOL &&
+                 (last->symbol == PS_OPERAND || last->symbol == PS_RPAREN));
+            if (!after_operand) {
+                input = PS_UMINUS;
+            }
+        }
+
         if (input == PS_LPAREN && at_unit_literal(ctx)) {
             input = PS_OPERAND;
         }
-
-        prec_symbol_t top = top_terminal(&stack);
 
         if (top == PS_DOLLAR && input == PS_DOLLAR) {
             break;
