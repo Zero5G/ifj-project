@@ -7,7 +7,7 @@ DEBUG_FLAGS := -g -O0
 TEST_CFLAGS := $(CFLAGS) -g $(shell pkg-config --cflags criterion)
 TEST_LDFLAGS := $(shell pkg-config --libs criterion)
 
-TARGET := interpreter
+TARGET := compiler
 TEST_TARGET := test_runner
 
 INCLUDES := $(wildcard src/*.h)
