@@ -702,6 +702,7 @@ static token read_token_fsm(lexer *lx)
                 }
                 if (znak == '*')
                 {
+                    hloubka_komentare = 1;
                     aktualni_stav = S_C_MLS;
                     break;
                 }
@@ -741,6 +742,11 @@ static token read_token_fsm(lexer *lx)
                     aktualni_stav = S_C_MLE;
                     break;
                 }
+                else if (znak == '/')
+                {
+                    aktualni_stav = S_C_ML_SLASH;
+                    break;
+                }
                 else if (znak == EOF)
                 {
                     dstr_delete(pole);
@@ -751,6 +757,30 @@ static token read_token_fsm(lexer *lx)
                     aktualni_stav = S_C_MLS;
                     break;
                 }
+            }
+            case S_C_ML_SLASH:
+            {
+                if(znak = '*')
+                {
+                    hloubka_komentare +=1;
+                    aktualni_stav = S_C_MLS;
+                    break;
+                }
+                else if(znak == '/')
+                {
+                    break;
+                }
+                else if(znak == EOF)
+                {
+                    dstr_delete(pole);
+                    exit(1);
+                }
+                else
+                {
+                    aktualni_stav = S_C_MLS;
+                    break;
+                }
+
             }
             case S_C_MLE:
             {
