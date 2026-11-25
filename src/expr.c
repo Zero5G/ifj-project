@@ -9,6 +9,7 @@
  */
 
 #include "expr.h"
+#include "error.h"
 #include "parser.h"
 
 #define STACK_SIZE 256
@@ -153,7 +154,7 @@ static void stack_init(expr_stack_t *s) { s->top = -1; }
 
 static bool stack_push(expr_stack_t *s, stack_item_t item) {
     if (s->top + 1 >= STACK_SIZE) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
     s->items[++s->top] = item;
     return true;
@@ -223,7 +224,7 @@ static stack_item_t make_marker(void) {
 
 static bool insert_marker(expr_stack_t *stack) {
     if (stack->top + 1 >= STACK_SIZE) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     int pos = top_terminal_index(stack) + 1;
@@ -267,7 +268,7 @@ ast_expr_t *parse_term(parser_ctx *ctx) {
         ast_expr_t *expr =
             ast_expr_create((unsigned)ctx->current.line, E_UNIT_LIT);
         if (expr == nullptr) {
-            return nullptr;
+            error_fatal_cleanup(ERR_OTHER);
         }
         advance(ctx);
         advance(ctx);
@@ -299,7 +300,7 @@ ast_expr_t *parse_term(parser_ctx *ctx) {
 
     ast_expr_t *expr = ast_expr_create((unsigned)ctx->current.line, kind);
     if (expr == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     switch (kind) {
@@ -343,7 +344,7 @@ static ast_expr_t *parse_operand(parser_ctx *ctx) {
 static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
     ast_expr_t *expr = parse_operand(ctx);
     if (expr == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     return stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL,
@@ -383,7 +384,7 @@ static bool reduce(expr_stack_t *stack) {
         ast_expr_t *expr =
             ast_expr_unary_create(operand.expr->line, OPU_NEG, operand.expr);
         if (expr == nullptr) {
-            return false;
+            error_fatal_cleanup(ERR_OTHER);
         }
 
         stack->top = marker - 1;
@@ -454,7 +455,7 @@ static bool reduce(expr_stack_t *stack) {
 
         ast_expr_t *expr = make_binary(tok, left.expr, right.expr);
         if (expr == nullptr) {
-            return false;
+            error_fatal_cleanup(ERR_OTHER);
         }
 
         stack->top = marker - 1;
