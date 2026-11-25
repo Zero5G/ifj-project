@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <err.h>
+#include <math.h>
 
 //definice stavu fsm
 typedef enum state
@@ -26,6 +28,7 @@ typedef enum state
     S_C_LE,
     S_C_MLE,
     S_C_MLE2,
+    S_C_ML_SLASH,
     S_NUMBER,
     S_DOUBLE,
     S_INTEGER,
