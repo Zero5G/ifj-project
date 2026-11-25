@@ -59,7 +59,7 @@ static const char precedence_table[15][15] = {
     // i
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>', '>'},
     // unary -
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
     // $
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', ' '},
 };
@@ -375,17 +375,13 @@ static bool reduce(expr_stack_t *stack) {
         stack_item_t op = stack->items[marker + 1];
         stack_item_t operand = stack->items[marker + 2];
 
-        if (op.kind != ITEM_SYMBOL || op.symbol != PS_UMINUS) {
-            return false;
-        }
-
-        if (operand.kind != ITEM_EXPR) {
+        if (op.kind != ITEM_SYMBOL || op.symbol != PS_UMINUS ||
+            operand.kind != ITEM_EXPR) {
             return false;
         }
 
         ast_expr_t *expr =
             ast_expr_unary_create(operand.expr->line, OPU_NEG, operand.expr);
-
         if (expr == nullptr) {
             return false;
         }
@@ -490,16 +486,13 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
         prec_symbol_t top = top_terminal(&stack);
 
-        bool after_expr =
-            stack.top >= 0 && stack.items[stack.top].kind == ITEM_EXPR;
-
         if (input == PS_MINUS) {
-            if (!after_expr &&
-                (top == PS_DOLLAR || top == PS_LPAREN || top == PS_PLUS ||
-                 top == PS_MINUS || top == PS_STAR || top == PS_SLASH ||
-                 top == PS_LT || top == PS_GT || top == PS_LTE ||
-                 top == PS_GTE || top == PS_EQ || top == PS_NEQ ||
-                 top == PS_UMINUS)) {
+            stack_item_t *last = &stack.items[stack.top];
+            bool after_operand =
+                last->kind == ITEM_EXPR ||
+                (last->kind == ITEM_SYMBOL &&
+                 (last->symbol == PS_OPERAND || last->symbol == PS_RPAREN));
+            if (!after_operand) {
                 input = PS_UMINUS;
             }
         }
