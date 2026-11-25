@@ -25,7 +25,6 @@ typedef enum state
     S_SLASH,
     S_COMMENT_L,
     S_C_MLS,
-    S_C_LE,
     S_C_MLE,
     S_C_MLE2,
     S_C_ML_SLASH,
@@ -228,7 +227,10 @@ static token read_token_fsm(lexer *lx)
                     c = next_char(lx);
                     if (c == ' ')
                     {
-                        mezery += 1;
+                        if(po_komentari == false)
+                        {
+                            mezery += 1;
+                        }
                     }
                     else if (c == '\t')
                     {
@@ -255,6 +257,8 @@ static token read_token_fsm(lexer *lx)
                             if (k == '\n')
                             {
                                 mezery = 0;
+                                tabulator = false;
+                                po_komentari = false;
                             }
                             else
                             {
@@ -732,22 +736,13 @@ static token read_token_fsm(lexer *lx)
             {
                 if ((znak == '\n') || (znak == EOF))
                 {
-                    aktualni_stav = S_C_LE;
+                    aktualni_stav = S_START;
                     break;
                 }
                 else
                 {
                     break;
                 }
-            }
-            case S_C_LE:
-            {
-                if (znak != EOF)
-                {
-                    back_char(lx, znak);
-                }
-                aktualni_stav = S_START;
-                break;
             }
             case S_C_MLS:
             {
