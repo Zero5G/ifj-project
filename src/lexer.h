@@ -87,7 +87,11 @@ typedef enum token_type {
     TT_DOT, // TT_SEMICOLON, // TT_AT,
     TT_LPAREN,
     TT_RPAREN,
+    TT_AND,
+    TT_OR,
+    TT_NOT,
 
+    TT_AT,
     //
     TT_INDENT,
     TT_DEDENT,
@@ -115,7 +119,7 @@ typedef struct token {
     token_type type;
     token_attr attr;
     int line;
-    int col; 
+    int col;
 } token;
 
 /** Maximalni pocet tokenu, o ktere lze nahlednout dopredu pomoci lexer_peek. */
@@ -144,15 +148,14 @@ void lexer_destroy(lexer *lx);
  */
 token get_next_token(lexer *lx);
 
-/** 
-* @brief Nahledne na n-ty nasledujici token
+/**
+ * @brief Nahledne na n-ty nasledujici token
  *
  * @param lx Ukazatel na instanci lexikalniho analyzatoru.
  * @param n Pocet tokenu dopredu.
  * @return Ukazatel na nahlednuty token ve vnitrni vyrovnavaci pameti lexeru.
  */
 const token *lexer_peek(lexer *lx, unsigned n);
-
 
 /**
  * @brief Uvolni dynamicky alokovanou pamet uvnitr tokenu.
@@ -173,9 +176,9 @@ const char *token_type_name(token_type type);
  *
  * @param tok Ukazatel na testovany token.
  * @param kw Ocekavane klicove slovo z vyctu keyword.
- * @return true pokud jde o token typu TT_KEYWORD se shodnym klicovym slovem, jinak false.
+ * @return true pokud jde o token typu TT_KEYWORD se shodnym klicovym slovem,
+ * jinak false.
  */
 bool token_is_kw(const token *tok, keyword kw);
-
 
 #endif
