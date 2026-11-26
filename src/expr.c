@@ -94,7 +94,6 @@ static const char precedence_table[18][18] = {
 };
 // clang-format on
 
-
 static char precedence(prec_symbol_t stack, prec_symbol_t input) {
     return precedence_table[stack][input];
 }
@@ -217,7 +216,8 @@ static prec_symbol_t top_terminal(expr_stack_t *stk) {
 
 static ast_expr_t *make_binary(token_type bop, ast_expr_t *left,
                                ast_expr_t *right) {
-    return ast_expr_binary_create(left->line, token_to_binary(bop), left, right);
+    return ast_expr_binary_create(left->line, token_to_binary(bop), left,
+                                  right);
 }
 
 static stack_item_t make_expr(ast_expr_t *expr) {
@@ -388,9 +388,11 @@ static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
         error_fatal_cleanup(ERR_OTHER);
     }
 
-    return stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL,
-                                            .symbol = PS_OPERAND,
-                                            .expr = expr,});
+    return stack_push(stack, (stack_item_t){
+                                 .kind = ITEM_SYMBOL,
+                                 .symbol = PS_OPERAND,
+                                 .expr = expr,
+                             });
 }
 
 static bool reduce(expr_stack_t *stack) {
@@ -551,10 +553,10 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
         if (input == PS_MINUS) {
             stack_item_t *last = &stack.items[stack.top];
-            bool after_operand = (bool)
-                (last->kind == ITEM_EXPR ||
-                (last->kind == ITEM_SYMBOL &&
-                 (last->symbol == PS_OPERAND || last->symbol == PS_RPAREN)));
+            bool after_operand = (bool)(last->kind == ITEM_EXPR ||
+                                        (last->kind == ITEM_SYMBOL &&
+                                         (last->symbol == PS_OPERAND ||
+                                          last->symbol == PS_RPAREN)));
             if (!after_operand) {
                 input = PS_UMINUS;
             }

@@ -150,8 +150,9 @@ static dstr take_function_name(parser_ctx *ctx) {
 }
 
 static bool is_stmt_end(const parser_ctx *ctx) {
-    return (bool)(ctx->current.type == TT_EOL || ctx->current.type == TT_OUTDENT ||
-        ctx->current.type == TT_EOF);
+    return (bool)(ctx->current.type == TT_EOL ||
+                  ctx->current.type == TT_OUTDENT ||
+                  ctx->current.type == TT_EOF);
 }
 
 static bool expect_stmt_end(parser_ctx *ctx) {
@@ -159,7 +160,8 @@ static bool expect_stmt_end(parser_ctx *ctx) {
         return true;
     }
 
-    return (bool)(ctx->current.type == TT_OUTDENT || ctx->current.type == TT_EOF);
+    return (bool)(ctx->current.type == TT_OUTDENT ||
+                  ctx->current.type == TT_EOF);
 }
 
 static bool add_parameter(ast_func_t *func, dstr name) {
@@ -181,8 +183,8 @@ static bool add_parameter(ast_func_t *func, dstr name) {
 }
 
 static bool add_argument(ast_expr_t *call, ast_expr_t *arg) {
-    ast_expr_t **args = (ast_expr_t**)realloc((void *)call->as.func.args,
-                                (call->as.func.argc + 1) * sizeof(*args));
+    ast_expr_t **args = (ast_expr_t **)realloc(
+        (void *)call->as.func.args, (call->as.func.argc + 1) * sizeof(*args));
     if (args == nullptr) {
         error_fatal_cleanup(ERR_OTHER);
     }
@@ -226,10 +228,11 @@ static bool is_statement(parser_ctx *ctx) {
     }
 
     return (bool)(token_is_kw(&ctx->current, KW_VAL) ||
-           token_is_kw(&ctx->current, KW_VAR) ||
-           token_is_kw(&ctx->current, KW_RETURN) ||
-           token_is_kw(&ctx->current, KW_IF) ||
-           token_is_kw(&ctx->current, KW_WHILE) || is_name_kw(&ctx->current));
+                  token_is_kw(&ctx->current, KW_VAR) ||
+                  token_is_kw(&ctx->current, KW_RETURN) ||
+                  token_is_kw(&ctx->current, KW_IF) ||
+                  token_is_kw(&ctx->current, KW_WHILE) ||
+                  is_name_kw(&ctx->current));
 }
 
 bool parser_run(parser_ctx *ctx) {
@@ -304,7 +307,9 @@ static bool parse_annotation(parser_ctx *ctx, bool *is_main) {
         return true;
     }
 
-    if (token_is_kw(&ctx->current, KW_MAIN) || (ctx->current.type == TT_IDENTIFIER && dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0)) {
+    if (token_is_kw(&ctx->current, KW_MAIN) ||
+        (ctx->current.type == TT_IDENTIFIER &&
+         dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0)) {
         advance(ctx);
     } else {
         return false;

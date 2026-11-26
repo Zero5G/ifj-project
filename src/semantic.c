@@ -109,107 +109,107 @@ static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
 
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
     switch (stmt->kind) {
-        case STMT_VAR_DEF: {
-            ast_expr_t *init = stmt->as.var_def.init;
-            if (init != nullptr) {
-                analyze_expr(ctx, init);
-            }
+    case STMT_VAR_DEF: {
+        ast_expr_t *init = stmt->as.var_def.init;
+        if (init != nullptr) {
+            analyze_expr(ctx, init);
+        }
 
-            symbol *sym = nullptr;
-            switch (symtable_add_var(ctx->stab, dstr_cstr(stmt->as.var_def.name),
-                                     &sym)) {
-                case SYM_OK:
-                    break;
-                case SYM_EXISTS:
-                    error_fatal_cleanup(ERR_SEM_REDEF);
-                case SYM_NOMEM:
-                    error_fatal_cleanup(ERR_OTHER);
-            }
-            data_type type = stmt->as.var_def.type;
-            if (type == TYPE_UNKNOWN && init != nullptr) {
-                type = init->data_type;
-            } else if (init != nullptr && init->data_type != TYPE_UNKNOWN &&
-                       type != init->data_type) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
+        symbol *sym = nullptr;
+        switch (symtable_add_var(ctx->stab, dstr_cstr(stmt->as.var_def.name),
+                                 &sym)) {
+        case SYM_OK:
+            break;
+        case SYM_EXISTS:
+            error_fatal_cleanup(ERR_SEM_REDEF);
+        case SYM_NOMEM:
+            error_fatal_cleanup(ERR_OTHER);
+        }
+        data_type type = stmt->as.var_def.type;
+        if (type == TYPE_UNKNOWN && init != nullptr) {
+            type = init->data_type;
+        } else if (init != nullptr && init->data_type != TYPE_UNKNOWN &&
+                   type != init->data_type) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
 
-            sym->kind = SYM_VAR;
-            sym->is_mut = stmt->as.var_def.is_mut;
-            sym->type = type;
-            stmt->as.var_def.type = type;
-            stmt->as.var_def.var_id = sym->var_id;
+        sym->kind = SYM_VAR;
+        sym->is_mut = stmt->as.var_def.is_mut;
+        sym->type = type;
+        stmt->as.var_def.type = type;
+        stmt->as.var_def.var_id = sym->var_id;
+        break;
+    }
+    case STMT_EXPR:
+        analyze_expr(ctx, stmt->as.expr);
+        break;
+    case STMT_RET: {
+        ast_expr_t *ret_val = stmt->as.ret_val;
+        symbol *func = ctx->current_sym;
+
+        if (ret_val != nullptr) {
+            analyze_expr(ctx, ret_val);
+        }
+
+        data_type type = ret_val != nullptr ? ret_val->data_type : TYPE_UNIT;
+        ctx->saw_return = true;
+
+        if (type == TYPE_UNKNOWN) {
             break;
         }
-        case STMT_EXPR:
-            analyze_expr(ctx, stmt->as.expr);
-            break;
-        case STMT_RET: {
-            ast_expr_t *ret_val = stmt->as.ret_val;
-            symbol *func = ctx->current_sym;
 
-            if (ret_val != nullptr) {
-                analyze_expr(ctx, ret_val);
-            }
-
-            data_type type = ret_val != nullptr ? ret_val->data_type : TYPE_UNIT;
-            ctx->saw_return = true;
-
-            if (type == TYPE_UNKNOWN) {
-                break;
-            }
-
-            if (func->type == TYPE_UNKNOWN) {
-                func->type = type;
-            } else if (func->type != type) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            break;
+        if (func->type == TYPE_UNKNOWN) {
+            func->type = type;
+        } else if (func->type != type) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
         }
-        case STMT_ASSIGN: {
-            ast_expr_t *val = stmt->as.assign.val;
-            analyze_expr(ctx, val);
+        break;
+    }
+    case STMT_ASSIGN: {
+        ast_expr_t *val = stmt->as.assign.val;
+        analyze_expr(ctx, val);
 
-            symbol *sym =
-                symtable_find_var(ctx->stab, dstr_cstr(stmt->as.assign.name));
-            if (sym == nullptr) {
-                error_fatal_cleanup(ERR_SEM_UNDEF);
-            }
-            if (!sym->is_mut) {
-                error_fatal_cleanup(ERR_SEM_ROAE);
-            }
-
-            if (sym->type != TYPE_UNKNOWN && val->data_type != TYPE_UNKNOWN &&
-                sym->type != val->data_type) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-
-            stmt->as.assign.var_id = sym->var_id;
-            break;
+        symbol *sym =
+            symtable_find_var(ctx->stab, dstr_cstr(stmt->as.assign.name));
+        if (sym == nullptr) {
+            error_fatal_cleanup(ERR_SEM_UNDEF);
         }
-        case STMT_IF: {
-            ast_expr_t *cond = stmt->as.if_stmt.cond;
-            analyze_expr(ctx, cond);
-
-            if ((cond->data_type != TYPE_UNKNOWN) &&
-                (cond->data_type != TYPE_BOOL)) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-
-            analyze_block(ctx, &stmt->as.if_stmt.then_blk);
-            if (stmt->as.if_stmt.has_else) {
-                analyze_block(ctx, &stmt->as.if_stmt.else_blk);
-            }
-            break;
+        if (!sym->is_mut) {
+            error_fatal_cleanup(ERR_SEM_ROAE);
         }
-        case STMT_WHILE: {
-            ast_expr_t *cond = stmt->as.while_stmt.cond;
-            analyze_expr(ctx, cond);
-            if (cond->data_type != TYPE_UNKNOWN && cond->data_type != TYPE_BOOL) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            analyze_block(ctx, &stmt->as.while_stmt.block);
-            break;
+
+        if (sym->type != TYPE_UNKNOWN && val->data_type != TYPE_UNKNOWN &&
+            sym->type != val->data_type) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
         }
+
+        stmt->as.assign.var_id = sym->var_id;
+        break;
+    }
+    case STMT_IF: {
+        ast_expr_t *cond = stmt->as.if_stmt.cond;
+        analyze_expr(ctx, cond);
+
+        if ((cond->data_type != TYPE_UNKNOWN) &&
+            (cond->data_type != TYPE_BOOL)) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
+
+        analyze_block(ctx, &stmt->as.if_stmt.then_blk);
+        if (stmt->as.if_stmt.has_else) {
+            analyze_block(ctx, &stmt->as.if_stmt.else_blk);
+        }
+        break;
+    }
+    case STMT_WHILE: {
+        ast_expr_t *cond = stmt->as.while_stmt.cond;
+        analyze_expr(ctx, cond);
+        if (cond->data_type != TYPE_UNKNOWN && cond->data_type != TYPE_BOOL) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
+        analyze_block(ctx, &stmt->as.while_stmt.block);
+        break;
+    }
     }
 }
 
@@ -355,7 +355,8 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         symbol *callee =
             symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
         if (callee == nullptr) {
-            error_fatalf_cleanup(ERR_SEM_UNDEF, "Funckce '%s' nenalezena.", dstr_cstr(expr->as.func.name));
+            error_fatalf_cleanup(ERR_SEM_UNDEF, "Funckce '%s' nenalezena.",
+                                 dstr_cstr(expr->as.func.name));
         }
         if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
             analyze_func(ctx, callee);

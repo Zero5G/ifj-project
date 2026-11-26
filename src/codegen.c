@@ -40,7 +40,8 @@ static void print_string(FILE *out, const char *str) {
 
 static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr);
 
-/** * @brief Rekurzivne vyhodnoti uzel výrazu tak, aby hodnota zůstala uložena na vrcholu zásobníku. */
+/** * @brief Rekurzivne vyhodnoti uzel výrazu tak, aby hodnota zůstala uložena
+ * na vrcholu zásobníku. */
 static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
     switch (expr->kind) {
     case E_INT_LIT:
@@ -73,12 +74,13 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
             unsigned idx = ++ctx->label_id;
             gen_expr(ctx, expr->as.binary.left);
             fputs("POPS LF@tmp1\n", ctx->out);
-            fprintf(ctx->out, "JUMPIFEQ &and_false_%u LF@tmp1 bool@false\n", idx);
+            fprintf(ctx->out, "JUMPIFEQ &and_false_%u LF@tmp1 bool@false\n",
+                    idx);
             gen_expr(ctx, expr->as.binary.right);
             fprintf(ctx->out, "JUMP &and_end_%u\n", idx);
             fprintf(ctx->out, "LABEL &and_false_%u\n", idx);
             fputs("PUSHS bool@false\n", ctx->out);
-            fprintf(ctx->out, "LABEL &and_end_%u\n",idx);
+            fprintf(ctx->out, "LABEL &and_end_%u\n", idx);
             break;
         }
         // ||
@@ -91,7 +93,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
             fprintf(ctx->out, "JUMP &or_end_%u\n", idx);
             fprintf(ctx->out, "LABEL &or_false_%u\n", idx);
             fputs("PUSHS bool@true\n", ctx->out);
-            fprintf(ctx->out, "LABEL &or_end_%u\n",idx);
+            fprintf(ctx->out, "LABEL &or_end_%u\n", idx);
             break;
         }
         gen_expr(ctx, expr->as.binary.left);
@@ -444,7 +446,8 @@ static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     }
 }
 
-/** * @brief Rekurzivne projde bloky příkazů a vypíše instrukce DEVAR pro lokální proměnné. */
+/** * @brief Rekurzivne projde bloky příkazů a vypíše instrukce DEVAR pro
+ * lokální proměnné. */
 static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     for (const ast_stmt_t *stmt = block->first; stmt != nullptr;
          stmt = stmt->next) {
@@ -461,7 +464,9 @@ static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     }
 }
 
-/** * @brief Vygeneruje hlavičku funkce, deklarace pomocných proměnných, nadeklaruje parametry a vezme jejich hodnoty z konce sásobníku. Přeloží tělo a uzavře ji. */
+/** * @brief Vygeneruje hlavičku funkce, deklarace pomocných proměnných,
+ * nadeklaruje parametry a vezme jejich hodnoty z konce sásobníku. Přeloží tělo
+ * a uzavře ji. */
 static void gen_func(codegen_ctx_t *ctx, const ast_func_t *func) {
     ctx->current_func = func;
     fprintf(ctx->out, "\nLABEL &fn_%s\n", dstr_cstr(func->name));

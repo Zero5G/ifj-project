@@ -364,11 +364,11 @@ static token read_token_fsm(lexer *lex) {
                 if (lex->paren_depth > 0) {
                     break;
                 }
-                    lex->at_line_start = true;
+                lex->at_line_start = true;
 
-                    tok.type = TT_EOL;
-                    dstr_delete(str);
-                    return tok;
+                tok.type = TT_EOL;
+                dstr_delete(str);
+                return tok;
             } else if (chr == EOF) {
                 if (lex->indent_top > 0) {
                     lex->indent_top -= 1;
@@ -376,9 +376,9 @@ static token read_token_fsm(lexer *lex) {
                     dstr_delete(str);
                     return tok;
                 }
-                    tok.type = TT_EOF;
-                    dstr_delete(str);
-                    return tok;
+                tok.type = TT_EOF;
+                dstr_delete(str);
+                return tok;
             } else if (isalpha(chr) || (chr == '_')) {
                 current_state = S_K_I;
                 dstr_push_char(str, (char)chr);
@@ -462,36 +462,36 @@ static token read_token_fsm(lexer *lex) {
                 dstr_push_char(str, (char)chr);
                 break;
             }
-                back_char(lex, chr);
-                // je to bool
-                if (dstr_cmp_raw(str, "true") == 0) {
-                    tok.type = TT_BOOLEAN_LITERAL;
-                    tok.attr.as_bool = true;
-                    dstr_delete(str); // boolen nepotrebuje text
-                    return tok;
-                }
-                // je to bool
-                if (dstr_cmp_raw(str, "false") == 0) {
-                    tok.type = TT_BOOLEAN_LITERAL;
-                    tok.attr.as_bool = false;
-                    dstr_delete(str); // boolen nepotrebuje text
-                    return tok;
-                }
-                // porovnani se vsema slovama key jako def,if int ....
-                if (check_keyword(str, &tok.attr.as_keyword)) {
-                    tok.type = TT_KEYWORD;
-                    dstr_delete(str);
-                    return tok;
-                }
-                // lexikalni chyba
-                if (dstr_cmp_raw(str, "_") == 0) {
-                    dstr_delete(str);
-                    error_fatal_cleanup(ERR_LEX);
-                }
-                // je to identifikator promenna ......
-                    tok.type = TT_IDENTIFIER;
-                    tok.attr.as_str = str;
-                    return tok;
+            back_char(lex, chr);
+            // je to bool
+            if (dstr_cmp_raw(str, "true") == 0) {
+                tok.type = TT_BOOLEAN_LITERAL;
+                tok.attr.as_bool = true;
+                dstr_delete(str); // boolen nepotrebuje text
+                return tok;
+            }
+            // je to bool
+            if (dstr_cmp_raw(str, "false") == 0) {
+                tok.type = TT_BOOLEAN_LITERAL;
+                tok.attr.as_bool = false;
+                dstr_delete(str); // boolen nepotrebuje text
+                return tok;
+            }
+            // porovnani se vsema slovama key jako def,if int ....
+            if (check_keyword(str, &tok.attr.as_keyword)) {
+                tok.type = TT_KEYWORD;
+                dstr_delete(str);
+                return tok;
+            }
+            // lexikalni chyba
+            if (dstr_cmp_raw(str, "_") == 0) {
+                dstr_delete(str);
+                error_fatal_cleanup(ERR_LEX);
+            }
+            // je to identifikator promenna ......
+            tok.type = TT_IDENTIFIER;
+            tok.attr.as_str = str;
+            return tok;
         }
         case S_ASSIGN: {
             if (chr == '=') {
@@ -499,10 +499,10 @@ static token read_token_fsm(lexer *lex) {
                 tok.type = TT_EQ;
                 return tok;
             }
-                back_char(lex, chr);
-                tok.type = TT_ASSIGN;
-                dstr_delete(str);
-                return tok;
+            back_char(lex, chr);
+            tok.type = TT_ASSIGN;
+            dstr_delete(str);
+            return tok;
         }
         case S_LT: {
             if (chr == '=') {
@@ -510,10 +510,10 @@ static token read_token_fsm(lexer *lex) {
                 tok.type = TT_LTE;
                 return tok;
             }
-                back_char(lex, chr);
-                tok.type = TT_LT;
-                dstr_delete(str);
-                return tok;
+            back_char(lex, chr);
+            tok.type = TT_LT;
+            dstr_delete(str);
+            return tok;
         }
         case S_GT: {
             if (chr == '=') {
@@ -521,10 +521,10 @@ static token read_token_fsm(lexer *lex) {
                 tok.type = TT_GTE;
                 return tok;
             }
-                back_char(lex, chr);
-                tok.type = TT_GT;
-                dstr_delete(str);
-                return tok;
+            back_char(lex, chr);
+            tok.type = TT_GT;
+            dstr_delete(str);
+            return tok;
         }
         case S_NEQ: {
             if (chr == '=') {
@@ -533,10 +533,10 @@ static token read_token_fsm(lexer *lex) {
                 return tok;
             }
             // unarni negace
-                back_char(lex, chr);
-                tok.type = TT_NOT;
-                dstr_delete(str);
-                return tok;
+            back_char(lex, chr);
+            tok.type = TT_NOT;
+            dstr_delete(str);
+            return tok;
         }
         case S_AND: {
             if (chr == '&') {
@@ -544,8 +544,8 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 return tok;
             }
-                dstr_delete(str);
-                error_fatal_cleanup(ERR_LEX);
+            dstr_delete(str);
+            error_fatal_cleanup(ERR_LEX);
         }
         case S_OR: {
             if (chr == '|') {
@@ -553,8 +553,8 @@ static token read_token_fsm(lexer *lex) {
                 tok.type = TT_OR;
                 return tok;
             }
-                dstr_delete(str);
-                error_fatal_cleanup(ERR_LEX);
+            dstr_delete(str);
+            error_fatal_cleanup(ERR_LEX);
         }
         case S_SLASH: {
             if (chr == '/') {
@@ -567,10 +567,10 @@ static token read_token_fsm(lexer *lex) {
                 break;
             }
             // neni to komentar
-                back_char(lex, chr);
-                tok.type = TT_SLASH;
-                dstr_delete(str);
-                return tok;
+            back_char(lex, chr);
+            tok.type = TT_SLASH;
+            dstr_delete(str);
+            return tok;
         }
         case S_COMMENT_L: {
             if ((chr == '\n') || (chr == EOF)) {
@@ -578,7 +578,7 @@ static token read_token_fsm(lexer *lex) {
                 current_state = S_START;
                 break;
             }
-                break;
+            break;
         }
         case S_C_MLS: {
             if (chr == '*') {
@@ -593,8 +593,8 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                current_state = S_C_MLS;
-                break;
+            current_state = S_C_MLS;
+            break;
         }
         case S_C_ML_SLASH: // '/' uvnitr komentare, muze zacinat vnoreny
                            // komentar
@@ -611,8 +611,8 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                current_state = S_C_MLS;
-                break;
+            current_state = S_C_MLS;
+            break;
         }
         case S_C_MLE: {
             if (chr == '/') {
@@ -623,8 +623,8 @@ static token read_token_fsm(lexer *lex) {
             if (chr == '*') {
                 break;
             }
-                current_state = S_C_MLS;
-                break;
+            current_state = S_C_MLS;
+            break;
         }
         case S_C_MLE2: {
             back_char(lex, chr);
@@ -657,7 +657,8 @@ static token read_token_fsm(lexer *lex) {
                 error_fatal_cleanup(ERR_LEX); // nemuze byt 7adfdsfds
             }
             back_char(lex, chr);
-            tok.attr.as_int = (int)strtol(dstr_cstr(str), nullptr, INT_LIT_BASE);
+            tok.attr.as_int =
+                (int)strtol(dstr_cstr(str), nullptr, INT_LIT_BASE);
             tok.type = TT_INT_LITERAL;
             dstr_delete(str);
             return tok;
@@ -681,34 +682,35 @@ static token read_token_fsm(lexer *lex) {
                     dstr_delete(str);
                     error_fatal_cleanup(ERR_LEX); // chyba pro 152_.44
                 }
-                    current_state = S_DOUBLE;
-                    dstr_push_char(str, (char)chr);
-                    break;
+                current_state = S_DOUBLE;
+                dstr_push_char(str, (char)chr);
+                break;
             }
             if (chr == 'e' || chr == 'E') {
                 if (after_underscore) {
                     dstr_delete(str);
                     error_fatal_cleanup(ERR_LEX); // chyba pro 152_.44
                 }
-                    current_state = S_DOUBLE;
-                    dstr_push_char(str, (char)chr);
-                    break;
+                current_state = S_DOUBLE;
+                dstr_push_char(str, (char)chr);
+                break;
             }
-                if (isalpha(chr) || chr == '_') {
-                    dstr_delete(str);
-                    error_fatal_cleanup(ERR_LEX); // nemuze byt 7adfdsfds
-                }
-
-                current_state = S_START;
-                if ((dstr_cstr(str)[0] == '0') || after_underscore) {
-                    dstr_delete(str);
-                    error_fatal_cleanup(ERR_LEX);
-                }
-                back_char(lex, chr); // vraceni neznameho znaku
-                tok.type = TT_INT_LITERAL;
-                tok.attr.as_int = (int)strtol(dstr_cstr(str), nullptr, INT_LIT_BASE);
+            if (isalpha(chr) || chr == '_') {
                 dstr_delete(str);
-                return tok;
+                error_fatal_cleanup(ERR_LEX); // nemuze byt 7adfdsfds
+            }
+
+            current_state = S_START;
+            if ((dstr_cstr(str)[0] == '0') || after_underscore) {
+                dstr_delete(str);
+                error_fatal_cleanup(ERR_LEX);
+            }
+            back_char(lex, chr); // vraceni neznameho znaku
+            tok.type = TT_INT_LITERAL;
+            tok.attr.as_int =
+                (int)strtol(dstr_cstr(str), nullptr, INT_LIT_BASE);
+            dstr_delete(str);
+            return tok;
         }
         case S_DOUBLE: {
             if (isdigit(chr)) {
@@ -747,15 +749,15 @@ static token read_token_fsm(lexer *lex) {
                         error_fatal_cleanup(ERR_LEX);
                     }
 
-                        current_state = S_START;
-                        back_char(lex, chr);
-                        tok.type = TT_DOUBLE_LITERAL;
-                        tok.attr.as_double = prevod_double(str);
-                        dstr_delete(str);
-                        return tok;
+                    current_state = S_START;
+                    back_char(lex, chr);
+                    tok.type = TT_DOUBLE_LITERAL;
+                    tok.attr.as_double = prevod_double(str);
+                    dstr_delete(str);
+                    return tok;
                 }
-                    dstr_push_char(str, (char)chr);
-                    break;
+                dstr_push_char(str, (char)chr);
+                break;
             }
             if (chr == 'd' || chr == 'D') // nepovinna pripona
             {
@@ -772,19 +774,18 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 return tok;
             }
-                char posledni = dstr_cstr(str)[dstr_len(str) - 1];
-                if ((posledni == '.') || (posledni == 'e') ||
-                    (posledni == 'E') || (posledni == '+') ||
-                    (posledni == '-') || after_underscore) {
-                    dstr_delete(str);
-                    error_fatal_cleanup(ERR_LEX);
-                }
-                current_state = S_START;
-                back_char(lex, chr); // vraceni neznameho znaku
-                tok.type = TT_DOUBLE_LITERAL;
-                tok.attr.as_double = prevod_double(str);
+            char posledni = dstr_cstr(str)[dstr_len(str) - 1];
+            if ((posledni == '.') || (posledni == 'e') || (posledni == 'E') ||
+                (posledni == '+') || (posledni == '-') || after_underscore) {
                 dstr_delete(str);
-                return tok;
+                error_fatal_cleanup(ERR_LEX);
+            }
+            current_state = S_START;
+            back_char(lex, chr); // vraceni neznameho znaku
+            tok.type = TT_DOUBLE_LITERAL;
+            tok.attr.as_double = prevod_double(str);
+            dstr_delete(str);
+            return tok;
         }
         case S_STRING_S: {
             if (chr == '"') {
@@ -799,9 +800,9 @@ static token read_token_fsm(lexer *lex) {
                 current_state = S_STRING_ES;
                 break;
             }
-                current_state = S_STRING;
-                dstr_push_char(str, (char)chr);
-                break;
+            current_state = S_STRING;
+            dstr_push_char(str, (char)chr);
+            break;
         }
         case S_STRING: {
             if (chr == '"') {
@@ -816,8 +817,8 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                dstr_push_char(str, (char)chr);
-                break;
+            dstr_push_char(str, (char)chr);
+            break;
         }
         case S_STRING_ES: {
             if (chr == 'n') {
@@ -845,18 +846,18 @@ static token read_token_fsm(lexer *lex) {
                 current_state = S_STRING;
                 break;
             }
-                dstr_delete(str);
-                error_fatal_cleanup(ERR_LEX);
+            dstr_delete(str);
+            error_fatal_cleanup(ERR_LEX);
         }
         case S_STRING_E: {
             if ((chr == '"') && (dstr_len(str) == 0)) {
                 current_state = S_S_ML;
                 break;
             }
-                tok.type = TT_STRING_LITERAL;
-                back_char(lex, chr);
-                tok.attr.as_str = str;
-                return tok;
+            tok.type = TT_STRING_LITERAL;
+            back_char(lex, chr);
+            tok.attr.as_str = str;
+            return tok;
         }
         case S_S_ML: {
             if (chr == '"') {
@@ -867,9 +868,9 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                dstr_push_char(str, (char)chr);
-                current_state = S_S_ML;
-                break;
+            dstr_push_char(str, (char)chr);
+            current_state = S_S_ML;
+            break;
         }
         case S_S_ML_E: {
             if (chr == '"') {
@@ -880,10 +881,10 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                dstr_push_char(str, '"');
-                dstr_push_char(str, (char)chr);
-                current_state = S_S_ML;
-                break;
+            dstr_push_char(str, '"');
+            dstr_push_char(str, (char)chr);
+            current_state = S_S_ML;
+            break;
         }
         case S_S_ML_E2: {
             if (chr == '"') {
@@ -894,11 +895,11 @@ static token read_token_fsm(lexer *lex) {
                 dstr_delete(str);
                 error_fatal_cleanup(ERR_LEX);
             }
-                dstr_push_char(str, '"');
-                dstr_push_char(str, '"');
-                dstr_push_char(str, (char)chr);
-                current_state = S_S_ML;
-                break;
+            dstr_push_char(str, '"');
+            dstr_push_char(str, '"');
+            dstr_push_char(str, (char)chr);
+            current_state = S_S_ML;
+            break;
         }
         case S_S_ML_E3: {
             if (chr == '"') // vic uvozovek na konci: posledni tri ukoncuji,
