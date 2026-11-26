@@ -18,14 +18,14 @@
 /** @brief Soukromá struktura, která udržuje proměnné použíté pro sem. analýzu */
 typedef struct sematic_ctx {
     ast_prog_t *prog;
-    symtable *stab;
+    symtable_t *stab;
     ast_func_t *current_func;
     symbol *current_sym;
     bool saw_return;
 } sematic_ctx;
 
 /** @brief Soukromá struktura pro deklarovaní vestavěných funkcí */
-typedef struct builtin_t {
+typedef struct builtin {
     const char *name;
     data_type ret;
     const data_type *params;
@@ -461,7 +461,7 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     ctx->saw_return = saved_seen;
 }
 
-void semantic_analyze(ast_prog_t *prog, symtable *stab) {
+void semantic_analyze(ast_prog_t *prog, symtable_t *stab) {
     if (prog == nullptr || stab == nullptr) {
         return;
     }

@@ -19,6 +19,6 @@
  * @param prog AST programu
  * @param stab Tabulka symbolů
  */
-void semantic_analyze(ast_prog_t *prog, symtable *stab);
+void semantic_analyze(ast_prog_t *prog, symtable_t *stab);
 
 #endif

@@ -2,7 +2,7 @@
  * @file symtable.c
  *
  * @author Jakub Manoušek
- * @brief Implementace modulu pro tabulku symbolů
+ * @brief Implementace modulu pro ADT tabulku symbolů
  *
  * @details
  */
@@ -15,16 +15,17 @@
 #include "symtable.h"
 #include <stdlib.h>
 
+/** @brief Interní typ pro obor platnosti funkce */
 typedef struct scope {
     hash_table vars;
     struct scope *parent;
     bool is_func_parent;
     unsigned saved_next_var_id;
-} scope;
+} scope_t;
 
 struct symtable {
     hash_table funcs;
-    scope *current;
+    scope_t *current;
     unsigned next_var_id;
 };
 
@@ -57,8 +58,8 @@ static sym_result symtable_insert(hash_table *htab, const char *name,
     return SYM_OK;
 }
 
-symtable *symtable_create() {
-    symtable *symtable = calloc(1, sizeof(struct symtable));
+symtable_t *symtable_create() {
+    symtable_t *symtable = calloc(1, sizeof(struct symtable));
     if (symtable == nullptr) {
         return nullptr;
     }
@@ -72,13 +73,13 @@ symtable *symtable_create() {
     return symtable;
 }
 
-void symtable_destroy(symtable *stab) {
+void symtable_destroy(symtable_t *stab) {
     if (stab == nullptr) {
         return;
     }
 
     while (stab->current != nullptr) {
-        scope *parent = stab->current->parent;
+        scope_t *parent = stab->current->parent;
         hashtable_dispose(&stab->current->vars);
         free(stab->current);
         stab->current = parent;
@@ -88,11 +89,11 @@ void symtable_destroy(symtable *stab) {
     free(stab);
 }
 
-bool symtable_enter_scope(symtable *stab) {
+bool symtable_enter_scope(symtable_t *stab) {
     if (stab == nullptr) {
         return false;
     }
-    scope *scp = calloc(1, sizeof(struct scope));
+    scope_t *scp = calloc(1, sizeof(struct scope));
     if (scp == nullptr) {
         return false;
     }
@@ -108,7 +109,7 @@ bool symtable_enter_scope(symtable *stab) {
     return true;
 }
 
-bool symtable_leave_scope(symtable *stab) {
+bool symtable_leave_scope(symtable_t *stab) {
     if (stab == nullptr) {
         return false;
     }
@@ -116,7 +117,7 @@ bool symtable_leave_scope(symtable *stab) {
         return false;
     }
 
-    scope *child = stab->current;
+    scope_t *child = stab->current;
     stab->current = child->parent;
     hashtable_dispose(&child->vars);
     free(child);
@@ -124,7 +125,7 @@ bool symtable_leave_scope(symtable *stab) {
     return true;
 }
 
-sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
+sym_result symtable_add_var(symtable_t *stab, const char *name, symbol **out) {
     symbol *existing = symtable_find_var(stab, name);
     if (existing != nullptr) {
         *out = existing;
@@ -139,8 +140,8 @@ sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
     return res;
 }
 
-symbol *symtable_find_var(const symtable *stab, const char *name) {
-    for (scope *scp = stab->current; scp != nullptr; scp = scp->parent) {
+symbol *symtable_find_var(const symtable_t *stab, const char *name) {
+    for (scope_t *scp = stab->current; scp != nullptr; scp = scp->parent) {
         hash_item *item = hashtable_search(&scp->vars, name);
         if (item != nullptr) {
             return item->symbol;
@@ -153,7 +154,7 @@ symbol *symtable_find_var(const symtable *stab, const char *name) {
     return nullptr;
 }
 
-bool symtable_enter_func(symtable *stab) {
+bool symtable_enter_func(symtable_t *stab) {
     unsigned saved = stab->next_var_id;
     if (!symtable_enter_scope(stab)) {
         return false;
@@ -166,7 +167,7 @@ bool symtable_enter_func(symtable *stab) {
     return true;
 }
 
-unsigned symtable_leave_func(symtable *stab) {
+unsigned symtable_leave_func(symtable_t *stab) {
     unsigned count = stab->next_var_id;
     unsigned saved = stab->current->saved_next_var_id;
     symtable_leave_scope(stab);
@@ -176,7 +177,7 @@ unsigned symtable_leave_func(symtable *stab) {
     return count; /**< se rovná ast_func.var_count */
 }
 
-sym_result symtable_add_func(symtable *stab, const char *name, symbol **out) {
+sym_result symtable_add_func(symtable_t *stab, const char *name, symbol **out) {
     symbol *existing = symtable_find_func(stab, name);
     if (existing != nullptr) {
         *out = existing;
@@ -186,7 +187,7 @@ sym_result symtable_add_func(symtable *stab, const char *name, symbol **out) {
     return symtable_insert(&stab->funcs, name, SYM_FUNC, out);
 }
 
-symbol *symtable_find_func(const symtable *stab, const char *name) {
+symbol *symtable_find_func(const symtable_t *stab, const char *name) {
     hash_item *item = hashtable_search(&stab->funcs, name);
     return item != nullptr ? item->symbol : nullptr;
 }

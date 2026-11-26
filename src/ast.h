@@ -21,7 +21,7 @@ typedef struct ast_stmt ast_stmt_t;
 typedef struct ast_func ast_func_t;
 typedef struct ast_expr ast_expr_t;
 
-typedef enum expr_kind {
+typedef enum expr_kind : uint8_t {
     E_UNARY,
     E_BINARY,
     E_FUNC,
@@ -33,15 +33,14 @@ typedef enum expr_kind {
     E_BOOLEAN_LIT,
 } expr_kind;
 
-typedef enum op_unary {
+typedef enum op_unary : uint8_t {
     OPU_NEG,
     OPU_PLUS,
     OPU_NOT,
-    OPU_INT2FLOAT, /**< konverze Int na Double (sémantika, nemá token v lexeru)
-                    */
+    OPU_INT2FLOAT, /**< konverze Int na Double (sémantika, nemá token v lexeru)*/
 } op_unary;
 
-typedef enum op_binary {
+typedef enum op_binary : uint8_t {
     OPB_ADD,
     OPB_SUB,
     OPB_MUL,

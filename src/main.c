@@ -16,7 +16,7 @@
 static lexer *lex = nullptr;
 static ast_prog_t *ast = nullptr;
 static parser_ctx parser;
-static symtable *stab = nullptr;
+static symtable_t *stab = nullptr;
 
 void cleanup() { // NOLINT
     lexer_destroy(lex);

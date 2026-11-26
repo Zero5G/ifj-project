@@ -11,31 +11,32 @@
 
 #include "ast.h"
 #include "types.h"
+
+#include <stdint.h>
 #include <stddef.h>
 
-typedef struct ast_func ast_func_t;
-
-typedef enum sym_kind {
+/** @brief Druhy symbolů v symtable */
+typedef enum sym_kind : uint8_t {
     SYM_VAR,
     SYM_FUNC,
 } sym_kind;
 
-typedef enum {
+/** @brief Stavy symbolů v symtable */
+typedef enum : uint8_t {
     SYM_OK,
     SYM_EXISTS,
     SYM_NOMEM,
 } sym_result;
 
-typedef enum {
+/** @brief Stavy návratového typu symbolu funcke */
+typedef enum : uint8_t {
     RET_EXPLICIT,
     RET_UNRESOLVED,
     RET_INFERRING,
     RET_INFERRED,
 } return_state;
 
-/**
- * @brief Struktura symbolu
- */
+/** @brief Struktura symbolu */
 typedef struct symbol {
     sym_kind kind;
     data_type type;
@@ -50,35 +51,36 @@ typedef struct symbol {
     ast_func_t *decl; /**< funkce, kterou vytvořil uživatel */
 } symbol;
 
-typedef struct symtable symtable;
+/** @brief Abstraktní datový typ pro tabulku symbolů */
+typedef struct symtable symtable_t;
 
 /**
  * @brief Vytvoří tabulku symbolů
  *
  * @return Ukazatel na tabulku symbolů
  */
-symtable *symtable_create();
+symtable_t *symtable_create();
 
 /**
  * @brief Zruší tabulku symbolů
  *
  * @param stab Ukazatel na tabulku symbolů
  */
-void symtable_destroy(symtable *stab);
+void symtable_destroy(symtable_t *stab);
 
 /**
  * @brief Přejít do dalšího rozsahu platnosti
  *
  * @param[in,out] stab Ukazatel na tabulku symbolů
  */
-bool symtable_enter_scope(symtable *stab);
+bool symtable_enter_scope(symtable_t *stab);
 
 /**
  * @brief Přejít do předchozího rozsahu platnosti
  *
  * @param[in,out] stab Ukazatel na tabulku symbolů
  */
-bool symtable_leave_scope(symtable *stab);
+bool symtable_leave_scope(symtable_t *stab);
 
 /**
  * @brief Přidá proměnnou do tabulky symbolů
@@ -89,7 +91,7 @@ bool symtable_leave_scope(symtable *stab);
  *
  * @return Vrací `sym_result`
  */
-sym_result symtable_add_var(symtable *stab, const char *name, symbol **out);
+sym_result symtable_add_var(symtable_t *stab, const char *name, symbol **out);
 
 /**
  * @brief Vyhledá proměnnou v tabulce symbolů
@@ -99,7 +101,7 @@ sym_result symtable_add_var(symtable *stab, const char *name, symbol **out);
  *
  * @return Ukazatel na symbol, `nullptr` pokud již existuje
  */
-symbol *symtable_find_var(const symtable *stab, const char *name);
+symbol *symtable_find_var(const symtable_t *stab, const char *name);
 
 /**
  * @brief Přejít do rozsahu platnosti funkce
@@ -108,7 +110,7 @@ symbol *symtable_find_var(const symtable *stab, const char *name);
  *
  * @return Pokud se vstup povedl
  */
-bool symtable_enter_func(symtable *stab);
+bool symtable_enter_func(symtable_t *stab);
 
 /**
  * @brief Odejít z rozsahu platnosti funkce
@@ -117,7 +119,7 @@ bool symtable_enter_func(symtable *stab);
  *
  * @return ast_func.var_count
  */
-unsigned symtable_leave_func(symtable *stab);
+unsigned symtable_leave_func(symtable_t *stab);
 
 /**
  * @brief Přidá funkci do tabulky symbolů
@@ -128,7 +130,7 @@ unsigned symtable_leave_func(symtable *stab);
  *
  * @return Vrací `sym_result`
  */
-sym_result symtable_add_func(symtable *stab, const char *name, symbol **out);
+sym_result symtable_add_func(symtable_t *stab, const char *name, symbol **out);
 
 /**
  * @brief Vyhledá funkci v tabulce symbolů
@@ -138,6 +140,6 @@ sym_result symtable_add_func(symtable *stab, const char *name, symbol **out);
  *
  * @return Ukazatel na symbol, `nullptr` pokud nenalezen
  */
-symbol *symtable_find_func(const symtable *stab, const char *name);
+symbol *symtable_find_func(const symtable_t *stab, const char *name);
 
 #endif
