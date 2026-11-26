@@ -86,7 +86,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
             fprintf(ctx->out, "JUMP &or_end_%u\n", idx);
             gen_expr(ctx, expr->as.binary.left);
             fprintf(ctx->out, "LABEL &or_false_%u\n", idx);
-            fputs("PUSH bool@false\n", ctx->out);
+            fputs("PUSH bool@true\n", ctx->out);
             fprintf(ctx->out, "LABEL &or_end_%u\n",idx);
             break;
         }
