@@ -16,14 +16,14 @@ format:
 
 ![VUT FIT logo](FIT_barevne_RGB_CZ.png)
 
-# Implementace překladače imperativního jazyka IFJ26. {.unlisted .unnumbered}
+# Implementace překladače imperativního jazyka **IFJ26**. {.unlisted .unnumbered}
 
 Jméno | xLogin | Body
 - | - | -
 **Jakub Manoušek** | `xmanouj00` | 25%
 Jakub Machač | `xmachaj00` | 25%
 Matěj Krňák | `xkrnakm00` | 25%
-Vojta Buchmaier | `x00` | 25%
+Vojta Buchmaier | `xbuchmv00` | 25%
 
 - **Zvolená varianta:** `TRP-izp`
 
@@ -35,7 +35,7 @@ Vojta Buchmaier | `x00` | 25%
   - `xmanouj00`: FSM, AST, semantická analýza
   - `xmachaj00`: dynamický řeťezec, generátor kódu
   - `xkrnakm00`: gramatika, 
-  - `x00`: tabulka s rozptýlenými položkami, lexikální analýza
+  - `xbuchmv00`: tabulka s rozptýlenými položkami, lexikální analýza
 
 \newpage
 \renewcommand{\contentsname}{Obsah}
@@ -44,6 +44,13 @@ Vojta Buchmaier | `x00` | 25%
 
 # Úvod
 Projekt byl dělán v jazuku C, standardu `C23`, požívaly jsme kompilátor `clang`, protože byl nejjedušší na instalaci a pracuje s nástroji `clang-tidy` and `clang-format`. Projekt je kompilován za použití programu `Make`.
+
+# Práce v týmu
+Projekt byl ukládán v git repositáři na GitHubu.
+Kde si každý vytvořil větev a pracoval na ní, jak byla práce hotová, tak si vytvořil _Pull request_,
+který byl poté mergnut do branche kde byl potřeba.
+Jedíné co se před mergováním kontrolovalo, bylo zda se merge může vykonat,
+nebo je potřeba udělat merge manuálně (pokud si někdo chyby všiml, tak si zažádal o změny).
 
 Pro programovaní nebyl nucený editor, ale byl poskytnut soubor `.editorconfig`.
 
@@ -54,24 +61,30 @@ Projekt dokáže generovat referenční manuál pomocí programu `Doxygen`.
 Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v souboru `README.md` v kořenovém adresáři.
 
 # Návrh a implementace
-Cílem projektu je implementovat překladač jazuka `IFJ26`, který je podmnožinou jazyku `Scala`.
-Překladač má být implementován v jazyce `C`.
-## Lexikální analýza (`lexer`)
-LL(1)
+Cílem projektu je implementovat překladač jazuka **IFJ26**, který je podmnožinou jazyku `Scala`.
 
-## Syntaktická analýza (`parser`)
-rekuzivní sestup,
-precedenci syntak. analyza
-1 look ahead
+## Lexikální analýza
+Lexikální analýzátor (lexer) používá konečný automat, který jde vidět v části [FSM](#fsm).
 
-## AST (`ast`)
+Obsahuje funkce voláné syntaktickou analýzou, hlavní je funkce co udělá ze vstupu tokeny,
+vždy načteme alespoň `LEXER_MAX_PEEK` tokenů, do vnitřího pole.
+To ukládáme, protože potřebujeme, aby parser mohl náhlédnou do budoucnosti (viz. [parser](#Syntaktická-analýza)).
+Pro nahlédunutí do budoucnosti používáme funkci `lexer_peek`.
+
+Jazyk **IFJ26** odděluje bloky kódu pomocí odsazení,
+lexer si proto ukládá zásobníku počet odsazení do leva a kolik chybí odsazení do prava.
+Za pomocí těchto hodnot pak vytváří tokeny `INDENT` a `OUTDENT`.
+
+## Syntaktická analýza
+
+## Abstraktní syntaktický strom
 Syntaktická analýza vyplňuje abstaktní syntaktický strom, který se skládá z funkcí `ast_func_t`,
 příkazů (`ast_stmt_t`) a výrazů (`ast_expr_t`).
 Funkce jsou uloženy jako jednoduchý jednosměrný spojový seznam, kde kořen je program (`ast_prog_t`),
 stejným způsobem jsou na sebe navázány příkazy, které jsou uloženy v blocku (`ast_block_t`).
 Struktury se skládají z unií a struktů, aktuální část unie rozhodují enumy.
 
-### AST - diagram návazností struktur
+### AST - diagram návaznosti struktur
 ```{mermaid}
 %%| fig-width: 3
 %%| fig-height: 4
@@ -97,7 +110,7 @@ Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním z
 
 ## Generátor kódu (`codegen`)
 
-# Diagram
+# Diagram programu
 ```{mermaid}
 %%| fig-width: 5
 %%| fig-height: 8
