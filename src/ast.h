@@ -17,8 +17,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/** @brief AST pro příkaz */
 typedef struct ast_stmt ast_stmt_t;
+/** @brief AST pro funkci */
 typedef struct ast_func ast_func_t;
+/** @brief AST pro výraz */
 typedef struct ast_expr ast_expr_t;
 
 typedef enum expr_kind : uint8_t {
@@ -97,12 +100,14 @@ struct ast_expr {
     } as;
 };
 
+/** @brief AST blok je jednosměrně zřetězený seznam příkazů */
 typedef struct ast_block {
     ast_stmt_t *first;
     ast_stmt_t *last;
     size_t count;
 } ast_block_t;
 
+/** @brief AST pro příkaz */
 struct ast_stmt {
     unsigned line;
     ast_stmt_t *next;
@@ -135,6 +140,7 @@ struct ast_stmt {
     } as;
 };
 
+/** @brief AST pro parametr funkce */
 typedef struct ast_func_param {
     dstr name;
     data_type type;
@@ -154,6 +160,7 @@ struct ast_func {
     ast_func_t *next;
 };
 
+/** @brief AST blok je jednosměrně zřetězený seznam funkcí */
 typedef struct ast_prog {
     ast_func_t *first;
     ast_func_t *last;
