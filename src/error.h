@@ -6,6 +6,8 @@
  *
  * @details
  */
+#ifndef ERROR_H
+#define ERROR_H
 #include <stdarg.h>
 #include <stdint.h>
 
@@ -98,3 +100,5 @@ void error_fatal_set_cleanup(void (*cleanup_func)(void));
  * @param ... Vlastní parametry pro tisk
  */
 [[noreturn]] void error_fatalf_cleanup(error_code code, const char *fmt, ...);
+
+#endif
