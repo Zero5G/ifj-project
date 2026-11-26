@@ -19,7 +19,7 @@ static parser_ctx parser;
 static symtable *stab = nullptr;
 
 void cleanup() { // NOLINT
-    lexer_destroy(lex);
+    lexer_destroy(&lex);
     ast_prog_free(ast);
     parser_destroy(&parser);
     symtable_destroy(stab);
@@ -47,10 +47,12 @@ int main(void) {
         error_fatal_cleanup(ERR_OTHER);
     }
     fprintf(stderr, "parser run\n"); // NOLINT
-    parser_run(&parser);
+    if (!parser_run(&parser)) {
+        error_fatal_cleanup(ERR_OTHER);
+    }
     fprintf(stderr, "parser done\n"); // NOLINT
 
-    lexer_destroy(lex);
+    lexer_destroy(&lex);
     parser_destroy(&parser);
 
     stab = symtable_create();

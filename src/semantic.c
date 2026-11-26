@@ -34,6 +34,7 @@ static const builtin_t builtins[] = {
     {"readLine", TYPE_STRING, nullptr, 0},
     {"readInt", TYPE_INT, nullptr, 0},
     {"readDouble", TYPE_DOUBLE, nullptr, 0},
+    {"readBoolean", TYPE_BOOL, nullptr, 0},
     {"toStr", TYPE_STRING, one_any_p, 1},
     {"toInt", TYPE_INT, one_double_p, 1},
     {"strLength", TYPE_INT, one_str_p, 1},
@@ -355,7 +356,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         symbol *callee =
             symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
         if (callee == nullptr) {
-            error_fatal_cleanup(ERR_SEM_UNDEF);
+            error_fatalf_cleanup(ERR_SEM_UNDEF, "Funckce '%s' nenalezena.", dstr_cstr(expr->as.func.name));
         }
         if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
             analyze_func(ctx, callee);

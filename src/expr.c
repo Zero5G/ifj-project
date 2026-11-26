@@ -9,6 +9,7 @@
  */
 
 #include "expr.h"
+#include "error.h"
 #include "parser.h"
 
 #define STACK_SIZE 256
@@ -28,40 +29,67 @@ typedef enum {
     PS_RPAREN,
     PS_OPERAND,
     PS_UMINUS,
+    PS_NOT,
+    PS_AND,
+    PS_OR,
     PS_DOLLAR
 } prec_symbol_t;
 
-static const char precedence_table[15][15] = {
+static const char precedence_table[18][18] = {
     // +
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // -
-    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
+    {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // *
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // /
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // <
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // >
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // <=
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // >=
-    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // ==
-    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // !=
-    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '>'},
+    {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '<',
+     '>', '>', '>'},
     // (
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', ' '},
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', '<',
+     '<', '<', ' '},
     // )
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', ' ',
+     '>', '>', '>'},
     // i
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>', '>',
+     '>', '>', '>'},
     // unary -
-    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '>'},
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', ' ',
+     ' ', ' ', '>'},
+    // !
+    {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', ' ', '<', ' ', '<',
+     '>', '>', '>'},
+    // &&
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', ' ', '<',
+     '>', '>', '>'},
+    // ||
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', ' ', '<',
+     '<', '>', '>'},
     // $
-    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', ' '},
+    {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', '<',
+     '<', '<', ' '},
 };
 
 static char precedence(prec_symbol_t stack, prec_symbol_t input) {
@@ -103,6 +131,13 @@ static prec_symbol_t token_to_symbol(token_type type) {
     case TT_IDENTIFIER:
         return PS_OPERAND;
 
+    case TT_NOT:
+        return PS_NOT;
+    case TT_AND:
+        return PS_AND;
+    case TT_OR:
+        return PS_OR;
+
     default:
         return PS_DOLLAR;
     }
@@ -130,6 +165,10 @@ static op_binary token_to_binary(token_type type) {
         return OPB_GT;
     case TT_GTE:
         return OPB_GTE;
+    case TT_AND:
+        return OPB_AND;
+    case TT_OR:
+        return OPB_OR;
 
     default:
         return OPB_ADD;
@@ -153,7 +192,7 @@ static void stack_init(expr_stack_t *s) { s->top = -1; }
 
 static bool stack_push(expr_stack_t *s, stack_item_t item) {
     if (s->top + 1 >= STACK_SIZE) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
     s->items[++s->top] = item;
     return true;
@@ -223,7 +262,7 @@ static stack_item_t make_marker(void) {
 
 static bool insert_marker(expr_stack_t *stack) {
     if (stack->top + 1 >= STACK_SIZE) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     int pos = top_terminal_index(stack) + 1;
@@ -267,7 +306,7 @@ ast_expr_t *parse_term(parser_ctx *ctx) {
         ast_expr_t *expr =
             ast_expr_create((unsigned)ctx->current.line, E_UNIT_LIT);
         if (expr == nullptr) {
-            return nullptr;
+            error_fatal_cleanup(ERR_OTHER);
         }
         advance(ctx);
         advance(ctx);
@@ -299,7 +338,7 @@ ast_expr_t *parse_term(parser_ctx *ctx) {
 
     ast_expr_t *expr = ast_expr_create((unsigned)ctx->current.line, kind);
     if (expr == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     switch (kind) {
@@ -343,7 +382,7 @@ static ast_expr_t *parse_operand(parser_ctx *ctx) {
 static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
     ast_expr_t *expr = parse_operand(ctx);
     if (expr == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     return stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL,
@@ -375,20 +414,35 @@ static bool reduce(expr_stack_t *stack) {
         stack_item_t op = stack->items[marker + 1];
         stack_item_t operand = stack->items[marker + 2];
 
-        if (op.kind != ITEM_SYMBOL || op.symbol != PS_UMINUS ||
-            operand.kind != ITEM_EXPR) {
-            return false;
+        if (op.kind == ITEM_SYMBOL && op.symbol == PS_UMINUS &&
+            operand.kind == ITEM_EXPR) {
+
+            ast_expr_t *expr = ast_expr_unary_create(operand.expr->line,
+                                                     OPU_NEG, operand.expr);
+            if (expr == nullptr) {
+                error_fatal_cleanup(ERR_OTHER);
+            }
+
+            stack->top = marker - 1;
+
+            return stack_push(stack, make_expr(expr));
         }
 
-        ast_expr_t *expr =
-            ast_expr_unary_create(operand.expr->line, OPU_NEG, operand.expr);
-        if (expr == nullptr) {
-            return false;
+        if (op.kind == ITEM_SYMBOL && op.symbol == PS_NOT &&
+            operand.kind == ITEM_EXPR) {
+
+            ast_expr_t *expr = ast_expr_unary_create(operand.expr->line,
+                                                     OPU_NOT, operand.expr);
+            if (expr == nullptr) {
+                error_fatal_cleanup(ERR_OTHER);
+            }
+
+            stack->top = marker - 1;
+
+            return stack_push(stack, make_expr(expr));
         }
 
-        stack->top = marker - 1;
-
-        return stack_push(stack, make_expr(expr));
+        return false;
     }
 
     if (count == 3) {
@@ -447,6 +501,12 @@ static bool reduce(expr_stack_t *stack) {
         case PS_NEQ:
             tok = TT_NEQ;
             break;
+        case PS_AND:
+            tok = TT_AND;
+            break;
+        case PS_OR:
+            tok = TT_OR;
+            break;
 
         default:
             return false;
@@ -454,7 +514,7 @@ static bool reduce(expr_stack_t *stack) {
 
         ast_expr_t *expr = make_binary(tok, left.expr, right.expr);
         if (expr == nullptr) {
-            return false;
+            error_fatal_cleanup(ERR_OTHER);
         }
 
         stack->top = marker - 1;
