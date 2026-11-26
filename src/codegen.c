@@ -66,6 +66,30 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
         }
         break;
     case E_BINARY:
+        if (expr->as.binary.op == OPB_AND) {
+            unsigned idx = ++ctx->label_id;
+            gen_expr(ctx, expr->as.binary.right);
+            fputs("POPS LF@tmp1\n", ctx->out);
+            fprintf(ctx->out, "JUMPIFEQ &and_false_%u LF@tmp1 bool@false\n", idx);
+            gen_expr(ctx, expr->as.binary.left);
+            fprintf(ctx->out, "JUMP &and_end_%u\n", idx);
+            fprintf(ctx->out, "LABEL &and_false_%u\n", idx);
+            fputs("PUSH bool@false\n", ctx->out);
+            fprintf(ctx->out, "LABEL &and_end_%u\n",idx);
+            break;
+        }
+        if (expr->as.binary.op == OPB_OR) {
+            unsigned idx = ++ctx->label_id;
+            gen_expr(ctx, expr->as.binary.right);
+            fputs("POPS LF@tmp1\n", ctx->out);
+            fprintf(ctx->out, "JUMPIFEQ &or_false_%u LF@tmp1 bool@false\n", idx);
+            fprintf(ctx->out, "JUMP &or_end_%u\n", idx);
+            gen_expr(ctx, expr->as.binary.left);
+            fprintf(ctx->out, "LABEL &or_false_%u\n", idx);
+            fputs("PUSH bool@false\n", ctx->out);
+            fprintf(ctx->out, "LABEL &or_end_%u\n",idx);
+            break;
+        }
         gen_expr(ctx, expr->as.binary.left);
         gen_expr(ctx, expr->as.binary.right);
         switch (expr->as.binary.op) {
