@@ -11,10 +11,11 @@
 #include "ast.h"
 #include "dstr.h"
 #include "error.h"
+
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
 #define SPECIAL_CHAR_LAST 32
 
