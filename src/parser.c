@@ -12,6 +12,7 @@
 #include "dstr.h"
 #include "error.h"
 #include "expr.h"
+#include "lexer.h"
 
 #include <stdlib.h>
 
@@ -156,6 +157,10 @@ static bool is_stmt_end(const parser_ctx *ctx) {
 }
 
 static bool expect_stmt_end(parser_ctx *ctx) {
+    if (accept(ctx, TT_SEMICOLON)) {
+        accept(ctx, TT_EOL);
+        return true;
+    }
     if (accept(ctx, TT_EOL)) {
         return true;
     }
@@ -605,13 +610,13 @@ static ast_stmt_t *parse_variable_definition(parser_ctx *ctx) {
 
     if (!expect(ctx, TT_ASSIGN)) {
         dstr_delete(name);
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_expr_t *init = parse_expression(ctx);
     if (init == nullptr) {
         dstr_delete(name);
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_VAR_DEF);
@@ -652,7 +657,7 @@ static ast_stmt_t *parse_function_return(parser_ctx *ctx) {
     if (!is_stmt_end(ctx)) {
         val = parse_expression(ctx);
         if (val == nullptr) {
-            error_fatal_cleanup(ERR_OTHER);
+            error_fatal_cleanup(ERR_SYNT);
         }
     }
 
@@ -677,7 +682,7 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
 
     ast_expr_t *cond = parse_expression(ctx);
     if (cond == nullptr) {
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!expect_kw(ctx, KW_THEN)) {
@@ -731,7 +736,7 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
 
     ast_expr_t *cond = parse_expression(ctx);
     if (cond == nullptr) {
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!expect_kw(ctx, KW_DO)) {
@@ -787,7 +792,7 @@ static ast_stmt_t *parse_assignment(parser_ctx *ctx) {
     ast_expr_t *val = parse_expression(ctx);
     if (val == nullptr) {
         dstr_delete(name);
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_ASSIGN);
@@ -809,7 +814,7 @@ static ast_stmt_t *parse_expression_statement(parser_ctx *ctx) {
     ast_expr_t *expr = is_name_kw(&ctx->current) ? parse_function_call(ctx)
                                                  : parse_expression(ctx);
     if (expr == nullptr) {
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return make_expr_stmt(line, expr);
@@ -871,7 +876,7 @@ static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call) {
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
     ast_expr_t *arg = parse_expression(ctx);
     if (arg == nullptr) {
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return add_argument(call, arg);
