@@ -1,12 +1,16 @@
 <prog> -> <prolog> <function_list>
 <prolog> -> KW_IMPORT ifj26 TT_DOT TT_STAR
-<function_list> -> <function> <function_list>
+<function_list> -> <annotation> <function> <function_list>
 <function_list> -> ε
+<annotation> -> TT_AT KW_MAIN <annotation_end>
+<annotation> -> ε
+<annotation_end> -> TT_EOL
+<annotation_end> -> ε
 <function> -> KW_DEF TT_IDENTIFIER TT_LPAREN <parameters> TT_RPAREN <return_type> TT_ASSIGN <block>
 <parameters> -> <parameter> <parameter_next>
 <parameters> -> ε
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
-<parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
+<parameter_next> -> TT_COMMA <parameter>
 <parameter_next> -> ε
 <return_type> -> TT_COLON <type>
 <return_type> -> ε
@@ -16,29 +20,36 @@
 <type> -> KW_BOOLEAN
 <type> -> KW_UNIT
 <type> -> KW_LIST
-<block> -> <statement>
-<block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
+<block> -> <block_statement>
+<block> -> <indented_block>
+<indented_block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
 <body> -> <statement_list>
-<statement_list> -> <statement> <statement_list>
+<statement_list> -> <block_statement>
 <statement_list> -> ε
+<block_statement> -> <statement>
 <statement> -> <variable_definition>
-<statement> -> <assignment>
-<statement> -> <function_call>
 <statement> -> <function_return>
 <statement> -> <if_statement>
 <statement> -> <while_statement>
-<statement> -> <expression>
+<statement> -> <identifier_statement>
+<statement> -> <expression_statement>
 <variable_definition> -> KW_VAL TT_IDENTIFIER <variable_type> TT_ASSIGN <expression>
 <variable_definition> -> KW_VAR TT_IDENTIFIER <variable_type> TT_ASSIGN <expression>
 <variable_type> -> TT_COLON <type>
 <variable_type> -> ε
+<function_return> -> KW_RETURN <expression>
+<if_statement> -> KW_IF <expression> KW_THEN <indented_block> KW_ELSE <if_statement>
+<if_statement> -> KW_IF <expression> KW_THEN <indented_block> KW_ELSE <indented_block>
+<if_statement> -> KW_IF <expression> KW_THEN <indented_block>
+<while_statement> -> KW_WHILE <expression> KW_DO <indented_block>
+<identifier_statement> -> <assignment>
+<identifier_statement> -> <expression_statement>
 <assignment> -> TT_IDENTIFIER TT_ASSIGN <expression>
+<expression_statement> -> <function_call>
+<expression_statement> -> <expression>
 <function_call> -> TT_IDENTIFIER TT_LPAREN <argument_list> TT_RPAREN
 <argument_list> -> <argument> <argument_next>
 <argument_list> -> ε
-<argument> -> TT_IDENTIFIER
-<argument_next> TT_COMMA TT_IDENTIFIER <argument_next>
+<argument> -> <expression>
+<argument_next> TT_COMMA <argument>
 <argument_next> -> ε
-<function_return> -> KW_RETURN
-<if_statement> -> KW_IF <expression> KW_THEN TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT KW_ELSE TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
-<while_statement> -> KW_WHILE <expression> KW_DO TT_EOL TT_INDENT <body> TT_EOL TT_OUTDENT
