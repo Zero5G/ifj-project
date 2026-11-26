@@ -12,8 +12,8 @@
 #include "ast.h"
 #include "types.h"
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /** @brief Druhy symbolů v symtable */
 typedef enum sym_kind : uint8_t {

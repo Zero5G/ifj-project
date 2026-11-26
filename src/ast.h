@@ -37,7 +37,9 @@ typedef enum op_unary : uint8_t {
     OPU_NEG,
     OPU_PLUS,
     OPU_NOT,
+    // clang-format off
     OPU_INT2FLOAT, /**< konverze Int na Double (sémantika, nemá token v lexeru)*/
+    // clang-format on
 } op_unary;
 
 typedef enum op_binary : uint8_t {
