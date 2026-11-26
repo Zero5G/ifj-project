@@ -316,9 +316,9 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
         fputs("GT LF@tmp5 LF@tmp2 LF@tmp3\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
-        fputs("LT LF@tmp5 LF@tmp2 LF@tm4\n", ctx->out);
+        fputs("LT LF@tmp5 LF@tmp2 LF@tmp4\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@false\n", idx);
-        
+
         fputs("MOVE LF@tmp4 string@\n", ctx->out);
         fprintf(ctx->out, "LABEL &sub_loop_%u\n", idx);
         fprintf(ctx->out, "JUMPIFEQ &sub_done_%u LF@tmp2 LF@tmp3\n", idx);
