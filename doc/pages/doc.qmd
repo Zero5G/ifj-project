@@ -81,10 +81,12 @@ Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním z
 
 # Diagram
 ```{mermaid}
+%%| fig-width: 5
+%%| fig-height: 6
 flowchart TD
     subgraph SEMANTIC["Semantická analýza"]
         direction LR
-        L1["Analýza (`semantic.h/c`)"] <--> L2["Tabulky symbolů (`symtable.h/c`)"]
+        SEM["Analýza (`semantic.h/c`)"] <--> TAB["Tabulky symbolů (`symtable.h/c`)"]
     end
 
     START[stdin] -->|IFJ26| LEXER("Lexikální analyzér (`lexer.h/c`)")
@@ -92,7 +94,7 @@ flowchart TD
     SYNT -->|peek| LEXER
     SYNT --> AST[("AST")]
     SYNT -.->|hotovo| SEMANTIC
-    SEMANTIC <--> AST
+    SEM <--> AST
     SEMANTIC -.->|hotovo| CODEGEN
     AST --> CODEGEN
     CODEGEN --> END[stdout]
