@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #define SPECIAL_CHAR_LAST 32
 
@@ -225,7 +226,15 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
     else if (strcmp(func_name, "readInt") == 0) {
         unsigned idx = ++ctx->label_id;
         fputs("READ LF@tmp1 int\n", ctx->out);
-        fprintf(ctx->out, "JUMPIFNEQ &ri_ok_%u LF@tmp1 nil@nil\n", idx);
+        fprintf(ctx->out, "JUMPIFEQ &ri_zero_%u LF@tmp1 nil@nil\n", idx);
+        // nejmenší hodnota u 32bit čísla
+        fprintf(ctx->out, "LT LF@tmp2 LF@tmp1 int@%d\n", INT32_MIN);
+        fprintf(ctx->out, "JUMPIFEQ &ri_zero_%u LF@tmp2 bool@true\n", idx);
+        // nejvetší hodnota u 32bit čísla
+        fprintf(ctx->out, "GT LF@tmp2 LF@tmp1 int@%d\n", INT32_MAX);
+        fprintf(ctx->out, "JUMPIFEQ &ri_zero_%u LF@tmp2 bool@true\n", idx);
+        fprintf(ctx->out, "JUMP &ri_ok_%u\n", idx);
+        fprintf(ctx->out, "LABEL &ri_zero_%u\n", idx);
         fputs("MOVE LF@tmp1 int@0\n", ctx->out);
         fprintf(ctx->out, "LABEL &ri_ok_%u\n", idx);
         fputs("PUSHS LF@tmp1\n", ctx->out);
@@ -301,19 +310,14 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         fputs("POPS LF@tmp1\n", ctx->out);
         fputs("STRLEN LF@tmp4 LF@tmp1\n", ctx->out);
 
-        !!! opravit
         fputs("LT LF@tmp5 LF@tmp2 int@0\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
         fputs("LT LF@tmp5 LF@tmp3 int@0\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
         fputs("GT LF@tmp5 LF@tmp2 LF@tmp3\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
-        fputs("GT LF@tmp5 LF@tmp2 LF@tmp4\n", ctx->out);
-        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
-        fputs("GT LF@tmp5 LF@tmp3 LF@tmp4\n", ctx->out);
-        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
-        fputs("GTE LF@tmp5 LF@tmp LF@tmp\n", ctx->out);
-        fprintf(ctx->out,"JUMIFEQ &sub_err_%u LF@tmp5 bool&true\n", idx);
+        fputs("LT LF@tmp5 LF@tmp2 LF@tm4\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@false\n", idx);
         
         fputs("MOVE LF@tmp4 string@\n", ctx->out);
         fprintf(ctx->out, "LABEL &sub_loop_%u\n", idx);
