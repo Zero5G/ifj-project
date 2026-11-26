@@ -472,6 +472,22 @@ static data_type infer_fallthrough_type(ast_block_t *block) {
     }
 }
 
+static void infer_body_result(ast_func_t *func, symbol *sym) {
+    if (!func->has_ret_type) {
+        sym->type = infer_fallthrough_type(&func->body);
+        func->ret_type = sym->type;
+        return;
+    }
+    if (func->ret_type == TYPE_UNIT || check_block_return(&func->body)) {
+        return;
+    }
+    ast_stmt_t *last = func->body.last;
+    if (last == nullptr || last->kind != STMT_EXPR ||
+        !try_coerce_type(&last->as.expr, func->ret_type)) {
+        error_fatal_cleanup(ERR_SEM_TYPE);
+    }
+}
+
 static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     ast_func_t *func = sym->decl;
     ast_func_t *saved_func = ctx->current_func;
@@ -510,10 +526,8 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     analyze_block(ctx, &func->body);
     func->var_count = symtable_leave_func(ctx->stab);
 
+    infer_body_result(func, sym);
     if (sym->ret_state == RET_INFERRING) {
-        if (sym->type == TYPE_UNKNOWN && !ctx->saw_return) {
-            sym->type = TYPE_UNIT;
-        }
         sym->ret_state = RET_INFERRED;
     }
 
