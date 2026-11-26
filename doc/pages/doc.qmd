@@ -32,10 +32,10 @@ Vojta Buchmaier | `xbuchmv00` | 25%
 - Seznam rozšíření: `BOOLTHEN`, `FUNEXP`
 
 - Rozdělení práce:
-  - `xmanouj00`: FSM, AST, semantická analýza
-  - `xmachaj00`: dynamický řeťezec, generátor kódu
-  - `xkrnakm00`: gramatika, 
-  - `xbuchmv00`: tabulka s rozptýlenými položkami, lexikální analýza
+  - `xmanouj00`: FSM, AST, implementace semantické analýzy
+  - `xmachaj00`: implementace modulu pro dynamické řeťezce, implementace generátoru kódu
+  - `xkrnakm00`: gramatika, implementace syntaktické analýzy
+  - `xbuchmv00`: tabulka s rozptýlenými položkami, implementace lexikální analýzy
 
 \newpage
 \renewcommand{\contentsname}{Obsah}
@@ -147,6 +147,18 @@ vygenerování hlavičky funkce, deklaraci proměnných a parametrů, a vygenero
 
 Každá funkce má vlastní lokální rámec (`LF`) s číslovanými proměnnými (`LF@v_<id>`) a pomocnými proměnnými (`LF@tmp1-5`),
 všechny instrukce `DEFVAR` se generují na začátku funkce aby nedošlo redefinici promněné uvnitř cyklu.
+
+## Ostatní
+### Dynamické řetězce
+(`dstr.h`, `dstr.c`)
+
+Abychom jsi ulechčily práci z řetězci, tak jsme vytvořily modul,
+který dynamicky rozšiřuje paměť řetězce, celá datová struktura je soukromá,
+přístup je jen přes dané funkce.
+
+### Typy
+(`types.h`)
+Sdílené typy jsou uložené zvlášť uložené v tomto modulu. 
 
 # Blokové schéma architektury
 ```{mermaid}
