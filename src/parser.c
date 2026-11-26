@@ -408,7 +408,15 @@ static bool parse_parameter(parser_ctx *ctx, ast_func_t *func) {
 // <parameter_next> -> TT_COMMA TT_IDENTIFIER TT_COLON <type> <parameter_next>
 // <parameter_next> -> ε
 static bool parse_parameter_next(parser_ctx *ctx, ast_func_t *func) {
-    while (accept(ctx, TT_COMMA)) {
+    while (ctx->current.type == TT_COMMA) {
+        int comma_line = ctx->current.line;
+        advance(ctx);
+        if (ctx->current.type == TT_RPAREN) {
+            if (ctx->current.line > comma_line) {
+                break;
+            }
+            error_fatal_cleanup(ERR_SYNT);
+        }
         if (!parse_parameter(ctx, func)) {
             return false;
         }
@@ -872,7 +880,15 @@ static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
 // <argument_next> TT_COMMA TT_IDENTIFIER <argument_next>
 // <argument_next> -> ε
 static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call) {
-    while (accept(ctx, TT_COMMA)) {
+    while (ctx->current.type == TT_COMMA) {
+        int comma_line = ctx->current.line;
+        advance(ctx);
+        if (ctx->current.type == TT_RPAREN) {
+            if (ctx->current.line > comma_line) {
+                break;
+            }
+            error_fatal_cleanup(ERR_SYNT);
+        }
         if (!parse_argument(ctx, call)) {
             return false;
         }
