@@ -60,7 +60,8 @@ doxygen:
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
 doc:
-	pandoc doc/pages/doc.md -o dokumentace.pdf --resource-path=docs:doc/assets
+	quarto render doc/pages/doc.md
+	cp doc/pages/dokumentace.pdf ./dokumentace.pdf
 
 clean:
 	rm -rf test_runner interpreter doc/gen/* dokumentace.pdf

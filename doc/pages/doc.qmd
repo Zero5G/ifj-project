@@ -4,6 +4,10 @@ author: "Tým xmanouj00"
 date: "November 2026"
 geometry: margin=1.8cm
 fontsize: 11pt
+format:
+  pdf:
+    output-file: "dokumentace.pdf"
+    resource-path: ["../assets"]
 ---
 
 ![VUT FIT logo](FIT_barevne_RGB_CZ.png)
@@ -74,6 +78,8 @@ Také se zde generuje výraz pro povýšení typu `integer` na typ `double`.
 Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním zřetězením položek.
 
 ## Generátor kódu (`codegen`)
+
+# Diagra,
 
 # Gramatika
 
