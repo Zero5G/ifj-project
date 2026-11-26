@@ -60,7 +60,7 @@ doxygen:
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
 doc:
-	quarto render doc/pages/doc.md
+	quarto render doc/pages/doc.qmd
 	cp doc/pages/dokumentace.pdf ./dokumentace.pdf
 
 clean:

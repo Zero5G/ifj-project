@@ -79,7 +79,9 @@ Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním z
 
 ## Generátor kódu (`codegen`)
 
-# Diagra,
+# Diagram
+```{mermaid}
+```
 
 # Gramatika
 

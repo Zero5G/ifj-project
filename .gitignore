@@ -1,9 +1,9 @@
 /doc/gen
 /doc/doxygen_warnings.log
 /.cache
+/doc/pages/doc_*
 test_runner
 interpreter
 compile_commands.json
 dokumentace.pdf
 .vscode/settings.json
-.gitignore
