@@ -10,7 +10,7 @@
 <parameters> -> <parameter> <parameter_next>
 <parameters> -> ε
 <parameter> -> TT_IDENTIFIER TT_COLON <type>
-<parameter_next> -> TT_COMMA <parameter>
+<parameter_next> -> TT_COMMA <parameter> <parameter_next>
 <parameter_next> -> ε
 <return_type> -> TT_COLON <type>
 <return_type> -> ε
@@ -24,7 +24,7 @@
 <block> -> <indented_block>
 <indented_block> -> TT_EOL TT_INDENT <body> TT_OUTDENT
 <body> -> <statement_list>
-<statement_list> -> <block_statement>
+<statement_list> -> <block_statement> <statement_list>
 <statement_list> -> ε
 <block_statement> -> <statement>
 <statement> -> <variable_definition>
@@ -51,5 +51,5 @@
 <argument_list> -> <argument> <argument_next>
 <argument_list> -> ε
 <argument> -> <expression>
-<argument_next> TT_COMMA <argument>
+<argument_next> TT_COMMA <argument> <argument_next>
 <argument_next> -> ε
