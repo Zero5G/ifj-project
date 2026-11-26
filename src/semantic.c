@@ -129,7 +129,8 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
         data_type type = stmt->as.var_def.type;
         if (type == TYPE_UNKNOWN && init != nullptr) {
             type = init->data_type;
-        } else if (init != nullptr && !try_coerce_type(&stmt->as.var_def.init, type)) {
+        } else if (init != nullptr &&
+                   !try_coerce_type(&stmt->as.var_def.init, type)) {
             error_fatal_cleanup(ERR_SEM_TYPE);
         }
 
@@ -428,6 +429,32 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     case E_BOOLEAN_LIT:
         expr->data_type = TYPE_BOOL;
         break;
+    }
+}
+
+static data_type infer_fallthrough_type(ast_block_t *block) {
+    ast_stmt_t *last = block->last;
+    if (last == nullptr) {
+        return TYPE_UNIT;
+    }
+    switch (last->kind) {
+    case STMT_EXPR:
+        return last->as.expr->data_type;
+    case STMT_IF: {
+        /* U if všechny větve musí bý tUnit  */
+        data_type then_t = infer_fallthrough_type(&last->as.if_stmt.then_blk);
+        data_type else_t =
+            last->as.if_stmt.has_else
+                ? infer_fallthrough_type(&last->as.if_stmt.else_blk)
+                : TYPE_UNIT;
+        if ((then_t != TYPE_UNIT && then_t != TYPE_UNKNOWN) ||
+            (else_t != TYPE_UNIT && else_t != TYPE_UNKNOWN)) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
+        return TYPE_UNIT;
+    }
+    default:
+        return TYPE_UNIT;
     }
 }
 
