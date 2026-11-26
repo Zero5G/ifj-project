@@ -432,6 +432,10 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     }
 }
 
+// check_block_return, infer_fallthrough_type, infer_body_result
+// Tyto funkce byly přidány na doporučení a s pomocí AI, při hledání chyb
+// v jiné částí kódu, proto prompt nemá co s tímto kódem dělat.
+
 /** @brief Zkontroluje jestli if elsy mají někde return */
 static bool check_block_return(const ast_block_t *block) {
     const ast_stmt_t *last = block->last;
@@ -478,9 +482,11 @@ static void infer_body_result(ast_func_t *func, symbol *sym) {
         func->ret_type = sym->type;
         return;
     }
+
     if (func->ret_type == TYPE_UNIT || check_block_return(&func->body)) {
         return;
     }
+
     ast_stmt_t *last = func->body.last;
     if (last == nullptr || last->kind != STMT_EXPR ||
         !try_coerce_type(&last->as.expr, func->ret_type)) {
