@@ -45,7 +45,7 @@ Vojta Buchmaier | `xbuchmv00` | 25%
 # Úvod
 Projekt byl dělán v jazuku C, standardu `C23`, požívaly jsme kompilátor `clang`, protože byl nejjedušší na instalaci a pracuje s nástroji `clang-tidy` and `clang-format`. Projekt je kompilován za použití programu `Make`.
 
-# Práce v týmu
+## Práce v týmu
 Projekt byl ukládán v git repositáři na GitHubu.
 Kde si každý vytvořil větev a pracoval na ní, jak byla práce hotová, tak si vytvořil _Pull request_,
 který byl poté mergnut do branche kde byl potřeba.
@@ -59,6 +59,19 @@ Styl programovaní jsme zvolili `LLVM` s malou úpravou.
 Projekt dokáže generovat referenční manuál pomocí programu `Doxygen`.
 
 Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v souboru `README.md` v kořenovém adresáři.
+
+## Využití AI nástrojů
+- AI nástroje bylo využité jako nejvíce jako rádce, v případech,
+kdy jsme si nebyli jisti, jak by část kódu mněla vypadat.
+
+- AI také bylo použito ke generování testů, které jsme neodevzávali,
+z tohoto důvodu.
+
+- V připadech, kdy jsme byli zoufalí, tak bylo využito pro statickou analýzu kódu,
+toto se dělo v místech, kdy nám kód i v debugování spadl, a i když jsme našli část
+kde se to stalo, nemohly jsme najít příčinu.
+
+- Každý z nás používal jiný model: Gemini Hydrogen 4, Sonnet 5.5, Copilot 365 (mód Auto)
 
 # Návrh a implementace
 Cílem projektu je implementovat překladač jazuka **IFJ26**, který je podmnožinou jazyku `Scala`.
@@ -81,6 +94,8 @@ Za pomocí těchto hodnot pak vytváří tokeny `INDENT` a `OUTDENT`.
 (`parser.h`, `parser.c`)
 
 ## Abstraktní syntaktický strom
+(`ast.h`, `ast.c`)
+
 Syntaktická analýza vyplňuje abstaktní syntaktický strom (AST), který se skládá z funkcí `ast_func_t`,
 příkazů (`ast_stmt_t`) a výrazů (`ast_expr_t`).
 Funkce jsou uloženy jako jednoduchý jednosměrný spojový seznam, kde kořen je program (`ast_prog_t`),
@@ -162,3 +177,13 @@ flowchart TD
 # Tabulka výrazů (`expr`)
 
 # FSM
+
+# Literatura
+
+- Algoritmus pro TZP:
+Bernstein, D. (n.d.). Hash Functions. York University. https://www.cse.yorku.ca/~oz/hash.html
+
+- Materiály pro TZP: IAL Moodle
+
+- Materiály pro syntaktickou analýzu: Alexander Meduna, Roman Lukáš.
+https://www.fit.vut.cz/study/course/IFJ/public/materials/
