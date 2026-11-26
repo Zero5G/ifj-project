@@ -105,9 +105,7 @@ static const keys keyword_table[] = {
     {"extension", KW_EXTENSION},
     {"for", KW_FOR},
     {"match", KW_MATCH},
-    {"print", KW_PRINT},
     {"type", KW_TYPE},
-    {"main", KW_MAIN},
     // Datove typy
     {"Int", KW_INT},
     {"Double", KW_DOUBLE},
