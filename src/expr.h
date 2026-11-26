@@ -17,13 +17,13 @@
  * @brief Funkce, ktera zacne parsovat expression
  * @param p Ukazatel na kontext parseru
  */
-ast_expr_t *parse_expression(parser_ctx *p);
+ast_expr_t *parse_expression(parser_ctx *ctx);
 
 /**
  * @brief Funkce, ktera zparsuje jeden term (identifikator nebo literal) a vrati
  * jeho uzel
  * @param p Ukazatel na kontext parseru
  */
-ast_expr_t *parse_term(parser_ctx *p);
+ast_expr_t *parse_term(parser_ctx *ctx);
 
 #endif

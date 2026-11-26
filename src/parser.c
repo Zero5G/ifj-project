@@ -43,14 +43,14 @@ static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
 
-bool parser_init(parser_ctx *ctx, lexer *lx) {
-    ctx->lx = lx;
+bool parser_init(parser_ctx *ctx, lexer *lex) {
+    ctx->lx = lex;
     ctx->current = (token){.type = TT_EOF};
     if (ctx->prog == nullptr) {
         return false;
     }
 
-    ctx->current = get_next_token(lx);
+    ctx->current = get_next_token(lex);
 
     return true;
 }
@@ -86,8 +86,8 @@ bool expect(parser_ctx *ctx, token_type type) {
     return true;
 }
 
-static bool accept_kw(parser_ctx *ctx, keyword kw) {
-    if (!token_is_kw(&ctx->current, kw)) {
+static bool accept_kw(parser_ctx *ctx, keyword kwd) {
+    if (!token_is_kw(&ctx->current, kwd)) {
         return false;
     }
 
@@ -95,8 +95,8 @@ static bool accept_kw(parser_ctx *ctx, keyword kw) {
     return true;
 }
 
-static bool expect_kw(parser_ctx *ctx, keyword kw) {
-    if (!token_is_kw(&ctx->current, kw)) {
+static bool expect_kw(parser_ctx *ctx, keyword kwd) {
+    if (!token_is_kw(&ctx->current, kwd)) {
         error_fatalf_cleanup(ERR_SYNT, "Nedostal jsem očekávané klíčové slovo");
     }
 
@@ -109,7 +109,7 @@ static unsigned current_line(const parser_ctx *ctx) {
 }
 
 static bool is_name_kw(const token *tok) {
-    return token_is_kw(tok, KW_MAIN) || token_is_kw(tok, KW_PRINT);
+    return (bool)(token_is_kw(tok, KW_MAIN) || token_is_kw(tok, KW_PRINT));
 }
 
 static dstr take_identifier(parser_ctx *ctx) {
@@ -150,8 +150,8 @@ static dstr take_function_name(parser_ctx *ctx) {
 }
 
 static bool is_stmt_end(const parser_ctx *ctx) {
-    return ctx->current.type == TT_EOL || ctx->current.type == TT_OUTDENT ||
-           ctx->current.type == TT_EOF;
+    return (bool)(ctx->current.type == TT_EOL || ctx->current.type == TT_OUTDENT ||
+        ctx->current.type == TT_EOF);
 }
 
 static bool expect_stmt_end(parser_ctx *ctx) {
@@ -159,7 +159,7 @@ static bool expect_stmt_end(parser_ctx *ctx) {
         return true;
     }
 
-    return ctx->current.type == TT_OUTDENT || ctx->current.type == TT_EOF;
+    return (bool)(ctx->current.type == TT_OUTDENT || ctx->current.type == TT_EOF);
 }
 
 static bool add_parameter(ast_func_t *func, dstr name) {
@@ -181,7 +181,7 @@ static bool add_parameter(ast_func_t *func, dstr name) {
 }
 
 static bool add_argument(ast_expr_t *call, ast_expr_t *arg) {
-    ast_expr_t **args = realloc((void *)call->as.func.args,
+    ast_expr_t **args = (ast_expr_t**)realloc((void *)call->as.func.args,
                                 (call->as.func.argc + 1) * sizeof(*args));
     if (args == nullptr) {
         error_fatal_cleanup(ERR_OTHER);
@@ -225,11 +225,11 @@ static bool is_statement(parser_ctx *ctx) {
         return false;
     }
 
-    return token_is_kw(&ctx->current, KW_VAL) ||
+    return (bool)(token_is_kw(&ctx->current, KW_VAL) ||
            token_is_kw(&ctx->current, KW_VAR) ||
            token_is_kw(&ctx->current, KW_RETURN) ||
            token_is_kw(&ctx->current, KW_IF) ||
-           token_is_kw(&ctx->current, KW_WHILE) || is_name_kw(&ctx->current);
+           token_is_kw(&ctx->current, KW_WHILE) || is_name_kw(&ctx->current));
 }
 
 bool parser_run(parser_ctx *ctx) {
@@ -273,7 +273,7 @@ static bool parse_prolog(parser_ctx *ctx) {
         error_fatal_cleanup(ERR_SYNT);
     }
 
-    return accept(ctx, TT_EOL) || ctx->current.type == TT_EOF;
+    return (bool)(accept(ctx, TT_EOL) || ctx->current.type == TT_EOF);
 }
 
 // <function_list> -> <annotation> <function> <function_list>
@@ -304,10 +304,7 @@ static bool parse_annotation(parser_ctx *ctx, bool *is_main) {
         return true;
     }
 
-    if (token_is_kw(&ctx->current, KW_MAIN)) {
-        advance(ctx);
-    } else if (ctx->current.type == TT_IDENTIFIER &&
-               dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0) {
+    if (token_is_kw(&ctx->current, KW_MAIN) || (ctx->current.type == TT_IDENTIFIER && dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0)) {
         advance(ctx);
     } else {
         return false;

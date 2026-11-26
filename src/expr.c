@@ -32,65 +32,68 @@ typedef enum {
     PS_NOT,
     PS_AND,
     PS_OR,
-    PS_DOLLAR
+    PS_DOLLAR,
 } prec_symbol_t;
 
+// clang-format off
 static const char precedence_table[18][18] = {
     // +
     {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // -
     {'>', '>', '<', '<', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // *
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // /
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // <
     {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // >
     {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // <=
     {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // >=
     {'<', '<', '<', '<', ' ', ' ', ' ', ' ', '>', '>', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // ==
     {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // !=
     {'<', '<', '<', '<', '<', '<', '<', '<', ' ', ' ', '<', '>', '<', '<', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // (
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '=', '<', '<', '<',
-     '<', '<', ' '},
+     '<', '<', ' ',},
     // )
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', ' ', ' ',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // i
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', ' ', '>', ' ', '>', '>',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // unary -
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', '>', '<', '<', ' ',
-     ' ', ' ', '>'},
+     ' ', ' ', '>',},
     // !
     {'>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '<', ' ', '<', ' ', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // &&
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', ' ', '<',
-     '>', '>', '>'},
+     '>', '>', '>',},
     // ||
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '>', '<', ' ', '<',
-     '<', '>', '>'},
+     '<', '>', '>',},
     // $
     {'<', '<', '<', '<', '<', '<', '<', '<', '<', '<', '<', ' ', '<', '<', '<',
-     '<', '<', ' '},
+     '<', '<', ' ',},
 };
+// clang-format on
+
 
 static char precedence(prec_symbol_t stack, prec_symbol_t input) {
     return precedence_table[stack][input];
@@ -188,19 +191,19 @@ typedef struct {
     int top;
 } expr_stack_t;
 
-static void stack_init(expr_stack_t *s) { s->top = -1; }
+static void stack_init(expr_stack_t *stk) { stk->top = -1; }
 
-static bool stack_push(expr_stack_t *s, stack_item_t item) {
-    if (s->top + 1 >= STACK_SIZE) {
+static bool stack_push(expr_stack_t *stk, stack_item_t item) {
+    if (stk->top + 1 >= STACK_SIZE) {
         error_fatal_cleanup(ERR_OTHER);
     }
-    s->items[++s->top] = item;
+    stk->items[++stk->top] = item;
     return true;
 }
 
-static int top_terminal_index(expr_stack_t *s) {
-    for (int i = s->top; i >= 0; i--) {
-        if (s->items[i].kind == ITEM_SYMBOL) {
+static int top_terminal_index(expr_stack_t *stk) {
+    for (int i = stk->top; i >= 0; i--) {
+        if (stk->items[i].kind == ITEM_SYMBOL) {
             return i;
         }
     }
@@ -208,13 +211,13 @@ static int top_terminal_index(expr_stack_t *s) {
     return 0;
 }
 
-static prec_symbol_t top_terminal(expr_stack_t *s) {
-    return s->items[top_terminal_index(s)].symbol;
+static prec_symbol_t top_terminal(expr_stack_t *stk) {
+    return stk->items[top_terminal_index(stk)].symbol;
 }
 
-static ast_expr_t *make_binary(token_type op, ast_expr_t *left,
+static ast_expr_t *make_binary(token_type bop, ast_expr_t *left,
                                ast_expr_t *right) {
-    return ast_expr_binary_create(left->line, token_to_binary(op), left, right);
+    return ast_expr_binary_create(left->line, token_to_binary(bop), left, right);
 }
 
 static stack_item_t make_expr(ast_expr_t *expr) {
@@ -296,7 +299,7 @@ static bool at_unit_literal(parser_ctx *ctx) {
         return false;
     }
     const token *next = lexer_peek(ctx->lx, 1);
-    return next != nullptr && next->type == TT_RPAREN;
+    return (bool)(next != nullptr && next->type == TT_RPAREN);
 }
 
 ast_expr_t *parse_term(parser_ctx *ctx) {
@@ -387,7 +390,7 @@ static bool shift_operand(expr_stack_t *stack, parser_ctx *ctx) {
 
     return stack_push(stack, (stack_item_t){.kind = ITEM_SYMBOL,
                                             .symbol = PS_OPERAND,
-                                            .expr = expr});
+                                            .expr = expr,});
 }
 
 static bool reduce(expr_stack_t *stack) {
@@ -411,10 +414,10 @@ static bool reduce(expr_stack_t *stack) {
     }
 
     if (count == 2) {
-        stack_item_t op = stack->items[marker + 1];
+        stack_item_t opr = stack->items[marker + 1];
         stack_item_t operand = stack->items[marker + 2];
 
-        if (op.kind == ITEM_SYMBOL && op.symbol == PS_UMINUS &&
+        if (opr.kind == ITEM_SYMBOL && opr.symbol == PS_UMINUS &&
             operand.kind == ITEM_EXPR) {
 
             ast_expr_t *expr = ast_expr_unary_create(operand.expr->line,
@@ -428,7 +431,7 @@ static bool reduce(expr_stack_t *stack) {
             return stack_push(stack, make_expr(expr));
         }
 
-        if (op.kind == ITEM_SYMBOL && op.symbol == PS_NOT &&
+        if (opr.kind == ITEM_SYMBOL && opr.symbol == PS_NOT &&
             operand.kind == ITEM_EXPR) {
 
             ast_expr_t *expr = ast_expr_unary_create(operand.expr->line,
@@ -447,15 +450,15 @@ static bool reduce(expr_stack_t *stack) {
 
     if (count == 3) {
         stack_item_t left = stack->items[marker + 1];
-        stack_item_t op = stack->items[marker + 2];
+        stack_item_t opr = stack->items[marker + 2];
         stack_item_t right = stack->items[marker + 3];
 
         if (left.kind == ITEM_SYMBOL && left.symbol == PS_LPAREN &&
-            op.kind == ITEM_EXPR && right.kind == ITEM_SYMBOL &&
+            opr.kind == ITEM_EXPR && right.kind == ITEM_SYMBOL &&
             right.symbol == PS_RPAREN) {
             stack->top = marker - 1;
 
-            return stack_push(stack, op);
+            return stack_push(stack, opr);
         }
 
         if (left.kind != ITEM_EXPR) {
@@ -464,13 +467,13 @@ static bool reduce(expr_stack_t *stack) {
         if (right.kind != ITEM_EXPR) {
             return false;
         }
-        if (op.kind != ITEM_SYMBOL) {
+        if (opr.kind != ITEM_SYMBOL) {
             return false;
         }
 
         token_type tok;
 
-        switch (op.symbol) {
+        switch (opr.symbol) {
         case PS_PLUS:
             tok = TT_PLUS;
             break;
@@ -548,10 +551,10 @@ ast_expr_t *parse_expression(parser_ctx *ctx) {
 
         if (input == PS_MINUS) {
             stack_item_t *last = &stack.items[stack.top];
-            bool after_operand =
-                last->kind == ITEM_EXPR ||
+            bool after_operand = (bool)
+                (last->kind == ITEM_EXPR ||
                 (last->kind == ITEM_SYMBOL &&
-                 (last->symbol == PS_OPERAND || last->symbol == PS_RPAREN));
+                 (last->symbol == PS_OPERAND || last->symbol == PS_RPAREN)));
             if (!after_operand) {
                 input = PS_UMINUS;
             }

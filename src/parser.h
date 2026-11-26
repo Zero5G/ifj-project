@@ -25,7 +25,7 @@ typedef struct parser_ctx {
  * @param ctx Ukazatel na kontext parseru
  * @param lx Ukazatel na lexer
  */
-bool parser_init(parser_ctx *ctx, lexer *lx);
+bool parser_init(parser_ctx *ctx, lexer *lex);
 
 /**
  * @brief Funkce, ktera zacina parsovani
