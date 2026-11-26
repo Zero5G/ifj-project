@@ -42,7 +42,7 @@ int main(void) {
         error_fatal_cleanup(ERR_OTHER);
     }
     if (!parser_run(&parser)) {
-        error_fatal_cleanup(ERR_OTHER);
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     lexer_destroy(&lex);
