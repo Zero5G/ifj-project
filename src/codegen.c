@@ -319,6 +319,16 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         gen_expr(ctx, expr->as.func.args[0]);
         fputs("INT2CHARS\n", ctx->out);
     }
+
+    // readBoolean()
+    else if (strcmp(func_name, "readBoolean") == 0) {
+        unsigned idx = ++ctx->label_id;
+        fputs("READ LF@tmp1 bool\n", ctx->out);
+        fprintf(ctx->out, "JUMPIFNEQ &rb_ok_%u LF@tmp1 nil@nil\n", idx);
+        fputs("MOVE LF@tmp1 bool@false\n", ctx->out);
+        fprintf(ctx->out,"LABEL &rb_ok_%u\n",idx);
+        fputs("PUSHS LF@tmp1\n", ctx->out);
+    }
 }
 
 static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block);
