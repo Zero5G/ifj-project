@@ -221,6 +221,7 @@ static bool is_statement(parser_ctx *ctx) {
     case TT_UNIT_LITERAL:
     case TT_LPAREN:
     case TT_NOT:
+    case TT_MINUS:
         return true;
     case TT_KEYWORD:
         break;
