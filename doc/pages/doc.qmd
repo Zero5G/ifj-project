@@ -64,6 +64,8 @@ Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v sou
 Cílem projektu je implementovat překladač jazuka **IFJ26**, který je podmnožinou jazyku `Scala`.
 
 ## Lexikální analýza
+(`lexer.h`, `lexer.c`)
+
 Lexikální analýzátor (lexer) používá konečný automat, který jde vidět v části [FSM](#fsm).
 
 Obsahuje funkce voláné syntaktickou analýzou, hlavní je funkce co udělá ze vstupu tokeny,
@@ -76,6 +78,7 @@ lexer si proto ukládá zásobníku počet odsazení do leva a kolik chybí odsa
 Za pomocí těchto hodnot pak vytváří tokeny `INDENT` a `OUTDENT`.
 
 ## Syntaktická analýza
+(`parser.h`, `parser.c`)
 
 ## Abstraktní syntaktický strom
 Syntaktická analýza vyplňuje abstaktní syntaktický strom, který se skládá z funkcí `ast_func_t`,
@@ -98,17 +101,25 @@ flowchart TD
     EXPR --> FUNC
 ```
 
-## Semantická analýza (`semantic`)
-Semantická analýza probíhá po syntatické analýze, tento modul obsahuje jen jednu funkci, která
-Prochází AST a kontroluje typy proměnných, ukládá funkce a proměnné do takulky symbolů (`symtable`).
+## Semantická analýza
+(`semantic.h`, `semantic.c`)
+
+Semantická analýza probíhá po syntatické analýze, tento modul obsahuje jen jednu veřejnou funkci,
+která prochází AST a kontroluje typy proměnných, ukládá funkce a proměnné do takulky symbolů (`symtable`).
 Při procházení se kontrolůjí typy funkcí (typy parametrů a náratný typ) a proměnných.
 Pro funkce se zde doplňuje náratný typ, pokud nebyl zadán ve zdrojovém kódu.
 Také se zde generuje výraz pro povýšení typu `integer` na typ `double`.
 
-### Tabulka symbolů (`symtable`)
-Tabulka symbolů používá tabulku s rozptýlenými položkami s implicitním zřetězením položek.
+### Tabulka symbolů
+(`symtable.h`, `symtable.c`, `htab.h`, `htab.c`)
 
-## Generátor kódu (`codegen`)
+Tabulka symbolů (TS) používá tabulku s rozptýlenými položkami (TRP) s implicitním zřetězením položek.
+TS je složená z několika TRP, jednoho hlavního pro funkce a několika pod tabulek,
+Podtabulky jsou uloženy v rozsahu `scope` (tj. rozsah platnosti) a obsahuje odkaz na svého _rodiče_.
+Přechod mezi roznimi zajišťují funkcemi `symtable_enter_scope` a `symtable_leave_scope`
+(pro funkce `symtable_enter_func` a `symtable_leave_func`).
+
+## Generátor kódu
 
 # Diagram programu
 ```{mermaid}
