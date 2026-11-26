@@ -2,7 +2,7 @@
 /doc/doxygen_warnings.log
 /.cache
 test_runner
-interpreter
+compiler
 compile_commands.json
 dokumentace.pdf
 .vscode/settings.json
