@@ -37,7 +37,7 @@ $(TEST_TARGET): $(TEST_SRC)
 	@mkdir -p $(@D)
 	$(CC) $(TEST_CFLAGS) $^ $(filter-out src/main.c,$(SRC)) -o $@ $(TEST_LDFLAGS)
 
-test: $(TEST_TARGET)
+test: $(TARGET) $(TEST_TARGET)
 	./$(TEST_TARGET)
 
 run: $(TARGET)
