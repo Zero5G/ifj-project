@@ -217,6 +217,7 @@ static bool is_statement(parser_ctx *ctx) {
     case TT_BOOLEAN_LITERAL:
     case TT_UNIT_LITERAL:
     case TT_LPAREN:
+    case TT_NOT:
         return true;
     case TT_KEYWORD:
         break;
@@ -688,8 +689,21 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
     if (accept_kw(ctx, KW_ELSE)) {
         stmt->as.if_stmt.has_else = true;
 
-        if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
-            return nullptr;
+        if (token_is_kw(&ctx->current, KW_IF)) {
+
+            ast_stmt_t *nested = parse_if_statement(ctx);
+
+            if (nested == nullptr) {
+                return nullptr;
+            }
+
+            if (!ast_block_append(&stmt->as.if_stmt.else_blk, nested)) {
+                return nullptr;
+            }
+        } else {
+            if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
+                return nullptr;
+            }
         }
     }
 
