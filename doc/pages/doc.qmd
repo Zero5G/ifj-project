@@ -7,7 +7,11 @@ fontsize: 11pt
 format:
   pdf:
     output-file: "dokumentace.pdf"
-    resource-path: ["../assets"]
+    resource-path: ["../assets", "../other"]
+    include-in-header:
+      text: |
+        \usepackage{fvextra}
+        \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,breakanywhere,commandchars=\\\{\}}
 ---
 
 ![VUT FIT logo](FIT_barevne_RGB_CZ.png)
@@ -69,6 +73,8 @@ Struktury se skládají z unií a struktů, aktuální část unie rozhodují en
 
 ### AST - diagram návazností struktur
 ```{mermaid}
+%%| fig-width: 3
+%%| fig-height: 4
 flowchart TD
     PROG[ast_prog_t] --> FUNC[ast_func_t]
     FUNC --> BLOCK[ast_block_t]
@@ -113,6 +119,9 @@ flowchart TD
 ```
 
 # Gramatika
+```default
+{{< include ../other/grammar.txt >}}
+```
 
 # Tabulka výrazů (`expr`)
 
