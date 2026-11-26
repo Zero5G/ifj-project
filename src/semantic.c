@@ -432,6 +432,20 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     }
 }
 
+/** @brief Zkontroluje jestli if elsy mají někde return */
+static bool check_block_return(const ast_block_t *block) {
+    const ast_stmt_t *last = block->last;
+    if (last == nullptr) {
+        return false;
+    }
+    if (last->kind == STMT_RET) {
+        return true;
+    }
+    return (bool)(last->kind == STMT_IF && last->as.if_stmt.has_else &&
+                  check_block_return(&last->as.if_stmt.then_blk) &&
+                  check_block_return(&last->as.if_stmt.else_blk));
+}
+
 static data_type infer_fallthrough_type(ast_block_t *block) {
     ast_stmt_t *last = block->last;
     if (last == nullptr) {
