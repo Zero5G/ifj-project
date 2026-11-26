@@ -14,6 +14,9 @@ INCLUDES := $(wildcard src/*.h)
 SRC := $(wildcard src/*.c)
 TEST_SRC := $(wildcard tests/*.c)
 
+ARCHIVE_TARGET := archive.zip
+DOC_TARGET := dokumentace.pdf
+
 .PHONY: all build debug debug-test test run doc format check-format check-tidy check clean
 
 all: clean build
@@ -57,5 +60,13 @@ doc:
 	make -C doc/gen/latex
 	cp doc/gen/latex/refman.pdf dokumentace.pdf
 
+pack:
+	zip -r $(ARCHIVE_TARGET) \
+		src/ Makefile rozdeleni rozsireni $(DOC_TARGET)
+
 clean:
-	rm -rf test_runner interpreter doc/gen/* dokumentace.pdf
+	rm -rf test_runner interpreter doc/gen/* $(DOC_TARGET) $(ARCHIVE_TARGET)
+
+is_it_ok: pack
+	cp $(ARCHIVE_TARGET) is_it_ok/
+	cd is_it_ok/ && ./is_it_ok.sh $(ARCHIVE_TARGET)

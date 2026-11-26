@@ -1,9 +1,10 @@
 /doc/gen
 /doc/doxygen_warnings.log
 /.cache
+/.vscode
+/is_it_ok/ifj26*
 test_runner
 compiler
 compile_commands.json
 dokumentace.pdf
-.vscode/settings.json
-.gitignore
+archive.zip
