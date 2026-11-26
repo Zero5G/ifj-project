@@ -139,7 +139,7 @@ lexer *lexer_create(FILE *in);
  *
  * @param lx Ukazatel na instanci lexikalniho analyzatoru.
  */
-void lexer_destroy(lexer *lx);
+void lexer_destroy(lexer **lx);
 
 /**
  * @brief Nacte a vrati nasledujici token ze vstupu (posune cteni dopredu).

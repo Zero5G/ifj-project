@@ -132,7 +132,7 @@ static bool check_keyword(dstr pole, keyword *out_kw) {
 
 static double prevod_double(dstr pole) {
     errno = 0;
-    double hodnota = strtod(dstr_cstr(pole), NULL);
+    double hodnota = strtod(dstr_cstr(pole), nullptr);
     if (isinf(hodnota) || (hodnota == 0.0 && errno == ERANGE)) {
         dstr_delete(pole);
         error_fatal_cleanup(ERR_LEX);
@@ -661,7 +661,7 @@ static token read_token_fsm(lexer *lx) {
                     error_fatal_cleanup(ERR_LEX); // nemuze byt 7adfdsfds
                 }
                 back_char(lx, chr);
-                tok.attr.as_int = strtol(dstr_cstr(str), NULL, 10);
+                tok.attr.as_int = strtol(dstr_cstr(str), nullptr, 10);
                 tok.type = TT_INT_LITERAL;
                 dstr_delete(str);
                 return tok;
@@ -710,7 +710,7 @@ static token read_token_fsm(lexer *lx) {
                 }
                 back_char(lx, chr); // vraceni neznameho znaku
                 tok.type = TT_INT_LITERAL;
-                tok.attr.as_int = (int)strtol(dstr_cstr(str), NULL, 10);
+                tok.attr.as_int = (int)strtol(dstr_cstr(str), nullptr, 10);
                 dstr_delete(str);
                 return tok;
             }
@@ -731,7 +731,7 @@ static token read_token_fsm(lexer *lx) {
             } else if (chr == 'e' || chr == 'E') {
                 char last_chr = dstr_cstr(str)[dstr_len(str) - 1];
                 if ((after_underscore == true) || !isdigit(last_chr) ||
-                    (strpbrk(dstr_cstr(str), "eE") != NULL)) {
+                    (strpbrk(dstr_cstr(str), "eE") != nullptr)) {
                     dstr_delete(str);
                     error_fatal_cleanup(
                         ERR_LEX); // chyba: 1.e5 nebo 1.5_e2 nebo 1e2e3
@@ -918,7 +918,7 @@ static token read_token_fsm(lexer *lx) {
 }
 
 bool token_is_kw(const token *tok, keyword kw) {
-    if (tok == NULL) {
+    if (tok == nullptr) {
         return false;
     }
     if ((tok->type == TT_KEYWORD) && (tok->attr.as_keyword == kw)) {
@@ -928,14 +928,14 @@ bool token_is_kw(const token *tok, keyword kw) {
 }
 
 void token_free(token *tok) {
-    if (tok == NULL) {
+    if (tok == nullptr) {
         return;
     }
 
     if ((tok->type == TT_IDENTIFIER) || (tok->type == TT_STRING_LITERAL)) {
-        if (tok->attr.as_str != NULL) {
+        if (tok->attr.as_str != nullptr) {
             dstr_delete(tok->attr.as_str);
-            tok->attr.as_str = NULL;
+            tok->attr.as_str = nullptr;
         }
     }
 }
@@ -1026,13 +1026,13 @@ const char *token_type_name(token_type type) {
 }
 
 lexer *lexer_create(FILE *in) {
-    if (in == NULL) {
-        return NULL;
+    if (in == nullptr) {
+        return nullptr;
     }
 
     lexer *lx = malloc(sizeof(struct lexer));
-    if (lx == NULL) {
-        return NULL;
+    if (lx == nullptr) {
+        return nullptr;
     }
     lx->indent_stack[0] = 0;
     lx->indent_top = 0;
@@ -1048,20 +1048,26 @@ lexer *lexer_create(FILE *in) {
     return lx;
 }
 
-void lexer_destroy(lexer *lx) {
-    if (lx == NULL) {
+void lexer_destroy(lexer **lx) {
+    if (lx == nullptr || *lx == nullptr) {
         return;
     }
-    for (unsigned i = 0; i < lx->peek_count; i++) {
-        token_free(&lx->peek_arr[i]);
+
+    if ((*lx) == nullptr) {
+        return;
     }
-    free(lx);
+
+    for (unsigned i = 0; i < (*lx)->peek_count; i++) {
+        token_free(&(*lx)->peek_arr[i]);
+    }
+    free(*lx);
+    *lx = nullptr;
 }
 
 // zobrazeni tokenu do predu
 const token *lexer_peek(lexer *lx, unsigned n) {
-    if (((lx == NULL) || (n < 1) || (n > LEXER_MAX_PEEK))) {
-        return NULL;
+    if (((lx == nullptr) || (n < 1) || (n > LEXER_MAX_PEEK))) {
+        return nullptr;
     }
     while (lx->peek_count < n) {
         lx->peek_arr[lx->peek_count] = read_token_fsm(lx);
@@ -1072,7 +1078,7 @@ const token *lexer_peek(lexer *lx, unsigned n) {
 // hlavni verejna funkce pro parser. Vrati dalsi token na rade a posune cteni
 // dal
 token get_next_token(lexer *lx) {
-    if (lx == NULL) {
+    if (lx == nullptr) {
         token err = {.type = TT_EOF};
         return err;
     }
