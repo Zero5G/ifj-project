@@ -7,7 +7,6 @@
  * @details
  */
 
-#include "ast.h"
 #include <string.h>
 #define HTAB_BASE_SIZE 12
 
@@ -125,9 +124,9 @@ bool symtable_leave_scope(symtable *stab) {
 }
 
 sym_result symtable_add_var(symtable *stab, const char *name, symbol **out) {
-    symbol *existing = symtable_find_var(stab, name);
+    hash_item *existing = hashtable_search(&stab->current->vars, name);
     if (existing != nullptr) {
-        *out = existing;
+        *out = existing->symbol;
         return SYM_EXISTS;
     }
 

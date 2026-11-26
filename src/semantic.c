@@ -94,6 +94,7 @@ static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
 static void analyze_func(sematic_ctx *ctx, symbol *sym);
+static bool try_coerce_type(ast_expr_t **expr, data_type wanted);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
     if (!symtable_enter_scope(ctx->stab)) {
@@ -128,8 +129,8 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
         data_type type = stmt->as.var_def.type;
         if (type == TYPE_UNKNOWN && init != nullptr) {
             type = init->data_type;
-        } else if (init != nullptr && init->data_type != TYPE_UNKNOWN &&
-                   type != init->data_type) {
+        } else if (init != nullptr &&
+                   !try_coerce_type(&stmt->as.var_def.init, type)) {
             error_fatal_cleanup(ERR_SEM_TYPE);
         }
 
@@ -145,22 +146,21 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
         break;
     case STMT_RET: {
         ast_expr_t *ret_val = stmt->as.ret_val;
-        symbol *func = ctx->current_sym;
 
         if (ret_val != nullptr) {
             analyze_expr(ctx, ret_val);
         }
 
-        data_type type = ret_val != nullptr ? ret_val->data_type : TYPE_UNIT;
         ctx->saw_return = true;
 
-        if (type == TYPE_UNKNOWN) {
+        if (!ctx->current_func->has_ret_type) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
+        data_type wanted = ctx->current_func->ret_type;
+        if (wanted == TYPE_UNIT) {
             break;
         }
-
-        if (func->type == TYPE_UNKNOWN) {
-            func->type = type;
-        } else if (func->type != type) {
+        if (ret_val == nullptr || !try_coerce_type(&stmt->as.ret_val, wanted)) {
             error_fatal_cleanup(ERR_SEM_TYPE);
         }
         break;
@@ -178,8 +178,7 @@ static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt) {
             error_fatal_cleanup(ERR_SEM_ROAE);
         }
 
-        if (sym->type != TYPE_UNKNOWN && val->data_type != TYPE_UNKNOWN &&
-            sym->type != val->data_type) {
+        if (!try_coerce_type(&stmt->as.assign.val, sym->type)) {
             error_fatal_cleanup(ERR_SEM_TYPE);
         }
 
@@ -235,6 +234,24 @@ static ast_expr_t *promote_int(ast_expr_t *expr) {
     }
     conv->data_type = TYPE_DOUBLE;
     return conv;
+}
+
+/** Zkusit přepsat typ na ten co chceme */
+static bool try_coerce_type(ast_expr_t **expr, data_type wanted) {
+    data_type got = (*expr)->data_type;
+    if (got == TYPE_UNKNOWN || wanted == TYPE_UNKNOWN || wanted == TYPE_ANY ||
+        got == wanted) {
+        return true;
+    }
+    if (wanted == TYPE_DOUBLE && got == TYPE_INT) {
+        ast_expr_t *promoted = promote_int(*expr);
+        if (promoted == nullptr) {
+            error_fatal_cleanup(ERR_OTHER);
+        }
+        *expr = promoted;
+        return true;
+    }
+    return false;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -335,7 +352,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         case OPB_LTE:
         case OPB_GT:
         case OPB_GTE:
-            if (!is_num(type)) {
+            if (!is_num(type) && type != TYPE_STRING) {
                 error_fatal_cleanup(ERR_SEM_TYPE);
             }
             expr->data_type = TYPE_BOOL;
@@ -380,9 +397,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
             data_type wanted = callee->is_builtin
                                    ? callee->param_types[i]
                                    : callee->decl->params[i].type;
-            data_type gotten = expr->as.func.args[i]->data_type;
-            if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN &&
-                wanted != TYPE_ANY && gotten != wanted) {
+            if (!try_coerce_type(&expr->as.func.args[i], wanted)) {
                 error_fatal_cleanup(ERR_SEM_BADARGS);
             }
         }
@@ -414,6 +429,68 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
     case E_BOOLEAN_LIT:
         expr->data_type = TYPE_BOOL;
         break;
+    }
+}
+
+// check_block_return, infer_fallthrough_type, infer_body_result
+// Tyto funkce byly přidány na doporučení a s pomocí AI, při hledání chyb
+// v jiné částí kódu, proto prompt nemá co s tímto kódem dělat.
+
+/** @brief Zkontroluje jestli if elsy mají někde return */
+static bool check_block_return(const ast_block_t *block) {
+    const ast_stmt_t *last = block->last;
+    if (last == nullptr) {
+        return false;
+    }
+    if (last->kind == STMT_RET) {
+        return true;
+    }
+    return (bool)(last->kind == STMT_IF && last->as.if_stmt.has_else &&
+                  check_block_return(&last->as.if_stmt.then_blk) &&
+                  check_block_return(&last->as.if_stmt.else_blk));
+}
+
+static data_type infer_fallthrough_type(ast_block_t *block) {
+    ast_stmt_t *last = block->last;
+    if (last == nullptr) {
+        return TYPE_UNIT;
+    }
+    switch (last->kind) {
+    case STMT_EXPR:
+        return last->as.expr->data_type;
+    case STMT_IF: {
+        /* U if všechny větve musí bý tUnit  */
+        data_type then_t = infer_fallthrough_type(&last->as.if_stmt.then_blk);
+        data_type else_t =
+            last->as.if_stmt.has_else
+                ? infer_fallthrough_type(&last->as.if_stmt.else_blk)
+                : TYPE_UNIT;
+        if ((then_t != TYPE_UNIT && then_t != TYPE_UNKNOWN) ||
+            (else_t != TYPE_UNIT && else_t != TYPE_UNKNOWN)) {
+            error_fatal_cleanup(ERR_SEM_TYPE);
+        }
+        return TYPE_UNIT;
+    }
+    default:
+        return TYPE_UNIT;
+    }
+}
+
+static void infer_body_result(ast_func_t *func, symbol *sym) {
+    if (!func->has_ret_type) {
+        sym->type = infer_fallthrough_type(&func->body);
+        func->ret_type = sym->type;
+        return;
+    }
+
+    if (func->ret_type == TYPE_UNIT || check_block_return(&func->body)) {
+        return;
+    }
+
+    ast_stmt_t *last = func->body.last;
+    if (last == nullptr || last->kind != STMT_EXPR ||
+        !try_coerce_type(&last->as.expr, func->ret_type)) {
+        error_fatal_cleanup(ERR_SEM_TYPE);
     }
 }
 
@@ -455,10 +532,8 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
     analyze_block(ctx, &func->body);
     func->var_count = symtable_leave_func(ctx->stab);
 
+    infer_body_result(func, sym);
     if (sym->ret_state == RET_INFERRING) {
-        if (sym->type == TYPE_UNKNOWN && !ctx->saw_return) {
-            sym->type = TYPE_UNIT;
-        }
         sym->ret_state = RET_INFERRED;
     }
 
@@ -481,6 +556,27 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
 
     if (!declare_funcs(&ctx)) {
         return;
+    }
+
+    ast_func_t *main_func = nullptr;
+    unsigned main_count = 0;
+    for (ast_func_t *func = prog->first; func != nullptr; func = func->next) {
+        if (func->is_main) {
+            main_func = func;
+            main_count++;
+        }
+    }
+    if (main_count == 0) {
+        error_fatal_cleanup(ERR_SEM_UNDEF);
+    }
+    if (main_count > 1) {
+        error_fatal_cleanup(ERR_SEM_REDEF);
+    }
+    if (main_func->param_count != 0) {
+        error_fatal_cleanup(ERR_SEM_BADARGS);
+    }
+    if (main_func->has_ret_type && main_func->ret_type != TYPE_UNIT) {
+        error_fatal_cleanup(ERR_SEM_TYPE);
     }
 
     for (ast_func_t *func = prog->first; func != nullptr; func = func->next) {
