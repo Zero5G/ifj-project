@@ -25,6 +25,7 @@ typedef struct {
 
 // NOLINTBEGIN(cert-err33-c)
 
+/** * @brief Převede řetězec na konstantu string@... . */
 static void print_string(FILE *out, const char *str) {
     fputs("string@", out);
     for (const unsigned char *ptr = (const unsigned char *)str; *ptr != '\0';
@@ -39,6 +40,7 @@ static void print_string(FILE *out, const char *str) {
 
 static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr);
 
+/** * @brief Rekurzivne vyhodnoti uzel výrazu tak, aby hodnota zůstala uložena na vrcholu zásobníku. */
 static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
     switch (expr->kind) {
     case E_INT_LIT:
@@ -66,6 +68,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
         }
         break;
     case E_BINARY:
+        // &&
         if (expr->as.binary.op == OPB_AND) {
             unsigned idx = ++ctx->label_id;
             gen_expr(ctx, expr->as.binary.left);
@@ -78,6 +81,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
             fprintf(ctx->out, "LABEL &and_end_%u\n",idx);
             break;
         }
+        // ||
         if (expr->as.binary.op == OPB_OR) {
             unsigned idx = ++ctx->label_id;
             gen_expr(ctx, expr->as.binary.left);
@@ -93,6 +97,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
         gen_expr(ctx, expr->as.binary.left);
         gen_expr(ctx, expr->as.binary.right);
         switch (expr->as.binary.op) {
+        // +
         case OPB_ADD:
             if (expr->data_type == TYPE_STRING) {
                 fputs("POPS LF@tmp2\n", ctx->out);
@@ -103,9 +108,11 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
                 fputs("ADDS\n", ctx->out);
             }
             break;
+        // -
         case OPB_SUB:
             fputs("SUBS\n", ctx->out);
             break;
+        // /
         case OPB_DIV:
             if (expr->data_type == TYPE_INT) {
                 fputs("IDIVS\n", ctx->out);
@@ -113,21 +120,27 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
                 fputs("DIVS\n", ctx->out);
             }
             break;
+        // *
         case OPB_MUL:
             fputs("MULS\n", ctx->out);
             break;
+        // ==
         case OPB_EQ:
             fputs("EQS\n", ctx->out);
             break;
+        // >
         case OPB_GT:
             fputs("GTS\n", ctx->out);
             break;
+        // =>
         case OPB_GTE:
             fputs("LTS\nNOTS\n", ctx->out);
             break;
+        // <
         case OPB_LT:
             fputs("LTS\n", ctx->out);
             break;
+        // =<
         case OPB_LTE:
             fputs("GTS\nNOTS\n", ctx->out);
             break;
@@ -183,6 +196,7 @@ static void gen_expr(codegen_ctx_t *ctx, const ast_expr_t *expr) { // NOLINT
     }
 }
 
+/** * @brief Vygeneruje instrukce pro volání funkcí. */
 static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
     const char *func_name = dstr_cstr(expr->as.func.name);
 
@@ -357,6 +371,7 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
 
 static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block);
 
+/** * @brief Příkaz z AST převede do instrukce IFJcode26. */
 static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
     switch (stmt->kind) {
     case STMT_VAR_DEF:
@@ -421,6 +436,7 @@ static void gen_stmt(codegen_ctx_t *ctx, const ast_stmt_t *stmt) {
     }
 }
 
+/** * @brief Projde seznam příkazů a udělá jeho překlad. */
 static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     for (const ast_stmt_t *stmt = block->first; stmt != nullptr;
          stmt = stmt->next) {
@@ -428,6 +444,7 @@ static void gen_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     }
 }
 
+/** * @brief Rekurzivne projde bloky příkazů a vypíše instrukce DEVAR pro lokální proměnné. */
 static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     for (const ast_stmt_t *stmt = block->first; stmt != nullptr;
          stmt = stmt->next) {
@@ -444,6 +461,7 @@ static void de_var_block(codegen_ctx_t *ctx, const ast_block_t *block) {
     }
 }
 
+/** * @brief Vygeneruje hlavičku funkce, deklarace pomocných proměnných, nadeklaruje parametry a vezme jejich hodnoty z konce sásobníku. Přeloží tělo a uzavře ji. */
 static void gen_func(codegen_ctx_t *ctx, const ast_func_t *func) {
     ctx->current_func = func;
     fprintf(ctx->out, "\nLABEL &fn_%s\n", dstr_cstr(func->name));
