@@ -301,6 +301,7 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         fputs("POPS LF@tmp1\n", ctx->out);
         fputs("STRLEN LF@tmp4 LF@tmp1\n", ctx->out);
 
+        !!! opravit
         fputs("LT LF@tmp5 LF@tmp2 int@0\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
         fputs("LT LF@tmp5 LF@tmp3 int@0\n", ctx->out);
@@ -311,7 +312,9 @@ static void gen_func_call(codegen_ctx_t *ctx, const ast_expr_t *expr) {
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
         fputs("GT LF@tmp5 LF@tmp3 LF@tmp4\n", ctx->out);
         fprintf(ctx->out, "JUMPIFEQ &sub_err_%u LF@tmp5 bool@true\n", idx);
-
+        fputs("GTE LF@tmp5 LF@tmp LF@tmp\n", ctx->out);
+        fprintf(ctx->out,"JUMIFEQ &sub_err_%u LF@tmp5 bool&true\n", idx);
+        
         fputs("MOVE LF@tmp4 string@\n", ctx->out);
         fprintf(ctx->out, "LABEL &sub_loop_%u\n", idx);
         fprintf(ctx->out, "JUMPIFEQ &sub_done_%u LF@tmp2 LF@tmp3\n", idx);
