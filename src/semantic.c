@@ -15,6 +15,16 @@
 
 #include <stddef.h>
 
+/** @brief Soukromá struktura, která udržuje proměnné použíté pro sem. analýzu */
+typedef struct sematic_ctx {
+    ast_prog_t *prog;
+    symtable *stab;
+    ast_func_t *current_func;
+    symbol *current_sym;
+    bool saw_return;
+} sematic_ctx;
+
+/** @brief Soukromá struktura pro deklarovaní vestavěných funkcí */
 typedef struct builtin_t {
     const char *name;
     data_type ret;
@@ -22,13 +32,18 @@ typedef struct builtin_t {
     size_t param_count;
 } builtin_t;
 
+/** @name Deklarace seznamů typů pro vestavěné funkce (buildins)
+ * @{
+ */
 static const data_type one_any_p[] = {TYPE_ANY};
 static const data_type one_int_p[] = {TYPE_INT};
 static const data_type one_double_p[] = {TYPE_DOUBLE};
 static const data_type one_str_p[] = {TYPE_STRING};
 static const data_type substr_p[] = {TYPE_STRING, TYPE_INT, TYPE_INT};
 static const data_type ord_p[] = {TYPE_STRING, TYPE_INT};
+/** @} */
 
+/** @brief Pole všech vestavěných funkcí */
 static const builtin_t builtins[] = {
     {"print", TYPE_UNIT, one_any_p, 1},
     {"readLine", TYPE_STRING, nullptr, 0},
@@ -42,14 +57,7 @@ static const builtin_t builtins[] = {
     {"chr", TYPE_STRING, one_int_p, 1},
 };
 
-typedef struct sematic_ctx {
-    ast_prog_t *prog;
-    symtable *stab;
-    ast_func_t *current_func;
-    symbol *current_sym;
-    bool saw_return;
-} sematic_ctx;
-
+/** @brief Funkce pro deklaraci vestavěných funkcí v symtable */
 static void declare_builtins(sematic_ctx *ctx) {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(builtins[0]); i++) {
         const builtin_t *buildin = &builtins[i];
@@ -67,6 +75,7 @@ static void declare_builtins(sematic_ctx *ctx) {
     }
 }
 
+/** @brief Pomocná funkce, která deklaruje všechny funkce definivané uživatelem */
 static bool declare_funcs(sematic_ctx *ctx) {
     for (ast_func_t *func = ctx->prog->first; func != nullptr;
          func = func->next) {
@@ -89,9 +98,13 @@ static bool declare_funcs(sematic_ctx *ctx) {
     return true;
 }
 
+/** @brief Pomocná funkce co provede semantickou analýzu nad ast_block_t */
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block);
+/** @brief Pomocná funkce co provede semantickou analýzu nad ast_expr_t */
 static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr);
+/** @brief Pomocná funkce co provede semantickou analýzu nad ast_stmt_t */
 static void analyze_stmt(sematic_ctx *ctx, ast_stmt_t *stmt);
+/** @brief Pomocná funkce co provede semantickou analýzu nad funkcí v symtable */
 static void analyze_func(sematic_ctx *ctx, symbol *sym);
 
 static void analyze_block(sematic_ctx *ctx, ast_block_t *block) {
@@ -217,11 +230,7 @@ static inline bool is_num(data_type type) {
     return (bool)(type == TYPE_DOUBLE || type == TYPE_INT);
 }
 
-/**
- * Převede Int výraz na Double. Literál se přepíše přímo, jiný výraz
- * (proměnná, volání, ...) se obalí uzlem OPU_INT2FLOAT.
- * Vrací výraz, který má nahradit původní (nebo nullptr při nedostatku paměti).
- */
+/** @brief Pomocná funkce pro změnu E_INT_LIT na E_DOUBLE_LIT a vložení konverzní operace */
 static ast_expr_t *promote_int(ast_expr_t *expr) {
     if (expr->kind == E_INT_LIT) {
         expr->as.double_val = (double)expr->as.int_val;
@@ -243,176 +252,162 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         return;
     }
     switch (expr->kind) {
-    case E_UNARY:
-        ast_expr_t *operand = expr->as.unary.operand;
-        analyze_expr(ctx, operand);
-        expr->data_type = TYPE_UNKNOWN;
-        if (operand->data_type == TYPE_UNKNOWN) {
+        case E_UNARY:
+            ast_expr_t *operand = expr->as.unary.operand;
+            analyze_expr(ctx, operand);
+            expr->data_type = TYPE_UNKNOWN;
+            if (operand->data_type == TYPE_UNKNOWN) {
+                break;
+            }
+            switch (expr->as.unary.op) {
+                case OPU_NEG:
+                case OPU_PLUS:
+                    if (!is_num(operand->data_type)) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                        break;
+                    }
+                    expr->data_type = operand->data_type;
+                    break;
+                case OPU_NOT:
+                    if (operand->data_type != TYPE_BOOL) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                    }
+                    expr->data_type = TYPE_BOOL;
+                    break;
+                case OPU_INT2FLOAT: expr->data_type = TYPE_DOUBLE; break;
+            }
             break;
-        }
-        switch (expr->as.unary.op) {
-        case OPU_NEG:
-        case OPU_PLUS:
-            if (!is_num(operand->data_type)) {
+        case E_BINARY: {
+            ast_expr_t *left = expr->as.binary.left;
+            ast_expr_t *right = expr->as.binary.right;
+            analyze_expr(ctx, left);
+            analyze_expr(ctx, right);
+
+            expr->data_type = TYPE_UNKNOWN;
+            if (left->data_type == TYPE_UNKNOWN ||
+                right->data_type == TYPE_UNKNOWN) {
+                break;
+            }
+
+            bool numeric_op =
+                (bool)(expr->as.binary.op != OPB_AND &&
+                       expr->as.binary.op !=
+                           OPB_OR); /**< Int na Double pokud jeden je Double */
+            if (numeric_op && left->data_type == TYPE_DOUBLE &&
+                right->data_type == TYPE_INT) {
+                right = promote_int(right);
+                if (right == nullptr) {
+                    error_fatal_cleanup(ERR_OTHER);
+                }
+                expr->as.binary.right = right;
+            } else if (numeric_op && left->data_type == TYPE_INT &&
+                       right->data_type == TYPE_DOUBLE) {
+                left = promote_int(left);
+                if (left == nullptr) {
+                    error_fatal_cleanup(ERR_OTHER);
+                }
+                expr->as.binary.left = left;
+            }
+
+            if (left->data_type != right->data_type) {
                 error_fatal_cleanup(ERR_SEM_TYPE);
                 break;
             }
-            expr->data_type = operand->data_type;
-            break;
-        case OPU_NOT:
-            if (operand->data_type != TYPE_BOOL) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            expr->data_type = TYPE_BOOL;
-            break;
-        case OPU_INT2FLOAT:
-            expr->data_type = TYPE_DOUBLE;
-            break;
-        }
-        break;
-    case E_BINARY: {
-        ast_expr_t *left = expr->as.binary.left;
-        ast_expr_t *right = expr->as.binary.right;
-        analyze_expr(ctx, left);
-        analyze_expr(ctx, right);
 
-        expr->data_type = TYPE_UNKNOWN;
-        if (left->data_type == TYPE_UNKNOWN ||
-            right->data_type == TYPE_UNKNOWN) {
-            break;
-        }
-
-        bool numeric_op =
-            (bool)(expr->as.binary.op != OPB_AND &&
-                   expr->as.binary.op !=
-                       OPB_OR); /**< Int na Double pokud jeden je Double */
-        if (numeric_op && left->data_type == TYPE_DOUBLE &&
-            right->data_type == TYPE_INT) {
-            right = promote_int(right);
-            if (right == nullptr) {
-                error_fatal_cleanup(ERR_OTHER);
+            data_type type = left->data_type;
+            switch (expr->as.binary.op) {
+                case OPB_ADD:
+                    /**< + je i konkatenace řetezců */
+                    if (!is_num(type) && type != TYPE_STRING) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                    }
+                    expr->data_type = type;
+                    break;
+                case OPB_SUB:
+                case OPB_MUL:
+                case OPB_DIV:
+                    if (!is_num(type)) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                    }
+                    expr->data_type = type;
+                    break;
+                case OPB_AND:
+                case OPB_OR:
+                    if (type != TYPE_BOOL) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                    }
+                    expr->data_type = TYPE_BOOL;
+                    break;
+                case OPB_LT:
+                case OPB_LTE:
+                case OPB_GT:
+                case OPB_GTE:
+                    if (!is_num(type)) {
+                        error_fatal_cleanup(ERR_SEM_TYPE);
+                    }
+                    expr->data_type = TYPE_BOOL;
+                    break;
+                case OPB_EQ:
+                case OPB_NE:
+                    expr->data_type = TYPE_BOOL;
+                    break;
+                }
+        } break;
+        case E_FUNC: {
+            for (size_t i = 0; i < expr->as.func.argc; i++) {
+                analyze_expr(ctx, expr->as.func.args[i]);
             }
-            expr->as.binary.right = right;
-        } else if (numeric_op && left->data_type == TYPE_INT &&
-                   right->data_type == TYPE_DOUBLE) {
-            left = promote_int(left);
-            if (left == nullptr) {
-                error_fatal_cleanup(ERR_OTHER);
-            }
-            expr->as.binary.left = left;
-        }
-
-        if (left->data_type != right->data_type) {
-            error_fatal_cleanup(ERR_SEM_TYPE);
-            break;
-        }
-
-        data_type type = left->data_type;
-        switch (expr->as.binary.op) {
-        case OPB_ADD:
-            /**< + je i konkatenace retezcu */
-            if (!is_num(type) && type != TYPE_STRING) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            expr->data_type = type;
-            break;
-        case OPB_SUB:
-        case OPB_MUL:
-        case OPB_DIV:
-            if (!is_num(type)) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            expr->data_type = type;
-            break;
-        case OPB_AND:
-        case OPB_OR:
-            if (type != TYPE_BOOL) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            expr->data_type = TYPE_BOOL;
-            break;
-        case OPB_LT:
-        case OPB_LTE:
-        case OPB_GT:
-        case OPB_GTE:
-            if (!is_num(type)) {
-                error_fatal_cleanup(ERR_SEM_TYPE);
-            }
-            expr->data_type = TYPE_BOOL;
-            break;
-        case OPB_EQ:
-        case OPB_NE:
-            expr->data_type = TYPE_BOOL;
-            break;
-        }
-    } break;
-    case E_FUNC: {
-        for (size_t i = 0; i < expr->as.func.argc; i++) {
-            analyze_expr(ctx, expr->as.func.args[i]);
-        }
-        expr->data_type = TYPE_UNKNOWN;
-
-        symbol *callee =
-            symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
-        if (callee == nullptr) {
-            error_fatal_cleanup(ERR_SEM_UNDEF);
-        }
-        if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
-            analyze_func(ctx, callee);
-        }
-        if (callee->ret_state == RET_INFERRING &&
-            callee->type == TYPE_UNKNOWN) {
-            error_fatal_cleanup(ERR_SEM_TYPE);
-        }
-        /* else {
-            expr->data_type = callee->type;
-        } */
-        expr->data_type = callee->type;
-
-        expr->as.func.target = callee->decl;
-
-        if (expr->as.func.argc != callee->param_count) {
-            error_fatal_cleanup(ERR_SEM_BADARGS);
-            break;
-        }
-        for (size_t i = 0; i < expr->as.func.argc; i++) {
-            data_type wanted = callee->is_builtin
-                                   ? callee->param_types[i]
-                                   : callee->decl->params[i].type;
-            data_type gotten = expr->as.func.args[i]->data_type;
-            if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN &&
-                wanted != TYPE_ANY && gotten != wanted) {
-                error_fatal_cleanup(ERR_SEM_BADARGS);
-            }
-        }
-    } break;
-    case E_VAR:
-        symbol *sym =
-            symtable_find_var(ctx->stab, dstr_cstr(expr->as.var.name));
-        if (sym == nullptr) {
-            error_fatal_cleanup(ERR_SEM_UNDEF);
             expr->data_type = TYPE_UNKNOWN;
-            return;
-        }
 
-        expr->data_type = sym->type;
-        expr->as.var.var_id = sym->var_id;
-        break;
-    case E_UNIT_LIT:
-        expr->data_type = TYPE_UNIT;
-        break;
-    case E_INT_LIT:
-        expr->data_type = TYPE_INT;
-        break;
-    case E_DOUBLE_LIT:
-        expr->data_type = TYPE_DOUBLE;
-        break;
-    case E_STRING_LIT:
-        expr->data_type = TYPE_STRING;
-        break;
-    case E_BOOLEAN_LIT:
-        expr->data_type = TYPE_BOOL;
-        break;
+            symbol *callee =
+                symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
+            if (callee == nullptr) {
+                error_fatal_cleanup(ERR_SEM_UNDEF);
+            }
+            if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
+                analyze_func(ctx, callee);
+            }
+            if (callee->ret_state == RET_INFERRING &&
+                callee->type == TYPE_UNKNOWN) {
+                error_fatal_cleanup(ERR_SEM_TYPE);
+            }
+
+            expr->data_type = callee->type;
+
+            expr->as.func.target = callee->decl;
+
+            if (expr->as.func.argc != callee->param_count) {
+                error_fatal_cleanup(ERR_SEM_BADARGS);
+                break;
+            }
+            for (size_t i = 0; i < expr->as.func.argc; i++) {
+                data_type wanted = callee->is_builtin
+                                       ? callee->param_types[i]
+                                       : callee->decl->params[i].type;
+                data_type gotten = expr->as.func.args[i]->data_type;
+                if (gotten != TYPE_UNKNOWN && wanted != TYPE_UNKNOWN &&
+                    wanted != TYPE_ANY && gotten != wanted) {
+                    error_fatal_cleanup(ERR_SEM_BADARGS);
+                }
+            }
+        } break;
+        case E_VAR:
+            symbol *sym =
+                symtable_find_var(ctx->stab, dstr_cstr(expr->as.var.name));
+            if (sym == nullptr) {
+                error_fatal_cleanup(ERR_SEM_UNDEF);
+                expr->data_type = TYPE_UNKNOWN;
+                return;
+            }
+
+            expr->data_type = sym->type;
+            expr->as.var.var_id = sym->var_id;
+            break;
+        case E_UNIT_LIT: expr->data_type = TYPE_UNIT; break;
+        case E_INT_LIT: expr->data_type = TYPE_INT; break;
+        case E_DOUBLE_LIT: expr->data_type = TYPE_DOUBLE; break;
+        case E_STRING_LIT: expr->data_type = TYPE_STRING; break;
+        case E_BOOLEAN_LIT: expr->data_type = TYPE_BOOL; break;
     }
 }
 
