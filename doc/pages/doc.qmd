@@ -81,7 +81,7 @@ Za pomocí těchto hodnot pak vytváří tokeny `INDENT` a `OUTDENT`.
 (`parser.h`, `parser.c`)
 
 ## Abstraktní syntaktický strom
-Syntaktická analýza vyplňuje abstaktní syntaktický strom, který se skládá z funkcí `ast_func_t`,
+Syntaktická analýza vyplňuje abstaktní syntaktický strom (AST), který se skládá z funkcí `ast_func_t`,
 příkazů (`ast_stmt_t`) a výrazů (`ast_expr_t`).
 Funkce jsou uloženy jako jednoduchý jednosměrný spojový seznam, kde kořen je program (`ast_prog_t`),
 stejným způsobem jsou na sebe navázány příkazy, které jsou uloženy v blocku (`ast_block_t`).
@@ -120,8 +120,20 @@ Přechod mezi roznimi zajišťují funkcemi `symtable_enter_scope` a `symtable_l
 (pro funkce `symtable_enter_func` a `symtable_leave_func`).
 
 ## Generátor kódu
+(`codegen.h`, `codegen.c`)
 
-# Diagram programu
+Generátor je poslední fáze našeho překladače, na vstup jde sémanticky ověřený AST
+a na výstup generuje instrukce **IFJcode20**. Skládá se z pomocných funkcí v modulu `codegen.c`,
+v main se volá pouze funkce codegen.
+
+Je rozdělen na tyhle hlavní části zpracování expresí, generování instrukcí pro volání funkcí,
+převedení příkazů z AST do instrukce **IFJcode26**, vypsání instrukce `DEVAR` pro lokální proměnné,
+vygenerování hlavičky funkce, deklaraci proměnných a parametrů, a vygenerování výsledného **IFJcode26**.
+
+Každá funkce má vlastní lokální rámec (`LF`) s číslovanými proměnnými (`LF@v_<id>`) a pomocnými proměnnými (`LF@tmp1-5`),
+všechny instrukce `DEFVAR` se generují na začátku funkce aby nedošlo redefinici promněné uvnitř cyklu.
+
+# Blokové schéma architektury
 ```{mermaid}
 %%| fig-width: 5
 %%| fig-height: 8
