@@ -3,6 +3,7 @@
 /.cache
 /doc/pages/doc_*
 /.vscode
+/obj
 /is_it_ok/ifj26*
 test_runner
 compiler

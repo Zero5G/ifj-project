@@ -10,9 +10,14 @@ TEST_LDFLAGS := $(shell pkg-config --libs criterion)
 TARGET := compiler
 TEST_TARGET := test_runner
 
+OBJ_DIR := obj
+
 INCLUDES := $(wildcard src/*.h)
 SRC := $(wildcard src/*.c)
 TEST_SRC := $(wildcard tests/*.c)
+
+OBJ := $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SRC))
+TEST_OBJ := $(patsubst tests/%.c,$(OBJ_DIR)/tests/%.o,$(TEST_SRC))
 
 ARCHIVE_TARGET := archive.zip
 DOC_TARGET := dokumentace.pdf
@@ -29,13 +34,19 @@ debug: $(TARGET)
 debug-test: TEST_CFLAGS += $(DEBUG_FLAGS)
 debug-test: $(TEST_TARGET)
 
-$(TARGET): $(SRC)
-	@mkdir -p $(@D)
+$(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(TEST_TARGET): $(TEST_SRC)
+$(TEST_TARGET): $(TEST_OBJ) $(filter-out $(OBJ_DIR)/main.o,$(OBJ))
+	$(CC) $(TEST_CFLAGS) $^ -o $@ $(TEST_LDFLAGS)
+
+$(OBJ_DIR)/%.o: src/%.c
 	@mkdir -p $(@D)
-	$(CC) $(TEST_CFLAGS) $^ $(filter-out src/main.c,$(SRC)) -o $@ $(TEST_LDFLAGS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/tests/%.o: tests/%.c
+	@mkdir -p $(@D)
+	$(CC) $(TEST_CFLAGS) -c $< -o $@
 
 test: $(TARGET) $(TEST_TARGET)
 	./$(TEST_TARGET)
@@ -54,6 +65,8 @@ check-tidy:
 
 check: check-tidy check-format
 
+build-check: check build
+
 # POZOR pdflatex je nastaven aby chyby byly přeskočené, takže spadnou do exit kódu, který ignorujeme
 doxygen:
 	doxygen Doxyfile
@@ -71,7 +84,7 @@ pack:
 		src/ Makefile rozdeleni rozsireni $(DOC_TARGET)
 
 clean:
-	rm -rf test_runner interpreter doc/gen/* $(DOC_TARGET) $(ARCHIVE_TARGET)
+	rm -rf $(OBJ_DIR) test_runner interpreter doc/gen/* $(DOC_TARGET) $(ARCHIVE_TARGET)
 
 is_it_ok: pack
 	cp $(ARCHIVE_TARGET) is_it_ok/

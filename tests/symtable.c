@@ -1,7 +1,7 @@
 #include <criterion/criterion.h>
 
-#include "symtable.h"
 #include "htab.h"
+#include "symtable.h"
 
 /* ---------- lifecycle (no fixture) ---------- */
 
@@ -13,9 +13,7 @@ Test(symtab_life, create_destroy) {
     symtable_destroy(st);
 }
 
-Test(symtab_life, destroy_null_is_noop) {
-    symtable_destroy(nullptr);
-}
+Test(symtab_life, destroy_null_is_noop) { symtable_destroy(nullptr); }
 
 Test(symtab_life, scope_null_stab) {
     cr_assert_not(symtable_enter_scope(nullptr));

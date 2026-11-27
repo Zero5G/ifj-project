@@ -8,6 +8,8 @@
  */
 #include "ast.h"
 #include "dstr.h"
+#include "types.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
