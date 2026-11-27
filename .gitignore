@@ -8,6 +8,8 @@ test_runner
 compiler
 compile_commands.json
 dokumentace.pdf
+!/dokumentace.pdf
 refman.pdf
 .vscode/settings.json
 archive.zip
+.$*.drawio.bkp

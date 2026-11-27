@@ -21,8 +21,8 @@ format:
 Jméno | xLogin | Body
 - | - | -
 **Jakub Manoušek** | `xmanouj00` | 25%
-Jakub Machač | `xmachaj00` | 25%
 Matěj Krňák | `xkrnakm00` | 25%
+Jakub Machač | `xmachaj00` | 25%
 Vojta Buchmaier | `xbuchmv00` | 25%
 
 - **Zvolená varianta:** `TRP-izp`
@@ -93,6 +93,19 @@ Za pomocí těchto hodnot pak vytváří tokeny `INDENT` a `OUTDENT`.
 ## Syntaktická analýza
 (`parser.h`, `parser.c`)
 
+Syntaktický analyzátor (parser) je implementován metodou rekurzivního sestupu, která je založena na LL gramatice.
+Voláním `get_next_token` parser dostává aktuální strukturu `token`,
+pomocí které vyhodnocuje, zda je program syntakticky správně, a vytváří abstraktní syntaktický strom.
+Hlavní funkce `parse_prog` postupně rekurzivně projde posloupnost tokenů a vyplní AST.
+
+### Výrazy
+(`expr.h`, `expr.c`)
+Výrazy jsou vyhodnocovány precedenční syntaktickou analýzou, která využívá precedenční tabulku.
+Pokud parser narazí na výraz, zavoláním funkce `parse_expression` předá kontext precedenčnímu parseru, definovaném v modulu `expr.c`.
+Precedenční parser inicializuje zásobník `expr_stack_t` a načítá tokeny,
+které se na zásobník ukládají pomocí precedenční tabulky.
+Ta vyhodnocuje správnou prioritu operátorů, a postupnou redukcí se vytvoří AST výrazu.
+
 ## Abstraktní syntaktický strom
 (`ast.h`, `ast.c`)
 
@@ -158,7 +171,7 @@ přístup je jen přes dané funkce.
 
 ### Typy
 (`types.h`)
-Sdílené typy jsou uložené zvlášť uložené v tomto modulu. 
+Sdílené typy jsou uložené zvlášť uložené v tomto modulu.
 
 # Blokové schéma architektury
 ```{mermaid}
@@ -186,16 +199,49 @@ flowchart TD
 {{< include ../other/grammar.txt >}}
 ```
 
-# Tabulka výrazů (`expr`)
+# Tabulka LL
+![VUT FIT logo](LLTable.png)
+
+# Precedenční tabulka
+![VUT FIT logo](LLTable.png)
 
 # FSM
+## Legenda pro nejasné názvy
+- COMMENT_L - řádkový komentář
+- C_MLS - několika řádkový komentář - začátek
+- ?C_MLE - několika řádkový komentář - možná konec
+- C_MLE - několika řádkový komentář - konec
+- **I** - identifikátor
+- **K** nebo **I** - klíčové slovo, nebo identifikátor
+- STRING_S - řetězec - začátek
+- STRING_ES - řetězec - `escape`
+- **STRING_E** - řetězec - konec
+- S_ML - několika řádkový řetězec - začátek
+- ?S_ML_E - několika řádkový řetězec - možná konec 1.
+- ??S_ML_E - několika řádkový řetězec - možná konec 2.
+- **S_ML_E** - několika řádkový řetězec - konec
+- LT - menší než
+- LE - menší, nebo rovno
+- GT - větší než
+- GE - větší, nebo rovno
+- RPAREN - levá závorka
+- LPAREN - pravá závorka
+
+
+## Obrázek
+![FSM](lexer.drawio.png){width=70%}
+
+\newpage
 
 # Literatura
 
 - Algoritmus pro TZP:
-Bernstein, D. (n.d.). Hash Functions. York University. https://www.cse.yorku.ca/~oz/hash.html
+Bernstein, D. (n.d.). Hash Functions. York University.
+
+```https://www.cse.yorku.ca/~oz/hash.html```
 
 - Materiály pro TZP: IAL Moodle
 
 - Materiály pro syntaktickou analýzu: Alexander Meduna, Roman Lukáš.
-https://www.fit.vut.cz/study/course/IFJ/public/materials/
+
+```https://www.fit.vut.cz/study/course/IFJ/public/materials/```
