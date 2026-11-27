@@ -396,6 +396,8 @@ static bool parse_parameter(parser_ctx *ctx, ast_func_t *func) {
 
 static bool parse_parameter_next(parser_ctx *ctx, ast_func_t *func) {
     while (ctx->current.type == TT_COMMA) {
+        // Tento úryvek kódu mi při testování odhalilo a opravilo AI,
+        // proto nemám přesný prompt
         int comma_line = ctx->current.line;
         advance(ctx);
         if (ctx->current.type == TT_RPAREN) {
@@ -823,6 +825,8 @@ static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
 
 static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call) {
     while (ctx->current.type == TT_COMMA) {
+        // Tento úryvek kódu mi při testování odhalilo a opravilo AI,
+        // proto nemám přesný prompt
         int comma_line = ctx->current.line;
         advance(ctx);
         if (ctx->current.type == TT_RPAREN) {
