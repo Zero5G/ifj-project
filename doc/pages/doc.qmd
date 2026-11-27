@@ -33,7 +33,7 @@ Vojta Buchmaier | `xbuchmv00` | 25%
 
 - Rozdělení práce:
   - `xmanouj00`: FSM, AST, implementace semantické analýzy
-  - `xmachaj00`: implementace modulu pro dynamické řeťezce, implementace generátoru kódu
+  - `xmachaj00`: implementace modulu pro dynamické řetězce, implementace generátoru kódu
   - `xkrnakm00`: gramatika, implementace syntaktické analýzy
   - `xbuchmv00`: tabulka s rozptýlenými položkami, implementace lexikální analýzy
 
@@ -43,7 +43,7 @@ Vojta Buchmaier | `xbuchmv00` | 25%
 \newpage
 
 # Úvod
-Projekt byl dělán v jazuku C, standardu `C23`, požívaly jsme kompilátor `clang`, protože byl nejjedušší na instalaci a pracuje s nástroji `clang-tidy` and `clang-format`. Projekt je kompilován za použití programu `Make`.
+Projekt byl dělán v jazuku C, standardu `C23`, používali jsme kompilátor `clang`, protože byl nejjedušší na instalaci a pracuje s nástroji `clang-tidy` and `clang-format`. Projekt je kompilován za použití programu `Make`.
 
 ## Práce v týmu
 Projekt byl ukládán v git repositáři na GitHubu.
@@ -62,14 +62,14 @@ Návod na kompilaci projektu (na operačním systémem Ubuntu) je obsáhnu v sou
 
 ## Využití AI nástrojů
 - AI nástroje bylo využité jako nejvíce jako rádce, v případech,
-kdy jsme si nebyli jisti, jak by část kódu mněla vypadat.
+kdy jsme si nebyli jisti, jak by část kódu měla vypadat.
 
 - AI také bylo použito ke generování testů, které jsme neodevzávali,
 z tohoto důvodu.
 
 - V připadech, kdy jsme byli zoufalí, tak bylo využito pro statickou analýzu kódu,
 toto se dělo v místech, kdy nám kód i v debugování spadl, a i když jsme našli část
-kde se to stalo, nemohly jsme najít příčinu.
+kde se to stalo, nemohli jsme najít příčinu.
 
 - Každý z nás používal jiný model: Gemini Hydrogen 4, Sonnet 5.5, Copilot 365 (mód Auto)
 
@@ -134,7 +134,7 @@ flowchart TD
 
 Semantická analýza probíhá po syntatické analýze, tento modul obsahuje jen jednu veřejnou funkci,
 která prochází AST a kontroluje typy proměnných, ukládá funkce a proměnné do takulky symbolů (`symtable`).
-Při procházení se kontrolůjí typy funkcí (typy parametrů a náratný typ) a proměnných.
+Při procházení se kontrolují typy funkcí (typy parametrů a náratný typ) a proměnných.
 Pro funkce se zde doplňuje náratný typ, pokud nebyl zadán ve zdrojovém kódu.
 Také se zde generuje výraz pro povýšení typu `integer` na typ `double`.
 
@@ -159,13 +159,13 @@ převedení příkazů z AST do instrukce **IFJcode26**, vypsání instrukce `DE
 vygenerování hlavičky funkce, deklaraci proměnných a parametrů, a vygenerování výsledného **IFJcode26**.
 
 Každá funkce má vlastní lokální rámec (`LF`) s číslovanými proměnnými (`LF@v_<id>`) a pomocnými proměnnými (`LF@tmp1-5`),
-všechny instrukce `DEFVAR` se generují na začátku funkce aby nedošlo redefinici promněné uvnitř cyklu.
+všechny instrukce `DEFVAR` se generují na začátku funkce aby nedošlo redefinici proměnné uvnitř cyklu.
 
 ## Ostatní
 ### Dynamické řetězce
 (`dstr.h`, `dstr.c`)
 
-Abychom jsi ulechčily práci z řetězci, tak jsme vytvořily modul,
+Abychom si ulehčili práci s řetězci, tak jsme vytvořily modul,
 který dynamicky rozšiřuje paměť řetězce, celá datová struktura je soukromá,
 přístup je jen přes dané funkce.
 
@@ -200,10 +200,10 @@ flowchart TD
 ```
 
 # Tabulka LL
-![VUT FIT logo](LLTable.png)
+![Tabulka LL](LLTable.png)
 
 # Precedenční tabulka
-![VUT FIT logo](LLTable.png)
+![Precedenční tabulka](PrecedenceTable.png)
 
 # FSM
 ## Legenda pro nejasné názvy
