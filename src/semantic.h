@@ -21,4 +21,10 @@
  */
 void semantic_analyze(ast_prog_t *prog, symtable *stab);
 
+/**
+ * @brief Zkontroluje zda program obsahuje správný počet @main
+ * @param prog AST programu
+ */
+void semantic_check_main(const ast_prog_t *prog);
+
 #endif

@@ -54,6 +54,7 @@ int main(void) {
     }
 
     semantic_analyze(ast, stab);
+    semantic_check_main(ast);
     symtable_destroy(stab);
 
     codegen(ast, stdout);

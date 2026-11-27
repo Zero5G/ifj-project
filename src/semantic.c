@@ -558,9 +558,27 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
         return;
     }
 
-    ast_func_t *main_func = nullptr;
-    unsigned main_count = 0;
     for (ast_func_t *func = prog->first; func != nullptr; func = func->next) {
+        symbol *sym = symtable_find_func(stab, dstr_cstr(func->name));
+        if (sym == nullptr || sym->decl != func) {
+            continue;
+        }
+        if (sym->ret_state == RET_INFERRED) {
+            continue;
+        }
+        analyze_func(&ctx, sym);
+    }
+}
+
+void semantic_check_main(const ast_prog_t *prog) {
+    if (prog == nullptr) {
+        return;
+    }
+
+    const ast_func_t *main_func = nullptr;
+    unsigned main_count = 0;
+    for (const ast_func_t *func = prog->first; func != nullptr;
+         func = func->next) {
         if (func->is_main) {
             main_func = func;
             main_count++;
@@ -577,16 +595,5 @@ void semantic_analyze(ast_prog_t *prog, symtable *stab) {
     }
     if (main_func->has_ret_type && main_func->ret_type != TYPE_UNIT) {
         error_fatal_cleanup(ERR_SEM_TYPE);
-    }
-
-    for (ast_func_t *func = prog->first; func != nullptr; func = func->next) {
-        symbol *sym = symtable_find_func(stab, dstr_cstr(func->name));
-        if (sym == nullptr || sym->decl != func) {
-            continue;
-        }
-        if (sym->ret_state == RET_INFERRED) {
-            continue;
-        }
-        analyze_func(&ctx, sym);
     }
 }
