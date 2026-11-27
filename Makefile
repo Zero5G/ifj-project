@@ -19,7 +19,7 @@ TEST_SRC := $(wildcard tests/*.c)
 OBJ := $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SRC))
 TEST_OBJ := $(patsubst tests/%.c,$(OBJ_DIR)/tests/%.o,$(TEST_SRC))
 
-ARCHIVE_TARGET := archive.zip
+ARCHIVE_TARGET := xmanouj00.zip
 DOC_TARGET := dokumentace.pdf
 
 .PHONY: all build debug debug-test test run doc format check-format check-tidy check clean
