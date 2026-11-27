@@ -372,7 +372,7 @@ static void analyze_expr(sematic_ctx *ctx, ast_expr_t *expr) {
         symbol *callee =
             symtable_find_func(ctx->stab, dstr_cstr(expr->as.func.name));
         if (callee == nullptr) {
-            error_fatalf_cleanup(ERR_SEM_UNDEF, "Funckce '%s' nenalezena.",
+            error_fatalf_cleanup(ERR_SEM_UNDEF, "Funckce '%s' nenalezena.\n",
                                  dstr_cstr(expr->as.func.name));
         }
         if (callee->ret_state == RET_UNRESOLVED && callee->decl != nullptr) {
@@ -524,7 +524,7 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
             func->params[i].var_id = param->var_id;
             break;
         case SYM_EXISTS:
-            error_fatal_cleanup(ERR_SEM_REDEF);
+            error_fatalf_cleanup(ERR_SEM_REDEF, "%s už byla definovaná\n", func->name);
         case SYM_NOMEM:
             error_fatal_cleanup(ERR_OTHER);
         }
@@ -585,15 +585,15 @@ void semantic_check_main(const ast_prog_t *prog) {
         }
     }
     if (main_count == 0) {
-        error_fatal_cleanup(ERR_SEM_UNDEF);
+        error_fatalf_cleanup(ERR_SEM_UNDEF, "@main nedefinován\n");
     }
     if (main_count > 1) {
-        error_fatal_cleanup(ERR_SEM_REDEF);
+        error_fatalf_cleanup(ERR_SEM_REDEF, "více @main než 1\n");
     }
     if (main_func->param_count != 0) {
-        error_fatal_cleanup(ERR_SEM_BADARGS);
+        error_fatalf_cleanup(ERR_SEM_BADARGS, "@main nesmí mít argumenty\n");
     }
     if (main_func->has_ret_type && main_func->ret_type != TYPE_UNIT) {
-        error_fatal_cleanup(ERR_SEM_TYPE);
+        error_fatalf_cleanup(ERR_SEM_TYPE, "@main má vracet typ Unit\n");
     }
 }
