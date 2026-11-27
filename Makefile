@@ -84,7 +84,7 @@ pack:
 		src/ Makefile rozdeleni rozsireni $(DOC_TARGET)
 
 clean:
-	rm -rf $(OBJ_DIR) test_runner interpreter doc/gen/* $(DOC_TARGET) $(ARCHIVE_TARGET)
+	rm -rf $(OBJ_DIR) test_runner interpreter doc/gen/* $(ARCHIVE_TARGET)
 
 is_it_ok: pack
 	cp $(ARCHIVE_TARGET) is_it_ok/
