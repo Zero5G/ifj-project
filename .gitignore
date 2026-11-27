@@ -12,5 +12,5 @@ dokumentace.pdf
 !/dokumentace.pdf
 refman.pdf
 .vscode/settings.json
-archive.zip
+*.zip
 .$*.drawio.bkp
