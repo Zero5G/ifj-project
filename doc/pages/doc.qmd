@@ -1,7 +1,9 @@
 ---
 title: "IFJ Projekt 2026/27"
 author: "Tým xmanouj00"
-date: "27. 11. 2026"
+date: "2026-11-27"
+date-format: "D. M. YYYY"
+lang: cs
 geometry: margin=1.8cm
 fontsize: 11pt
 format:
