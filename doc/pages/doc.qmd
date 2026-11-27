@@ -1,7 +1,7 @@
 ---
 title: "IFJ Projekt 2026/27"
 author: "Tým xmanouj00"
-date: "November 2026"
+date: "27. 11. 2026"
 geometry: margin=1.8cm
 fontsize: 11pt
 format:
@@ -18,12 +18,12 @@ format:
 
 # Implementace překladače imperativního jazyka **IFJ26**. {.unlisted .unnumbered}
 
-Jméno | xLogin | Body
-- | - | -
-**Jakub Manoušek** | `xmanouj00` | 25%
-Matěj Krňák | `xkrnakm00` | 25%
-Jakub Machač | `xmachaj00` | 25%
-Vojta Buchmaier | `xbuchmv00` | 25%
+Jméno | Osobní číslo | xLogin | Body
+--- | --- | --- | ---
+**Jakub Manoušek** | 282015 | `xmanouj00` | 25%
+Matěj Krňák | 282070 | `xkrnakm00` | 25%
+Jakub Machač | 279304 | `xmachaj00` | 25%
+Vojta Buchmaier | 282282 | `xbuchmv00` | 25%
 
 - **Zvolená varianta:** `TRP-izp`
 
@@ -32,9 +32,9 @@ Vojta Buchmaier | `xbuchmv00` | 25%
 - Seznam rozšíření: `BOOLTHEN`, `FUNEXP`
 
 - Rozdělení práce:
-  - `xmanouj00`: FSM, AST, implementace semantické analýzy
-  - `xmachaj00`: implementace modulu pro dynamické řetězce, implementace generátoru kódu
-  - `xkrnakm00`: gramatika, implementace syntaktické analýzy
+  - `xmanouj00`: FSM, AST, implementace semantické analýzy, dokumentace
+  - `xkrnakm00`: gramatika, implementace syntaktické analýzy, dokumentace
+  - `xmachaj00`: implementace modulu pro dynamické řetězce, implementace generátoru kódu, dokumentace
   - `xbuchmv00`: tabulka s rozptýlenými položkami, implementace lexikální analýzy
 
 \newpage
@@ -49,7 +49,7 @@ Projekt byl dělán v jazuku C, standardu `C23`, používali jsme kompilátor `c
 Projekt byl ukládán v git repositáři na GitHubu.
 Kde si každý vytvořil větev a pracoval na ní, jak byla práce hotová, tak si vytvořil _Pull request_,
 který byl poté mergnut do branche kde byl potřeba.
-Jedíné co se před mergováním kontrolovalo, bylo zda se merge může vykonat,
+Jediné co se před mergováním kontrolovalo, bylo zda se merge může vykonat,
 nebo je potřeba udělat merge manuálně (pokud si někdo chyby všiml, tak si zažádal o změny).
 
 Pro programovaní nebyl nucený editor, ale byl poskytnut soubor `.editorconfig`.
@@ -67,7 +67,7 @@ kdy jsme si nebyli jisti, jak by část kódu měla vypadat.
 - AI také bylo použito ke generování testů, které jsme neodevzávali,
 z tohoto důvodu.
 
-- V připadech, kdy jsme byli zoufalí, tak bylo využito pro statickou analýzu kódu,
+- V případech, kdy jsme byli zoufalí, tak bylo využito pro statickou analýzu kódu,
 toto se dělo v místech, kdy nám kód i v debugování spadl, a i když jsme našli část
 kde se to stalo, nemohli jsme najít příčinu.
 
@@ -139,19 +139,19 @@ Pro funkce se zde doplňuje náratný typ, pokud nebyl zadán ve zdrojovém kód
 Také se zde generuje výraz pro povýšení typu `integer` na typ `double`.
 
 ### Tabulka symbolů
-(`symtable.h`, `symtable.c`, `htab.h`, `htab.c`)
+(`symtable.h`, `symtable.c`, `hashtable.h`, `hashtable.c`)
 
 Tabulka symbolů (TS) používá tabulku s rozptýlenými položkami (TRP) s implicitním zřetězením položek.
 TS je složená z několika TRP, jednoho hlavního pro funkce a několika pod tabulek,
 Podtabulky jsou uloženy v rozsahu `scope` (tj. rozsah platnosti) a obsahuje odkaz na svého _rodiče_.
-Přechod mezi roznimi zajišťují funkcemi `symtable_enter_scope` a `symtable_leave_scope`
+Přechod mezi rozsahy zajišťují funkcemi `symtable_enter_scope` a `symtable_leave_scope`
 (pro funkce `symtable_enter_func` a `symtable_leave_func`).
 
 ## Generátor kódu
 (`codegen.h`, `codegen.c`)
 
 Generátor je poslední fáze našeho překladače, na vstup jde sémanticky ověřený AST
-a na výstup generuje instrukce **IFJcode20**. Skládá se z pomocných funkcí v modulu `codegen.c`,
+a na výstup generuje instrukce **IFJcode26**. Skládá se z pomocných funkcí v modulu `codegen.c`,
 v main se volá pouze funkce codegen.
 
 Je rozdělen na tyhle hlavní části zpracování expresí, generování instrukcí pro volání funkcí,
@@ -165,13 +165,17 @@ všechny instrukce `DEFVAR` se generují na začátku funkce aby nedošlo redefi
 ### Dynamické řetězce
 (`dstr.h`, `dstr.c`)
 
-Abychom si ulehčili práci s řetězci, tak jsme vytvořily modul,
+Abychom si ulehčili práci s řetězci, tak jsme vytvořili modul,
 který dynamicky rozšiřuje paměť řetězce, celá datová struktura je soukromá,
 přístup je jen přes dané funkce.
 
 ### Typy
 (`types.h`)
-Sdílené typy jsou uložené zvlášť uložené v tomto modulu.
+Sdílené typy jsou zvlášť uložené v tomto modulu.
+
+### Error
+(`error.h`, `error.h`)
+Pomocné funkci pro tištění chyb a okamžité ukončení programu.
 
 # Blokové schéma architektury
 ```{mermaid}
@@ -224,8 +228,8 @@ flowchart TD
 - LE - menší, nebo rovno
 - GT - větší než
 - GE - větší, nebo rovno
-- RPAREN - levá závorka
-- LPAREN - pravá závorka
+- RPAREN - pravá závorka
+- LPAREN - levá závorka
 
 
 ## Obrázek
@@ -233,14 +237,14 @@ flowchart TD
 
 \newpage
 
-# Literatura
+# Zdroje
 
-- Algoritmus pro TZP:
+- Algoritmus pro TRP šifrování:
 Bernstein, D. (n.d.). Hash Functions. York University.
 
 ```https://www.cse.yorku.ca/~oz/hash.html```
 
-- Materiály pro TZP: IAL Moodle
+- Materiály pro TRP: IAL Moodle
 
 - Materiály pro syntaktickou analýzu: Alexander Meduna, Roman Lukáš.
 
