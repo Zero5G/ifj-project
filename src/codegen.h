@@ -1,7 +1,7 @@
 /**
  * @file codegen.h
  *
- * @author Jakub Machac
+ * @author Jakub Machač (xmachaj00)
  * @brief Modul generátoru kódu
  *
  * @details

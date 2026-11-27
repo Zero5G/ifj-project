@@ -2,7 +2,7 @@
  * @file lexer.c
  *
  * @author Vojta Buchmaier
- * @brief Lexikální analyzér
+ * @brief Lexikální analyzér (xbuchmv00)
  *
  * @details
  */

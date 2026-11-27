@@ -1,8 +1,8 @@
 /**
  * @file dstr.c
  *
- * @author Jakub Machač
- * @author Jakub Manoušek
+ * @author Jakub Machač (xmachaj00)
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro dynamické řetězce
  *
  * @details

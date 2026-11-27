@@ -1,8 +1,8 @@
 /**
  * @file htab.c
  *
- * @author Vojta Buchmaier
- * @author Jakub Manoušek
+ * @author Vojta Buchmaier (xbuchmv00)
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro hašovací tabulku
  *
  * @details

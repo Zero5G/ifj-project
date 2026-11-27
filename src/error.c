@@ -1,7 +1,7 @@
 /**
  * @file error.c
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro chybová hlašení a ukončení programu
  *
  * @details

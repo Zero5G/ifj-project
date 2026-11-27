@@ -1,7 +1,7 @@
 /**
  * @file symtable.c
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro tabulku symbolů
  *
  * @details

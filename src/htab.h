@@ -1,8 +1,8 @@
 /**
  * @file htab.h
  *
- * @author Vojta Buchmaier
- * @author Jakub Manoušek
+ * @author Vojta Buchmaier (xbuchmv00)
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Modul pro hašovací tabulku
  *
  * @details

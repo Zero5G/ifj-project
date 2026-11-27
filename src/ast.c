@@ -1,7 +1,7 @@
 /**
  * @file ast.c
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro AST (abstraktní syntaktický strom)
  *
  * @details

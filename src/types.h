@@ -1,7 +1,7 @@
 /**
  * @file types.h
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Modulu pro datové typy
  *
  * @details

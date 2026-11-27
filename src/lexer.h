@@ -1,7 +1,8 @@
 /**
  * @file lexer.h
  *
- * @author Jakub Manoušek a Vojta Buchmaier
+ * @author Jakub Manoušek (xmanouj00)
+ * @author Vojta Buchmaier (xbuchmv00)
  * @brief Modul pro lexikální analyzér
  *
  * @details

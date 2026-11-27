@@ -1,7 +1,7 @@
 /**
  * @file sematic.c
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Implementace modulu pro semantickou analýzu
  *
  * @details

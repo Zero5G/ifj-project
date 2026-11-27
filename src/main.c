@@ -1,5 +1,8 @@
 /**
  * @file main.c
+ *
+ * @author Jakub Manoušek (xmanouj00)
+ *
  * @brief Main entry point of application
  */
 

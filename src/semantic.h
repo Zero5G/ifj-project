@@ -1,7 +1,7 @@
 /**
  * @file sematic.h
  *
- * @author Jakub Manoušek
+ * @author Jakub Manoušek (xmanouj00)
  * @brief Modul pro semantickou analýzu
  *
  * @details

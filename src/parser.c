@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  *
- * @author Matěj Krňák
+ * @author Matěj Krňák (xkrnakm00)
  * @brief Implementace modulu pro syntaktickou analýzu
  *
  * @details

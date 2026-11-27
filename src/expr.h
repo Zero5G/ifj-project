@@ -1,7 +1,7 @@
 /**
  * @file expr.h
  *
- * @author Matěj Krňák
+ * @author Matěj Krňák (xkrnakm00)
  * @brief Modul pro zpracování výrazů precedenční syntaktickou analýzou
  *
  * @details
