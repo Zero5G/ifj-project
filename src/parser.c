@@ -10,6 +10,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "dstr.h"
+#include "error.h"
 #include "expr.h"
 
 #include <stdlib.h>
@@ -42,15 +43,14 @@ static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call);
 static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call);
 
-bool parser_init(parser_ctx *ctx, lexer *lx) {
-    ctx->lx = lx;
+bool parser_init(parser_ctx *ctx, lexer *lex) {
+    ctx->lx = lex;
     ctx->current = (token){.type = TT_EOF};
-    ctx->prog = ast_prog_create();
     if (ctx->prog == nullptr) {
         return false;
     }
 
-    ctx->current = get_next_token(lx);
+    ctx->current = get_next_token(lex);
 
     return true;
 }
@@ -61,15 +61,7 @@ ast_prog_t *parser_take_prog(parser_ctx *ctx) {
     return prog;
 }
 
-void parser_destroy(parser_ctx *ctx) {
-    token_free(&ctx->current);
-
-    if (ctx->prog != nullptr) {
-        ast_prog_free(ctx->prog);
-        free(ctx->prog);
-        ctx->prog = nullptr;
-    }
-}
+void parser_destroy(parser_ctx *ctx) { token_free(&ctx->current); }
 
 void advance(parser_ctx *ctx) {
     token_free(&ctx->current);
@@ -94,8 +86,8 @@ bool expect(parser_ctx *ctx, token_type type) {
     return true;
 }
 
-static bool accept_kw(parser_ctx *ctx, keyword kw) {
-    if (!token_is_kw(&ctx->current, kw)) {
+static bool accept_kw(parser_ctx *ctx, keyword kwd) {
+    if (!token_is_kw(&ctx->current, kwd)) {
         return false;
     }
 
@@ -103,9 +95,9 @@ static bool accept_kw(parser_ctx *ctx, keyword kw) {
     return true;
 }
 
-static bool expect_kw(parser_ctx *ctx, keyword kw) {
-    if (!token_is_kw(&ctx->current, kw)) {
-        return false;
+static bool expect_kw(parser_ctx *ctx, keyword kwd) {
+    if (!token_is_kw(&ctx->current, kwd)) {
+        error_fatalf_cleanup(ERR_SYNT, "Nedostal jsem očekávané klíčové slovo");
     }
 
     advance(ctx);
@@ -117,12 +109,12 @@ static unsigned current_line(const parser_ctx *ctx) {
 }
 
 static bool is_name_kw(const token *tok) {
-    return token_is_kw(tok, KW_MAIN) || token_is_kw(tok, KW_PRINT);
+    return (bool)(token_is_kw(tok, KW_MAIN) || token_is_kw(tok, KW_PRINT));
 }
 
 static dstr take_identifier(parser_ctx *ctx) {
     if (ctx->current.type != TT_IDENTIFIER) {
-        return nullptr;
+        error_fatalf_cleanup(ERR_SYNT, "Nedostal jsem požadovaný token");
     }
 
     dstr name = ctx->current.attr.as_str;
@@ -146,6 +138,10 @@ static dstr take_function_name(parser_ctx *ctx) {
         return nullptr;
     }
 
+    if (name == nullptr) {
+        error_fatal_cleanup(ERR_OTHER);
+    }
+
     if (name != nullptr) {
         advance(ctx);
     }
@@ -154,8 +150,9 @@ static dstr take_function_name(parser_ctx *ctx) {
 }
 
 static bool is_stmt_end(const parser_ctx *ctx) {
-    return ctx->current.type == TT_EOL || ctx->current.type == TT_DEDENT ||
-           ctx->current.type == TT_EOF;
+    return (bool)(ctx->current.type == TT_EOL ||
+                  ctx->current.type == TT_OUTDENT ||
+                  ctx->current.type == TT_EOF);
 }
 
 static bool expect_stmt_end(parser_ctx *ctx) {
@@ -163,14 +160,15 @@ static bool expect_stmt_end(parser_ctx *ctx) {
         return true;
     }
 
-    return ctx->current.type == TT_DEDENT || ctx->current.type == TT_EOF;
+    return (bool)(ctx->current.type == TT_OUTDENT ||
+                  ctx->current.type == TT_EOF);
 }
 
 static bool add_parameter(ast_func_t *func, dstr name) {
     ast_func_param_t *params =
         realloc(func->params, (func->param_count + 1) * sizeof(*params));
     if (params == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     func->params = params;
@@ -185,10 +183,10 @@ static bool add_parameter(ast_func_t *func, dstr name) {
 }
 
 static bool add_argument(ast_expr_t *call, ast_expr_t *arg) {
-    ast_expr_t **args = realloc((void *)call->as.func.args,
-                                (call->as.func.argc + 1) * sizeof(*args));
+    ast_expr_t **args = (ast_expr_t **)realloc(
+        (void *)call->as.func.args, (call->as.func.argc + 1) * sizeof(*args));
     if (args == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     call->as.func.args = args;
@@ -201,7 +199,7 @@ static bool add_argument(ast_expr_t *call, ast_expr_t *arg) {
 static ast_stmt_t *make_expr_stmt(unsigned line, ast_expr_t *expr) {
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_EXPR);
     if (stmt == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.expr = expr;
@@ -221,6 +219,7 @@ static bool is_statement(parser_ctx *ctx) {
     case TT_BOOLEAN_LITERAL:
     case TT_UNIT_LITERAL:
     case TT_LPAREN:
+    case TT_NOT:
         return true;
     case TT_KEYWORD:
         break;
@@ -228,11 +227,12 @@ static bool is_statement(parser_ctx *ctx) {
         return false;
     }
 
-    return token_is_kw(&ctx->current, KW_VAL) ||
-           token_is_kw(&ctx->current, KW_VAR) ||
-           token_is_kw(&ctx->current, KW_RETURN) ||
-           token_is_kw(&ctx->current, KW_IF) ||
-           token_is_kw(&ctx->current, KW_WHILE) || is_name_kw(&ctx->current);
+    return (bool)(token_is_kw(&ctx->current, KW_VAL) ||
+                  token_is_kw(&ctx->current, KW_VAR) ||
+                  token_is_kw(&ctx->current, KW_RETURN) ||
+                  token_is_kw(&ctx->current, KW_IF) ||
+                  token_is_kw(&ctx->current, KW_WHILE) ||
+                  is_name_kw(&ctx->current));
 }
 
 bool parser_run(parser_ctx *ctx) {
@@ -264,26 +264,25 @@ static bool parse_prolog(parser_ctx *ctx) {
 
     if (ctx->current.type != TT_IDENTIFIER ||
         dstr_cmp_raw(ctx->current.attr.as_str, "ifj26") != 0) {
-        return false;
+        error_fatalf_cleanup(ERR_SYNT, "Chybí knihovna ifj26\n");
     }
     advance(ctx);
 
     if (!expect(ctx, TT_DOT)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!expect(ctx, TT_STAR)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
-    return accept(ctx, TT_EOL) || ctx->current.type == TT_EOF;
+    return (bool)(accept(ctx, TT_EOL) || ctx->current.type == TT_EOF);
 }
 
-// <function_list> -> <function> <function_list>
+// <function_list> -> <annotation> <function> <function_list>
 // <function_list> -> ε
 static bool parse_function_list(parser_ctx *ctx) {
-    while (token_is_kw(&ctx->current, KW_MAIN) ||
-           token_is_kw(&ctx->current, KW_DEF)) {
+    while (ctx->current.type == TT_AT || token_is_kw(&ctx->current, KW_DEF)) {
         bool is_main = false;
         if (!parse_annotation(ctx, &is_main)) {
             return false;
@@ -297,11 +296,23 @@ static bool parse_function_list(parser_ctx *ctx) {
     return true;
 }
 
+// <annotation> -> TT_AT KW_MAIN <annotation_end>
+// <annotation> -> ε
+// <annotation_end> -> TT_EOL
+// <annotation_end> -> ε
 static bool parse_annotation(parser_ctx *ctx, bool *is_main) {
     *is_main = false;
 
-    if (token_is_kw(&ctx->current, KW_MAIN)) {
+    if (!accept(ctx, TT_AT)) {
+        return true;
+    }
+
+    if (token_is_kw(&ctx->current, KW_MAIN) ||
+        (ctx->current.type == TT_IDENTIFIER &&
+         dstr_cmp_raw(ctx->current.attr.as_str, "main") == 0)) {
         advance(ctx);
+    } else {
+        return false;
     }
 
     *is_main = true;
@@ -322,13 +333,13 @@ static bool parse_function(parser_ctx *ctx, bool is_main) {
 
     dstr name = take_function_name(ctx);
     if (name == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_func_t *func = ast_func_create(line);
     if (func == nullptr) {
         dstr_delete(name);
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     func->name = name;
@@ -337,7 +348,7 @@ static bool parse_function(parser_ctx *ctx, bool is_main) {
     ast_prog_append(ctx->prog, func);
 
     if (!expect(ctx, TT_LPAREN)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!parse_parameters(ctx, func)) {
@@ -345,7 +356,7 @@ static bool parse_function(parser_ctx *ctx, bool is_main) {
     }
 
     if (!expect(ctx, TT_RPAREN)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!parse_return_type(ctx, func)) {
@@ -353,7 +364,7 @@ static bool parse_function(parser_ctx *ctx, bool is_main) {
     }
 
     if (!expect(ctx, TT_ASSIGN)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return parse_block(ctx, &func->body);
@@ -379,16 +390,16 @@ static bool parse_parameters(parser_ctx *ctx, ast_func_t *func) {
 static bool parse_parameter(parser_ctx *ctx, ast_func_t *func) {
     dstr name = take_identifier(ctx);
     if (name == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     if (!add_parameter(func, name)) {
         dstr_delete(name);
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     if (!expect(ctx, TT_COLON)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return parse_type(ctx, &func->params[func->param_count - 1].type);
@@ -427,7 +438,8 @@ static bool parse_return_type(parser_ctx *ctx, ast_func_t *func) {
 // <type> -> KW_LIST
 static bool parse_type(parser_ctx *ctx, data_type *out) {
     if (ctx->current.type != TT_KEYWORD) {
-        return false;
+        error_fatalf_cleanup(ERR_SYNT,
+                             "Nedostal jsem požadované klíčové slovo");
     }
 
     data_type type = TYPE_UNKNOWN;
@@ -452,7 +464,7 @@ static bool parse_type(parser_ctx *ctx, data_type *out) {
         type = TYPE_UNKNOWN; // no list type in types.h so idk what to put here
         break;
     default:
-        return false;
+        error_fatalf_cleanup(ERR_SYNT, "Nedostal jsem podporovaný typ");
     }
 
     advance(ctx);
@@ -473,19 +485,19 @@ static bool parse_block(parser_ctx *ctx, ast_block_t *block) {
 
 static bool parse_indented_block(parser_ctx *ctx, ast_block_t *block) {
     if (!expect(ctx, TT_EOL)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!expect(ctx, TT_INDENT)) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!parse_body(ctx, block)) {
         return false;
     }
 
-    if (!expect(ctx, TT_DEDENT)) {
-        return false;
+    if (!expect(ctx, TT_OUTDENT)) {
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return true;
@@ -511,7 +523,7 @@ static bool parse_statement_list(parser_ctx *ctx, ast_block_t *block) {
 static bool parse_block_statement(parser_ctx *ctx, ast_block_t *block) {
     ast_stmt_t *stmt = parse_statement(ctx);
     if (stmt == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_block_append(block, stmt);
@@ -574,30 +586,30 @@ static ast_stmt_t *parse_variable_definition(parser_ctx *ctx) {
 
     dstr name = take_identifier(ctx);
     if (name == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     data_type type = TYPE_UNKNOWN;
     if (!parse_variable_type(ctx, &type)) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     if (!expect(ctx, TT_ASSIGN)) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     ast_expr_t *init = parse_expression(ctx);
     if (init == nullptr) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_VAR_DEF);
     if (stmt == nullptr) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.var_def.name = name;
@@ -632,13 +644,13 @@ static ast_stmt_t *parse_function_return(parser_ctx *ctx) {
     if (!is_stmt_end(ctx)) {
         val = parse_expression(ctx);
         if (val == nullptr) {
-            return nullptr;
+            error_fatal_cleanup(ERR_OTHER);
         }
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_RET);
     if (stmt == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.ret_val = val;
@@ -657,7 +669,7 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
 
     ast_expr_t *cond = parse_expression(ctx);
     if (cond == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     if (!expect_kw(ctx, KW_THEN)) {
@@ -666,7 +678,7 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_IF);
     if (stmt == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.if_stmt.cond = cond;
@@ -679,8 +691,21 @@ static ast_stmt_t *parse_if_statement(parser_ctx *ctx) {
     if (accept_kw(ctx, KW_ELSE)) {
         stmt->as.if_stmt.has_else = true;
 
-        if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
-            return nullptr;
+        if (token_is_kw(&ctx->current, KW_IF)) {
+
+            ast_stmt_t *nested = parse_if_statement(ctx);
+
+            if (nested == nullptr) {
+                return nullptr;
+            }
+
+            if (!ast_block_append(&stmt->as.if_stmt.else_blk, nested)) {
+                return nullptr;
+            }
+        } else {
+            if (!parse_indented_block(ctx, &stmt->as.if_stmt.else_blk)) {
+                return nullptr;
+            }
         }
     }
 
@@ -698,7 +723,7 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
 
     ast_expr_t *cond = parse_expression(ctx);
     if (cond == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     if (!expect_kw(ctx, KW_DO)) {
@@ -707,7 +732,7 @@ static ast_stmt_t *parse_while_statement(parser_ctx *ctx) {
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_WHILE);
     if (stmt == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.while_stmt.cond = cond;
@@ -727,7 +752,7 @@ static ast_stmt_t *parse_identifier_statement(parser_ctx *ctx) {
     const token *next = lexer_peek(ctx->lx, 1);
 
     if (next == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (next->type == TT_ASSIGN) {
@@ -748,19 +773,19 @@ static ast_stmt_t *parse_assignment(parser_ctx *ctx) {
 
     if (!expect(ctx, TT_ASSIGN)) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     ast_expr_t *val = parse_expression(ctx);
     if (val == nullptr) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     ast_stmt_t *stmt = ast_stmt_create(line, STMT_ASSIGN);
     if (stmt == nullptr) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     stmt->as.assign.name = name;
@@ -776,7 +801,7 @@ static ast_stmt_t *parse_expression_statement(parser_ctx *ctx) {
     ast_expr_t *expr = is_name_kw(&ctx->current) ? parse_function_call(ctx)
                                                  : parse_expression(ctx);
     if (expr == nullptr) {
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     return make_expr_stmt(line, expr);
@@ -794,7 +819,7 @@ ast_expr_t *parse_function_call(parser_ctx *ctx) {
     ast_expr_t *call = ast_expr_create(line, E_FUNC);
     if (call == nullptr) {
         dstr_delete(name);
-        return nullptr;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     call->as.func.name = name;
@@ -803,7 +828,7 @@ ast_expr_t *parse_function_call(parser_ctx *ctx) {
     call->as.func.target = nullptr;
 
     if (!expect(ctx, TT_LPAREN)) {
-        return nullptr;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     if (!parse_argument_list(ctx, call)) {
@@ -811,7 +836,7 @@ ast_expr_t *parse_function_call(parser_ctx *ctx) {
     }
 
     if (!expect(ctx, TT_RPAREN)) {
-        return nullptr;
+        error_fatal_cleanup(ERR_SYNT);
     }
 
     return call;
@@ -836,9 +861,9 @@ static bool parse_argument_list(parser_ctx *ctx, ast_expr_t *call) {
 // STRING_LITERAL, BOOLEAN_LITERAL, UNIT_LITERAL, so this should be taken care
 // of
 static bool parse_argument(parser_ctx *ctx, ast_expr_t *call) {
-    ast_expr_t *arg = parse_term(ctx);
+    ast_expr_t *arg = parse_expression(ctx);
     if (arg == nullptr) {
-        return false;
+        error_fatal_cleanup(ERR_OTHER);
     }
 
     return add_argument(call, arg);
@@ -856,4 +881,4 @@ static bool parse_argument_next(parser_ctx *ctx, ast_expr_t *call) {
     return true;
 }
 
-// parse_expression(), parse_term() -> in expr.c
+// parse_expression() -> in expr.c

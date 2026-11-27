@@ -84,13 +84,18 @@ typedef enum token_type {
     // Separátory
     TT_COLON,
     TT_COMMA,
-    TT_DOT, // TT_SEMICOLON, // TT_AT,
+    TT_DOT,
+    TT_SEMICOLON,
     TT_LPAREN,
     TT_RPAREN,
+    TT_AND,
+    TT_OR,
+    TT_NOT,
 
+    TT_AT,
     //
     TT_INDENT,
-    TT_DEDENT,
+    TT_OUTDENT,
     TT_EOF,
     TT_EOL,
 } token_type;
@@ -127,14 +132,14 @@ typedef struct token {
  * @param in Ukazatel na otevreny vstupni soubor se zdrojovym kodem.
  * @return Ukazatel na alokovanou strukturu lexer, nebo NULL pri chybe alokace.
  */
-lexer *lexer_create(FILE *in);
+lexer *lexer_create(FILE *input);
 
 /**
  * @brief Uvolni veskerou pamet alokovanou pro lexikalni analyzator.
  *
  * @param lx Ukazatel na instanci lexikalniho analyzatoru.
  */
-void lexer_destroy(lexer *lx);
+void lexer_destroy(lexer **lex);
 
 /**
  * @brief Nacte a vrati nasledujici token ze vstupu (posune cteni dopredu).
@@ -142,7 +147,7 @@ void lexer_destroy(lexer *lx);
  * @param lx Ukazatel na instanci lexikalniho analyzatoru.
  * @return Nactena struktura token.
  */
-token get_next_token(lexer *lx);
+token get_next_token(lexer *lex);
 
 /**
  * @brief Nahledne na n-ty nasledujici token
@@ -151,7 +156,7 @@ token get_next_token(lexer *lx);
  * @param n Pocet tokenu dopredu.
  * @return Ukazatel na nahlednuty token ve vnitrni vyrovnavaci pameti lexeru.
  */
-const token *lexer_peek(lexer *lx, unsigned n);
+const token *lexer_peek(lexer *lex, unsigned n);
 
 /**
  * @brief Uvolni dynamicky alokovanou pamet uvnitr tokenu.
@@ -175,6 +180,6 @@ const char *token_type_name(token_type type);
  * @return true pokud jde o token typu TT_KEYWORD se shodnym klicovym slovem,
  * jinak false.
  */
-bool token_is_kw(const token *tok, keyword kw);
+bool token_is_kw(const token *tok, keyword kwd);
 
 #endif

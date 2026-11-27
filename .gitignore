@@ -2,8 +2,12 @@
 /doc/doxygen_warnings.log
 /.cache
 /doc/pages/doc_*
+/.vscode
+/is_it_ok/ifj26*
 test_runner
-interpreter
+compiler
 compile_commands.json
 dokumentace.pdf
+refman.pdf
 .vscode/settings.json
+archive.zip

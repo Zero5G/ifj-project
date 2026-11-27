@@ -7,6 +7,9 @@
  * @details
  */
 
+#ifndef TYPES_H
+#define TYPES_H
+
 typedef enum data_type {
     TYPE_UNKNOWN,
     TYPE_INT,
@@ -16,3 +19,5 @@ typedef enum data_type {
     TYPE_BOOL,
     TYPE_ANY,
 } data_type;
+
+#endif
