@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define OUTPUT stderr
+
 /**
  * @brief Statický ukazatel na cleanup funkci (nastaven pro každý soubor zvlášť)
  */
@@ -41,7 +43,7 @@ const char *error_string(error_code code) {
 }
 
 void error_print(error_code code) {
-    fprintf(stderr, "%s\n", error_string(code)); // NOLINT
+    fprintf(OUTPUT, "%s\n", error_string(code)); // NOLINT
 }
 
 void error_vprintf(error_code code, const char *fmt, va_list args) {
@@ -82,7 +84,10 @@ void error_fatal_set_cleanup(void (*cleanup_func)(void)) {
     exit((int)code);
 }
 
-[[noreturn]] void error_fatal_cleanup(error_code code) { die(code); }
+[[noreturn]] void error_fatal_cleanup(error_code code) {
+    error_print(code);
+    die(code);
+}
 
 [[noreturn]] void error_fatalf_cleanup(error_code code, const char *fmt, ...) {
     va_list args;

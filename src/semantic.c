@@ -524,7 +524,8 @@ static void analyze_func(sematic_ctx *ctx, symbol *sym) {
             func->params[i].var_id = param->var_id;
             break;
         case SYM_EXISTS:
-            error_fatalf_cleanup(ERR_SEM_REDEF, "%s už byla definovaná\n", func->name);
+            error_fatalf_cleanup(ERR_SEM_REDEF, "%s už byla definovaná\n",
+                                 func->name);
         case SYM_NOMEM:
             error_fatal_cleanup(ERR_OTHER);
         }
