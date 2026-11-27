@@ -10,7 +10,7 @@
 #include <string.h>
 #define HTAB_BASE_SIZE 12
 
-#include "htab.h"
+#include "hashtable.h"
 #include "symtable.h"
 #include <stdlib.h>
 
