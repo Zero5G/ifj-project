@@ -166,6 +166,7 @@ static void expr_free(ast_expr_t *expr) {
         expr_free(expr->as.binary.right);
         break;
     case E_FUNC:
+        dstr_delete(expr->as.func.name);
         for (size_t i = 0; i < expr->as.func.argc; i++) {
             expr_free(expr->as.func.args[i]);
         }
